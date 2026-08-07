@@ -19,6 +19,7 @@ import './moderation-pagination.css'
 import './role-management.css'
 import './account-activity.css'
 import './admin-death.css'
+import './social-verification-events.css'
 
 const rootElement = document.getElementById('root')
 

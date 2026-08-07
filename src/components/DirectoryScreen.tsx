@@ -127,7 +127,7 @@ async function fetchPeoplePage(page: number, queryTerm: string): Promise<PeopleP
   if (queryTerm.trim()) {
     const smart = await supabase.rpc('search_directory_people', { p_query: queryTerm, p_limit: PAGE_SIZE + 1, p_offset: from })
     if (!smart.error) {
-      const received = (smart.data ?? []).map((item) => normalizeFallbackPerson(item as Record<string, unknown>))
+      const received = (smart.data ?? []).map((item: unknown) => normalizeFallbackPerson(item as Record<string, unknown>))
       const value: PeoplePage = { rows: received.slice(0, PAGE_SIZE), count: null, hasMore: received.length > PAGE_SIZE }
       peopleCache.set(key, { ...value, savedAt: Date.now() })
       return value

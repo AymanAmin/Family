@@ -8,3 +8,68 @@
 .direct-relation-delete-confirm{display:grid;gap:8px;padding:9px;border:1px solid #f0d6d1;border-radius:12px;color:#79554e;background:#fff7f5;font-size:.56rem;line-height:1.5}.direct-relation-delete-confirm>div{display:flex;justify-content:flex-end;gap:6px}
 .relationship-change-queue{display:grid;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #e1ebe7}.danger-status{color:#954b42!important;background:#f9e8e5!important}
 @media(max-width:760px){.direct-relations-panel{gap:8px;margin-top:10px;padding:10px;border-radius:16px}.direct-relations-heading h3{font-size:.82rem}.direct-relations-heading p{font-size:.54rem}.direct-relation-card{padding:8px}.direct-relation-person{grid-template-columns:34px minmax(0,1fr);gap:7px}.direct-relation-person>span{width:34px;height:34px;border-radius:10px}.direct-relation-person strong{font-size:.64rem}.direct-relation-card>p{padding-inline-start:41px}.direct-relation-edit{grid-template-columns:1fr}.direct-relation-edit>div{grid-column:auto}.direct-relation-actions button,.direct-relation-edit button,.direct-relation-delete-confirm button{min-height:30px;font-size:.51rem}.relationship-change-queue{margin-top:10px;padding-top:10px}}
+
+/* Per-person relationship integrity / rebuild action */
+.relationship-sync-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 18px 0;
+  padding: 16px 18px;
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.07), rgba(255, 255, 255, 0.94));
+}
+
+.relationship-sync-copy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.relationship-sync-copy > div {
+  display: grid;
+  gap: 4px;
+}
+
+.relationship-sync-copy strong {
+  font-size: 0.98rem;
+}
+
+.relationship-sync-copy small {
+  color: var(--muted, #64748b);
+  line-height: 1.7;
+}
+
+.relationship-sync-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 14px;
+  background: rgba(15, 118, 110, 0.12);
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+
+.relationship-sync-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .relationship-sync-card {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+    padding: 15px;
+  }
+
+  .relationship-sync-button {
+    width: 100%;
+  }
+}
+

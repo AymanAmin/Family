@@ -245,6 +245,7 @@ function App() {
   const [relationships, setRelationships] = useState<PersonRelationship[]>([])
   const [relationsLoading, setRelationsLoading] = useState(false)
   const [relationshipRefresh, setRelationshipRefresh] = useState(0)
+  const [relationshipSyncBusy, setRelationshipSyncBusy] = useState(false)
   const [ownLinkRequest, setOwnLinkRequest] = useState<AccountLinkRequest | null>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -771,6 +772,35 @@ function App() {
     if (data) await openPerson(data as Person)
   }
 
+  async function resyncSelectedPersonRelationships() {
+    if (!supabase || !selectedPerson || !isAdmin) return
+
+    setRelationshipSyncBusy(true)
+    const { data, error } = await supabase.rpc('resync_person_relationships', {
+      p_person_id: selectedPerson.id,
+    })
+    setRelationshipSyncBusy(false)
+
+    if (error) {
+      if (error.message.toLowerCase().includes('does not exist')) {
+        return showMessage('شغّل أحدث ملف supabase/SETUP.sql لتفعيل إعادة مزامنة العلاقات.', 'error')
+      }
+      return showMessage(friendlyError(error.message), 'error')
+    }
+
+    const summary = Array.isArray(data) ? data[0] : data
+    const directCount = Number(summary?.direct_relationship_count ?? 0)
+    const smartCount = Number(summary?.smart_relationship_count ?? 0)
+    const extendedCount = Number(summary?.extended_relationship_count ?? 0)
+    const removedCount = Number(summary?.removed_invalid_count ?? 0)
+
+    setRelationshipRefresh((value) => value + 1)
+    showMessage(
+      `تمت إعادة مزامنة علاقات ${selectedPerson.full_name}: ${directCount} علاقة مباشرة، ${smartCount} علاقة في الشبكة الأساسية، ${extendedCount} علاقة ممتدة${removedCount ? `، وتم تنظيف ${removedCount} سجل غير صالح أو مكرر` : ''}.`,
+      'success',
+    )
+  }
+
   async function submitRelationship(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!supabase || !session || !requireAccount()) return
@@ -1041,8 +1071,12 @@ function App() {
               <article><span>سنة الميلاد</span><strong>{selectedPerson.birth_year || 'غير محددة'}</strong></article>
               <article className={selectedPerson.is_deceased ? 'deceased-fact' : 'alive-fact'}><span>الحالة</span><strong>{selectedPerson.is_deceased ? 'متوفى' : 'على قيد الحياة'}</strong>{selectedPerson.is_deceased && <small>تاريخ الوفاة: {formatDate(selectedPerson.death_date)}</small>}</article>
             </div>
+            {isAdmin && <div className="relationship-sync-card">
+              <div className="relationship-sync-copy"><span className="relationship-sync-icon" aria-hidden="true">↻</span><div><strong>إعادة مزامنة العلاقات</strong><small>يعيد فحص علاقات هذا الفرد مع جميع الأشخاص، وينظف التكرار غير الصالح، ثم يبني القرابات المستنتجة من جديد.</small></div></div>
+              <button className="secondary relationship-sync-button" type="button" disabled={relationshipSyncBusy} onClick={() => void resyncSelectedPersonRelationships()}>{relationshipSyncBusy ? 'جارٍ المزامنة…' : 'إعادة المزامنة'}</button>
+            </div>}
             <PersonFamilyMemberships personId={selectedPerson.id} recordCreatedBy={selectedPerson.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} isLinkedPerson={profile?.linked_person_id === selectedPerson.id} onChanged={async () => { await loadCommunityData(); await openPersonById(selectedPerson.id) }} />
-            <Suspense fallback={<LazyPanelFallback />}><DirectRelationshipManager personId={selectedPerson.id} sessionUserId={session?.user.id} isAdmin={isAdmin} onOpenPerson={(id) => void openPersonById(id)} onChanged={() => setRelationshipRefresh((value) => value + 1)} /></Suspense>
+            <Suspense fallback={<LazyPanelFallback />}><DirectRelationshipManager key={`${selectedPerson.id}-${relationshipRefresh}`} personId={selectedPerson.id} sessionUserId={session?.user.id} isAdmin={isAdmin} onOpenPerson={(id) => void openPersonById(id)} onChanged={() => setRelationshipRefresh((value) => value + 1)} /></Suspense>
             {session && !profile?.linked_person_id && (
               <div className="link-account-card">
                 <div><strong>هل هذا سجلك؟</strong><p>قدّم طلب ربط حسابك بهذا الشخص للوصول إلى ميزات الملف الشخصي لاحقًا.</p></div>

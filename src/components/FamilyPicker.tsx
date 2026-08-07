@@ -14,12 +14,13 @@ type Props = {
   onChange: (familyId: string) => void
   required?: boolean
   emptyLabel?: string
+  approvedOnly?: boolean
 }
 
 const CACHE_TTL = 60_000
 const cache = new Map<string, { at: number; rows: FamilyOption[] }>()
 
-export default function FamilyPicker({ label, value, onChange, required = false, emptyLabel = 'بدون عائلة محددة' }: Props) {
+export default function FamilyPicker({ label, value, onChange, required = false, emptyLabel = 'بدون عائلة محددة', approvedOnly = false }: Props) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<FamilyOption | null>(null)
   const [results, setResults] = useState<FamilyOption[]>([])
@@ -36,16 +37,14 @@ export default function FamilyPicker({ label, value, onChange, required = false,
         return
       }
       if (selected?.id === value) return
-      const { data } = await supabase
-        .from('families')
-        .select('id,name,origin_place,status')
-        .eq('id', value)
-        .maybeSingle()
+      let request = supabase.from('families').select('id,name,origin_place,status').eq('id', value)
+      if (approvedOnly) request = request.eq('status', 'approved')
+      const { data } = await request.maybeSingle()
       if (!cancelled) setSelected((data as FamilyOption | null) ?? null)
     }
     void loadSelected()
     return () => { cancelled = true }
-  }, [value, selected?.id])
+  }, [value, selected?.id, approvedOnly])
 
   useEffect(() => () => {
     if (timerRef.current) window.clearTimeout(timerRef.current)
@@ -53,7 +52,7 @@ export default function FamilyPicker({ label, value, onChange, required = false,
 
   async function runSearch(raw: string, immediate = false) {
     const term = raw.trim().replace(/\s+/g, ' ')
-    const key = term.toLocaleLowerCase('ar') || '__recent__'
+    const key = `${approvedOnly ? 'approved' : 'visible'}:${term.toLocaleLowerCase('ar') || '__recent__'}`
     const cached = cache.get(key)
     if (cached && Date.now() - cached.at < CACHE_TTL) {
       setResults(cached.rows)
@@ -68,7 +67,7 @@ export default function FamilyPicker({ label, value, onChange, required = false,
       let request = supabase
         .from('families')
         .select('id,name,origin_place,status')
-        .in('status', ['approved', 'pending'])
+      request = approvedOnly ? request.eq('status', 'approved') : request.in('status', ['approved', 'pending'])
       if (term) request = request.ilike('name', `%${term}%`)
       const { data } = await request.order(term ? 'name' : 'created_at', { ascending: Boolean(term) }).limit(7)
       if (requestId !== requestRef.current) return
@@ -126,7 +125,7 @@ export default function FamilyPicker({ label, value, onChange, required = false,
               value={query}
               onChange={(event) => handleQuery(event.target.value)}
               onFocus={() => { setOpen(true); if (!results.length) void runSearch(query, true) }}
-              placeholder="اكتب اسم العائلة للبحث"
+              placeholder={approvedOnly ? 'ابحث في العائلات المعتمدة' : 'اكتب اسم العائلة للبحث'}
               autoComplete="off"
               required={required && !value}
             />

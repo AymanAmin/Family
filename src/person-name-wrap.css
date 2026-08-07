@@ -4,18 +4,22 @@
   max-width: 100%;
 }
 
+/*
+ * The title row itself must never wrap. The name can wrap inside its own
+ * flexible area, while the verified badge stays anchored beside the first line.
+ */
 .person-title-line {
   width: 100%;
   min-width: 0;
   max-width: 100%;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem 0.55rem;
+  flex-wrap: nowrap !important;
+  align-items: flex-start;
+  gap: 0.45rem;
 }
 
 .person-title-line h1 {
-  flex: 1 1 100%;
+  flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
   margin: 0;
@@ -25,6 +29,13 @@
   text-wrap: pretty;
   font-size: clamp(1.35rem, 3.6vw, 2.2rem) !important;
   line-height: 1.28 !important;
+}
+
+.person-title-line .verified-person-badge {
+  flex: 0 0 auto !important;
+  align-self: flex-start;
+  margin-top: 0.12em;
+  white-space: nowrap;
 }
 
 .person-title-line + p {
@@ -39,13 +50,17 @@
   }
 
   .person-title-line {
-    gap: 0.3rem 0.45rem;
+    gap: 0.38rem;
   }
 
   .person-title-line h1 {
     font-size: 1.3rem !important;
     line-height: 1.32 !important;
     letter-spacing: -0.01em;
+  }
+
+  .person-title-line .verified-person-badge {
+    margin-top: 0.08em;
   }
 }
 

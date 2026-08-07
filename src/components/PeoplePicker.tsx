@@ -10,28 +10,32 @@ type PersonOption = {
   is_verified?: boolean
 }
 
+type SearchMode = 'prefix' | 'broad'
+
 type Props = {
   label: string
   value: string
   onChange: (personId: string) => void
   excludeId?: string
   required?: boolean
+  searchMode?: SearchMode
 }
 
 const SEARCH_DELAY = 320
 const CACHE_TTL = 60_000
 const resultCache = new Map<string, { savedAt: number; rows: PersonOption[] }>()
 
-function cacheKey(query: string, excludeId?: string) {
-  return `${query.trim().toLocaleLowerCase('ar')}::${excludeId ?? ''}`
+function cacheKey(query: string, excludeId: string | undefined, searchMode: SearchMode) {
+  return `${searchMode}::${query.trim().toLocaleLowerCase('ar')}::${excludeId ?? ''}`
 }
 
-export default function PeoplePicker({ label, value, onChange, excludeId, required = false }: Props) {
+export default function PeoplePicker({ label, value, onChange, excludeId, required = false, searchMode = 'prefix' }: Props) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<PersonOption | null>(null)
   const [results, setResults] = useState<PersonOption[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLLabelElement | null>(null)
   const timerRef = useRef<number | null>(null)
   const requestRef = useRef(0)
 
@@ -55,6 +59,16 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
       })
   }, [value, selected?.id])
 
+  useEffect(() => {
+    function closeWhenClickingOutside(event: PointerEvent) {
+      const target = event.target as Node | null
+      if (target && rootRef.current && !rootRef.current.contains(target)) setOpen(false)
+    }
+
+    document.addEventListener('pointerdown', closeWhenClickingOutside)
+    return () => document.removeEventListener('pointerdown', closeWhenClickingOutside)
+  }, [])
+
   useEffect(() => () => {
     if (timerRef.current) window.clearTimeout(timerRef.current)
     requestRef.current += 1
@@ -73,7 +87,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
       return
     }
 
-    const key = cacheKey(normalized, excludeId)
+    const key = cacheKey(normalized, excludeId, searchMode)
     const cached = resultCache.get(key)
     if (cached && Date.now() - cached.savedAt < CACHE_TTL) {
       setResults(cached.rows)
@@ -85,6 +99,24 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
       if (!supabase) return
       const requestId = ++requestRef.current
       setLoading(true)
+
+      if (searchMode === 'prefix') {
+        let prefixQuery = supabase
+          .from('people')
+          .select('id,full_name,gender,birth_year,is_verified')
+          .eq('status', 'approved')
+          .ilike('full_name', `${normalized}%`)
+          .order('full_name')
+          .limit(6)
+        if (excludeId) prefixQuery = prefixQuery.neq('id', excludeId)
+        const { data } = await prefixQuery
+        if (requestId !== requestRef.current) return
+        const rows = (data ?? []) as PersonOption[]
+        resultCache.set(key, { savedAt: Date.now(), rows })
+        setResults(rows)
+        setLoading(false)
+        return
+      }
 
       const smart = await supabase.rpc('search_people_names', {
         p_query: normalized,
@@ -112,6 +144,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
       const { data } = await fallback
       if (requestId !== requestRef.current) return
       const rows = (data ?? []) as PersonOption[]
+      resultCache.set(key, { savedAt: Date.now(), rows })
       setResults(rows)
       setLoading(false)
     }, SEARCH_DELAY)
@@ -138,7 +171,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
   }
 
   return (
-    <label className="people-picker-label">
+    <label className="people-picker-label" ref={rootRef}>
       <span>{label}{required ? ' *' : ''}</span>
       <div className={`people-picker ${open ? 'open' : ''}`}>
         {selected ? (
@@ -148,7 +181,24 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
             <button type="button" onClick={clear} aria-label="إزالة الاختيار">×</button>
           </div>
         ) : (
-          <input value={query} onChange={(event) => search(event.target.value)} onFocus={() => setOpen(true)} placeholder="اكتب حرفين على الأقل للبحث" autoComplete="off" enterKeyHint="search" required={required && !value} />
+          <input
+            value={query}
+            onChange={(event) => search(event.target.value)}
+            onFocus={() => setOpen(true)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                setOpen(false)
+                event.currentTarget.blur()
+              } else if (event.key === 'Tab') {
+                setOpen(false)
+              }
+            }}
+            placeholder={searchMode === 'prefix' ? 'اكتب بداية الاسم — حرفين على الأقل' : 'اكتب حرفين على الأقل للبحث'}
+            autoComplete="off"
+            enterKeyHint="search"
+            required={required && !value}
+          />
         )}
 
         {open && !selected && (
@@ -158,7 +208,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
                 <span className="people-picker-avatar">{person.full_name.charAt(0)}</span>
                 <span><span className="verified-name-line"><strong>{person.full_name}</strong>{person.is_verified && <VerifiedBadge compact />}</span><small>{person.birth_year || 'سنة الميلاد غير محددة'}</small></span>
               </button>
-            )) : <div className="people-picker-state">لا توجد نتيجة مطابقة.</div>}
+            )) : <div className="people-picker-state">لا توجد نتيجة تبدأ بهذا الاسم.</div>}
           </div>
         )}
       </div>

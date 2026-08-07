@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import InstallPrompt from './components/InstallPrompt'
+import PushNotificationSettings from './components/PushNotificationSettings'
 import './styles.css'
 import './mobile-app.css'
 import './mobile-fixes.css'
@@ -29,6 +30,7 @@ import './edit-review-diff.css'
 import './tree-action-buttons.css'
 import './person-name-wrap.css'
 import './pwa-install.css'
+import './push-notifications.css'
 
 function disablePageZoom() {
   document.documentElement.style.touchAction = 'pan-x pan-y'
@@ -77,5 +79,6 @@ createRoot(rootElement).render(
   <StrictMode>
     <App />
     <InstallPrompt />
+    <PushNotificationSettings />
   </StrictMode>,
 )

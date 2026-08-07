@@ -95,11 +95,11 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
 
     const { data, error: profileError } = await supabase
       .from('profiles')
-      .select('role,account_status')
+      .select('role')
       .eq('id', userId)
       .maybeSingle()
 
-    setIsAdmin(!profileError && data?.account_status === 'active' && ['admin', 'super_admin'].includes(data.role))
+    setIsAdmin(!profileError && ['admin', 'super_admin'].includes(data?.role ?? ''))
   }, [])
 
   const loadPage = useCallback(async (offset: number, append: boolean) => {
@@ -230,26 +230,24 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
                         })}
                       </div>
                     ) : null}
-                    {isAdmin && (
-                      <div className="news-admin-edit">
-                        <RecordEditButton
-                          entityType="events"
-                          recordId={item.id}
-                          createdBy={item.created_by}
-                          sessionUserId={sessionUserId}
-                          isAdmin
-                          initialData={{
-                            event_type: item.event_type,
-                            title: item.title,
-                            family_id: item.family_id,
-                            event_date: item.event_date,
-                            location_name: item.location_name,
-                            description: item.description,
-                          }}
-                          onSaved={() => loadPage(0, false)}
-                        />
-                      </div>
-                    )}
+                    <div className="news-admin-edit">
+                      <RecordEditButton
+                        entityType="events"
+                        recordId={item.id}
+                        createdBy={item.created_by}
+                        sessionUserId={sessionUserId}
+                        isAdmin={isAdmin}
+                        initialData={{
+                          event_type: item.event_type,
+                          title: item.title,
+                          family_id: item.family_id,
+                          event_date: item.event_date,
+                          location_name: item.location_name,
+                          description: item.description,
+                        }}
+                        onSaved={() => loadPage(0, false)}
+                      />
+                    </div>
                   </div>
                 </article>
               )

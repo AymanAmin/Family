@@ -40,8 +40,9 @@
 - واجهة دخول Google وإدارة الجلسة وتسجيل الخروج جاهزة.
 - migration تنشئ ملف المستخدم تلقائيًا بعد دخول Google.
 - مسار الإنتاج مضبوط على `https://aymanamin.github.io/Family/`.
-- مفتاح Supabase القابل للنشر مسجل كقيمة عامة، بينما ما زال رابط مشروع Family مطلوبًا كمتغير GitHub.
+- الواجهة مرتبطة بمشروع Supabase ذي المعرّف `rtmdaalabudycimnnena` باستخدام مفتاح publishable عام.
 - تفعيل Google داخل Supabase يحتاج Client ID وClient Secret من Google Cloud ويُحفظان داخل Supabase فقط.
+- تنفيذ migration وإعداد Google يجب أن يتم داخل مشروع Family نفسه، وليس مشروع Football Score.
 
 ## التشغيل المحلي
 

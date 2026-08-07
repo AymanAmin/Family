@@ -1037,23 +1037,30 @@ function App() {
         {schemaReady && view === 'home' && (
           <>
 
+            <section className="hero-panel home-search-hero" aria-label="البحث في دليل المنطقة">
+              <div className="hero-copy">
+                <form className="search-bar home-search-bar" onSubmit={runSearch}>
+                  <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="ابحث باسم شخص أو عائلة" aria-label="ابحث باسم شخص أو عائلة" />
+                  <button className="primary" type="submit">بحث</button>
+                </form>
+              </div>
+            </section>
+
             <section className="nasab-dashboard">
-              <article className="family-welcome-card">
+              <div className="app-services unified-home-stats" aria-label="اختصارات وإحصائيات المنصة">
+                <button className="service-tile stat-service-tile" type="button" onClick={() => setView('search')}><span className="service-icon">{platformStats?.approved_families ?? '—'}</span><span><strong>العائلات</strong><small>الأسر المعتمدة في الدليل</small></span></button>
+                <button className="service-tile stat-service-tile" type="button" onClick={() => setView('search')}><span className="service-icon">{platformStats?.approved_people ?? '—'}</span><span><strong>الأفراد</strong><small>ملفات الأشخاص الموثقة</small></span></button>
+                <button className="service-tile stat-service-tile" type="button" onClick={() => setView('news')}><span className="service-icon">{platformStats?.approved_events ?? '—'}</span><span><strong>المناسبات</strong><small>الأخبار والمناسبات المنشورة</small></span></button>
+                <button className="service-tile" type="button" onClick={() => setView('tree')}><span className="service-icon">ش</span><span><strong>شجرة العائلة</strong><small>استكشف القرابة ومسارات النسب</small></span></button>
+                {isAdmin && <button className="service-tile stat-service-tile" type="button" onClick={() => setView('admin')}><span className="service-icon">{pending.length}</span><span><strong>بانتظار الاعتماد</strong><small>الطلبات التي تحتاج مراجعة</small></span></button>}
+                <button className="service-tile" type="button" onClick={() => session ? setView('account') : document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' })}><span className="service-icon">{session ? userName[0] : 'د'}</span><span><strong>{session ? 'حسابي' : 'الدخول'}</strong><small>{session ? 'الربط والملف الشخصي' : 'ساهم في توثيق العائلة'}</small></span></button>
+              </div>
+
+              <article className="family-welcome-card compact-family-welcome">
                 <span className="eyebrow">صلة — البيت الرقمي للعائلة</span>
                 <h2>{session ? `مرحبًا ${userName}، أهلك أقرب إليك.` : 'عائلتك، تاريخها، وأخبارها في مكان واحد.'}</h2>
                 <p>استعرض الأسر والأفراد، وثّق صلات القرابة، وتابع المناسبات من واجهة واحدة مصممة لكل الأجيال.</p>
-                <div className="family-welcome-actions">
-                  <button className="light-action" type="button" onClick={() => setView('search')}>فتح دليل العائلة</button>
-                  <button className="outline-action" type="button" onClick={() => requireAccount() && setView('add')}>إضافة معلومة</button>
-                </div>
               </article>
-
-              <div className="app-services">
-                <button className="service-tile" type="button" onClick={() => setView('tree')}><span className="service-icon">ش</span><span><strong>شجرة العائلة</strong><small>استكشف القرابة ومسارات النسب</small></span></button>
-                <button className="service-tile" type="button" onClick={() => setView('search')}><span className="service-icon">{platformStats?.approved_families ?? '—'}</span><span><strong>العائلات</strong><small>الأسر المعتمدة في الدليل</small></span></button>
-                <button className="service-tile" type="button" onClick={() => setView('search')}><span className="service-icon">{platformStats?.approved_people ?? '—'}</span><span><strong>الأفراد</strong><small>ملفات الأشخاص الموثقة</small></span></button>
-                <button className="service-tile" type="button" onClick={() => session ? setView('account') : document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' })}><span className="service-icon">{session ? userName[0] : 'د'}</span><span><strong>{session ? 'حسابي' : 'الدخول'}</strong><small>{session ? 'الربط والملف الشخصي' : 'ساهم في توثيق العائلة'}</small></span></button>
-              </div>
             </section>
 
             <section className="section-block soft">
@@ -1083,28 +1090,6 @@ function App() {
                 <div className="home-section-heading"><h2>شجرة العائلة</h2><button type="button" onClick={() => setView('tree')}>فتح الشجرة</button></div>
                 <div className="tree-orbit" aria-label="معاينة رمزية لشجرة العائلة"><span className="tree-root">صلة</span><span className="tree-node n1">جد</span><span className="tree-node n2">أب</span><span className="tree-node n3">أم</span><span className="tree-node n4">ابن</span><span className="tree-node n5">ابنة</span></div>
               </article>
-            </section>
-
-            <section className="hero-panel">
-              <div className="hero-copy">
-                <span className="eyebrow">بيانات حقيقية فقط</span>
-                <h1>ابحث عن أهلك، ووثّق أسر منطقتك ومناسباتها.</h1>
-                <p>لا يظهر أي شخص أو عائلة أو مناسبة للعامة إلا بعد مراجعتها واعتمادها.</p>
-                <form className="search-bar" onSubmit={runSearch}>
-                  <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="ابحث باسم شخص أو عائلة" />
-                  <button className="primary" type="submit">بحث</button>
-                </form>
-                <div className="hero-actions">
-                  <button className="primary" onClick={() => requireAccount() && setView('add')}>إضافة معلومة</button>
-                  <button className="secondary" onClick={() => setView('search')}>فتح دليل المنطقة</button>
-                </div>
-              </div>
-              <div className="real-stats">
-                <article><strong>{platformStats?.approved_families ?? '—'}</strong><span>عائلة معتمدة</span></article>
-                <article><strong>{platformStats?.approved_people ?? '—'}</strong><span>شخص معتمد</span></article>
-                <article><strong>{platformStats?.approved_events ?? '—'}</strong><span>مناسبة منشورة</span></article>
-                <article><strong>{isAdmin ? pending.length : '—'}</strong><span>{isAdmin ? 'بانتظار الاعتماد' : 'مراجعة إدارية'}</span></article>
-              </div>
             </section>
 
             <section className="section-block">

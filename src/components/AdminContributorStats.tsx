@@ -119,7 +119,7 @@ export default function AdminContributorStats({ active }: Props) {
     if (rankingResult.error) {
       setRows([])
       setHasMore(false)
-      setMessage(rankingResult.error.message.toLowerCase().includes('does not exist') ? 'شغّل migration رقم 022 لتفعيل إحصائيات المساهمين.' : 'تعذر تحميل إحصائيات المساهمين الآن.')
+      setMessage(rankingResult.error.message.toLowerCase().includes('does not exist') ? 'شغّل migration رقم 026 لتفعيل إحصائيات المساهمين.' : 'تعذر تحميل إحصائيات المساهمين الآن.')
       return
     }
 

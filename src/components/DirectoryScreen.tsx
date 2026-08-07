@@ -61,7 +61,7 @@ function cacheKey(term: string, page: number) {
   return `${term.trim().toLocaleLowerCase('ar')}::${page}`
 }
 
-function normalizeFallbackPerson(item: Record<string, unknown>): DirectoryPerson {
+function normalizePerson(item: Record<string, unknown>): DirectoryPerson {
   return {
     id: String(item.id ?? ''),
     full_name: String(item.full_name ?? ''),
@@ -103,19 +103,8 @@ function FamilyCard({ item, onOpen }: { item: DirectoryFamily; onOpen: (item: Di
   )
 }
 
-async function fallbackPeoplePage(page: number, queryTerm: string): Promise<PeoplePage> {
-  if (!supabase) return { rows: [], count: null, hasMore: false }
-  const from = page * PAGE_SIZE
-  const to = from + PAGE_SIZE - 1
-  let query = supabase
-    .from('people')
-    .select('id,full_name,gender,birth_year,is_deceased,death_date,description,status,family_id,created_by,created_at,families(name)', { count: 'planned' })
-    .eq('status', 'approved')
-  if (queryTerm) query = query.ilike('full_name', `%${queryTerm}%`)
-  const result = await query.order(queryTerm ? 'full_name' : 'created_at', { ascending: Boolean(queryTerm) }).range(from, to)
-  if (result.error) throw result.error
-  const rows = (result.data ?? []).map((item) => normalizeFallbackPerson(item as unknown as Record<string, unknown>))
-  return { rows, count: result.count ?? null, hasMore: rows.length === PAGE_SIZE && (result.count == null || to + 1 < result.count) }
+function hasNextPage(receivedLength: number, count: number | null, from: number) {
+  return receivedLength > PAGE_SIZE || (count != null && from + PAGE_SIZE < count)
 }
 
 async function fetchPeoplePage(page: number, queryTerm: string): Promise<PeoplePage> {
@@ -125,35 +114,60 @@ async function fetchPeoplePage(page: number, queryTerm: string): Promise<PeopleP
   if (cached && Date.now() - cached.savedAt < CACHE_TTL) return cached
 
   const from = page * PAGE_SIZE
-  if (queryTerm.trim()) {
-    const smart = await supabase.rpc('search_directory_people', { p_query: queryTerm, p_limit: PAGE_SIZE + 1, p_offset: from })
+  const normalizedTerm = queryTerm.trim()
+
+  if (normalizedTerm) {
+    const smart = await supabase.rpc('search_directory_people', {
+      p_query: normalizedTerm,
+      p_limit: PAGE_SIZE + 1,
+      p_offset: from,
+    })
     if (!smart.error) {
-      const received = (smart.data ?? []).map((item: unknown) => normalizeFallbackPerson(item as Record<string, unknown>))
+      const received = (smart.data ?? []).map((item: unknown) => normalizePerson(item as Record<string, unknown>))
       const value: PeoplePage = { rows: received.slice(0, PAGE_SIZE), count: null, hasMore: received.length > PAGE_SIZE }
       peopleCache.set(key, { ...value, savedAt: Date.now() })
       return value
     }
-    const fallback = await fallbackPeoplePage(page, queryTerm)
-    peopleCache.set(key, { ...fallback, savedAt: Date.now() })
-    return fallback
   }
 
-  const to = from + PAGE_SIZE - 1
-  const enriched = await supabase
+  const to = from + PAGE_SIZE
+  let query = supabase
     .from('people')
     .select('id,full_name,gender,birth_year,is_deceased,death_date,is_verified,description,status,family_id,created_by,created_at,families(name)', { count: 'planned' })
     .eq('status', 'approved')
-    .order('created_at', { ascending: false })
+
+  if (normalizedTerm) query = query.ilike('full_name', `%${normalizedTerm}%`)
+
+  const result = await query
+    .order(normalizedTerm ? 'full_name' : 'created_at', { ascending: Boolean(normalizedTerm) })
     .range(from, to)
 
-  if (enriched.error) {
-    const fallback = await fallbackPeoplePage(page, '')
-    peopleCache.set(key, { ...fallback, savedAt: Date.now() })
-    return fallback
+  if (result.error) {
+    const fallbackQuery = supabase
+      .from('people')
+      .select('id,full_name,gender,birth_year,is_deceased,death_date,description,status,family_id,created_by,created_at,families(name)', { count: 'planned' })
+      .eq('status', 'approved')
+    const fallback = normalizedTerm ? fallbackQuery.ilike('full_name', `%${normalizedTerm}%`) : fallbackQuery
+    const fallbackResult = await fallback
+      .order(normalizedTerm ? 'full_name' : 'created_at', { ascending: Boolean(normalizedTerm) })
+      .range(from, to)
+    if (fallbackResult.error) throw fallbackResult.error
+    const received = (fallbackResult.data ?? []).map((item) => normalizePerson(item as unknown as Record<string, unknown>))
+    const value: PeoplePage = {
+      rows: received.slice(0, PAGE_SIZE),
+      count: fallbackResult.count ?? null,
+      hasMore: hasNextPage(received.length, fallbackResult.count ?? null, from),
+    }
+    peopleCache.set(key, { ...value, savedAt: Date.now() })
+    return value
   }
 
-  const rows = (enriched.data ?? []).map((item) => normalizeFallbackPerson(item as unknown as Record<string, unknown>))
-  const value: PeoplePage = { rows, count: enriched.count ?? null, hasMore: rows.length === PAGE_SIZE && (enriched.count == null || to + 1 < enriched.count) }
+  const received = (result.data ?? []).map((item) => normalizePerson(item as unknown as Record<string, unknown>))
+  const value: PeoplePage = {
+    rows: received.slice(0, PAGE_SIZE),
+    count: result.count ?? null,
+    hasMore: hasNextPage(received.length, result.count ?? null, from),
+  }
   peopleCache.set(key, { ...value, savedAt: Date.now() })
   return value
 }
@@ -165,8 +179,14 @@ async function fetchFamilyPage(page: number, queryTerm: string): Promise<FamilyP
   if (cached && Date.now() - cached.savedAt < CACHE_TTL) return cached
 
   const from = page * PAGE_SIZE
-  if (queryTerm.trim()) {
-    const smart = await supabase.rpc('search_directory_families', { p_query: queryTerm, p_limit: PAGE_SIZE + 1, p_offset: from })
+  const normalizedTerm = queryTerm.trim()
+
+  if (normalizedTerm) {
+    const smart = await supabase.rpc('search_directory_families', {
+      p_query: normalizedTerm,
+      p_limit: PAGE_SIZE + 1,
+      p_offset: from,
+    })
     if (!smart.error) {
       const received = (smart.data ?? []) as DirectoryFamily[]
       const value: FamilyPage = { rows: received.slice(0, PAGE_SIZE), count: null, hasMore: received.length > PAGE_SIZE }
@@ -175,16 +195,28 @@ async function fetchFamilyPage(page: number, queryTerm: string): Promise<FamilyP
     }
   }
 
-  const to = from + PAGE_SIZE - 1
+  // Fetch one extra row. The ninth row is used only to determine whether
+  // another page exists, then only eight rows are rendered to the user.
+  const to = from + PAGE_SIZE
   let query = supabase
     .from('families')
     .select('id,name,description,origin_place,status,created_by,created_at', { count: 'planned' })
     .eq('status', 'approved')
-  if (queryTerm) query = query.ilike('name', `%${queryTerm}%`)
-  const result = await query.order(queryTerm ? 'name' : 'created_at', { ascending: Boolean(queryTerm) }).range(from, to)
+
+  if (normalizedTerm) query = query.ilike('name', `%${normalizedTerm}%`)
+
+  const result = await query
+    .order(normalizedTerm ? 'name' : 'created_at', { ascending: Boolean(normalizedTerm) })
+    .range(from, to)
+
   if (result.error) throw result.error
-  const rows = (result.data ?? []) as DirectoryFamily[]
-  const value: FamilyPage = { rows, count: result.count ?? null, hasMore: rows.length === PAGE_SIZE && (result.count == null || to + 1 < result.count) }
+
+  const received = (result.data ?? []) as DirectoryFamily[]
+  const value: FamilyPage = {
+    rows: received.slice(0, PAGE_SIZE),
+    count: result.count ?? null,
+    hasMore: hasNextPage(received.length, result.count ?? null, from),
+  }
   familyCache.set(key, { ...value, savedAt: Date.now() })
   return value
 }
@@ -213,10 +245,19 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
     setLoading(true)
     setError('')
     try {
-      const [peopleResult, familyResult] = await Promise.all([fetchPeoplePage(0, queryTerm), fetchFamilyPage(0, queryTerm)])
+      const [peopleResult, familyResult] = await Promise.all([
+        fetchPeoplePage(0, queryTerm),
+        fetchFamilyPage(0, queryTerm),
+      ])
       if (requestId !== requestRef.current) return
-      setPeople(peopleResult.rows); setPeopleCount(peopleResult.count); setPeopleHasMore(peopleResult.hasMore); setPeoplePage(0)
-      setFamilies(familyResult.rows); setFamilyCount(familyResult.count); setFamilyHasMore(familyResult.hasMore); setFamilyPage(0)
+      setPeople(peopleResult.rows)
+      setPeopleCount(peopleResult.count)
+      setPeopleHasMore(peopleResult.hasMore)
+      setPeoplePage(0)
+      setFamilies(familyResult.rows)
+      setFamilyCount(familyResult.count)
+      setFamilyHasMore(familyResult.hasMore)
+      setFamilyPage(0)
     } catch (err) {
       if (requestId !== requestRef.current) return
       setError(err instanceof Error ? err.message : 'تعذر تحميل الدليل.')
@@ -227,21 +268,28 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
 
   useEffect(() => {
     const value = initialTerm.trim()
-    setTerm(initialTerm); setSubmittedTerm(value); void reload(value)
+    setTerm(initialTerm)
+    setSubmittedTerm(value)
+    void reload(value)
   }, [initialTerm, reload])
 
   useEffect(() => {
     setTab(initialTab)
   }, [initialTab])
 
-  useEffect(() => () => { if (debounceRef.current) window.clearTimeout(debounceRef.current) }, [])
+  useEffect(() => () => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current)
+  }, [])
 
   function updateTerm(value: string) {
     setTerm(value)
     if (debounceRef.current) window.clearTimeout(debounceRef.current)
     const normalized = value.trim()
     if (normalized.length === 1) return
-    debounceRef.current = window.setTimeout(() => { setSubmittedTerm(normalized); void reload(normalized) }, 360)
+    debounceRef.current = window.setTimeout(() => {
+      setSubmittedTerm(normalized)
+      void reload(normalized)
+    }, 360)
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -249,39 +297,57 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
     if (debounceRef.current) window.clearTimeout(debounceRef.current)
     const value = term.trim()
     if (value.length === 1) return
-    setSubmittedTerm(value); void reload(value)
+    setSubmittedTerm(value)
+    void reload(value)
   }
 
   function clearSearch() {
     if (debounceRef.current) window.clearTimeout(debounceRef.current)
-    setTerm(''); setSubmittedTerm(''); void reload('')
+    setTerm('')
+    setSubmittedTerm('')
+    void reload('')
   }
 
   async function loadMore(kind: 'people' | 'families') {
-    setLoadingMore(kind); setError('')
+    if (loadingMore) return
+    setLoadingMore(kind)
+    setError('')
     try {
       if (kind === 'people') {
         const nextPage = peoplePage + 1
         const result = await fetchPeoplePage(nextPage, submittedTerm)
         setPeople((current) => [...current, ...result.rows.filter((row) => !current.some((old) => old.id === row.id))])
-        setPeopleCount(result.count); setPeopleHasMore(result.hasMore); setPeoplePage(nextPage)
+        setPeopleCount(result.count)
+        setPeopleHasMore(result.hasMore)
+        setPeoplePage(nextPage)
       } else {
         const nextPage = familyPage + 1
         const result = await fetchFamilyPage(nextPage, submittedTerm)
         setFamilies((current) => [...current, ...result.rows.filter((row) => !current.some((old) => old.id === row.id))])
-        setFamilyCount(result.count); setFamilyHasMore(result.hasMore); setFamilyPage(nextPage)
+        setFamilyCount(result.count)
+        setFamilyHasMore(result.hasMore)
+        setFamilyPage(nextPage)
       }
-    } catch (err) { setError(err instanceof Error ? err.message : 'تعذر تحميل المزيد.') } finally { setLoadingMore(null) }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'تعذر تحميل المزيد.')
+    } finally {
+      setLoadingMore(null)
+    }
   }
 
   const showPeople = tab === 'all' || tab === 'people'
   const showFamilies = tab === 'all' || tab === 'families'
   const waitingForSecondCharacter = term.trim().length === 1
+  const canLoadMoreFamilies = familyHasMore || (familyCount != null && families.length < familyCount)
 
   return (
     <section className="directory-v2-page">
       <div className="directory-v2-hero">
-        <div className="directory-v2-heading"><span className="directory-kicker">دليل صلة</span><h1>اعثر على الشخص أو العائلة بسرعة</h1><p>بحث عربي ذكي يتجاهل الهمزات واختلاف التاء المربوطة، مع تحميل تدريجي مناسب للجوال.</p></div>
+        <div className="directory-v2-heading">
+          <span className="directory-kicker">دليل صلة</span>
+          <h1>اعثر على الشخص أو العائلة بسرعة</h1>
+          <p>بحث عربي ذكي يتجاهل الهمزات واختلاف التاء المربوطة، مع تحميل تدريجي مناسب للجوال.</p>
+        </div>
         <form className="directory-search-box" onSubmit={submit} role="search">
           <span className="directory-search-icon" aria-hidden="true">⌕</span>
           <input value={term} onChange={(event) => updateTerm(event.target.value)} placeholder="ابحث بالاسم…" autoComplete="off" enterKeyHint="search" aria-label="البحث في دليل الأشخاص والعائلات" />
@@ -297,10 +363,37 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
       </div>
 
       {error && <div className="directory-inline-error" role="alert">{error}</div>}
-      {loading ? <div className="directory-skeleton-list" aria-label="جارٍ تحميل الدليل">{Array.from({ length: 5 }).map((_, index) => <span key={index} />)}</div> : (
+      {loading ? (
+        <div className="directory-skeleton-list" aria-label="جارٍ تحميل الدليل">
+          {Array.from({ length: 5 }).map((_, index) => <span key={index} />)}
+        </div>
+      ) : (
         <div className="directory-result-stack" aria-live="polite">
-          {showPeople && <section className="directory-result-section"><header><div><span>الأفراد</span><h2>{submittedTerm ? `نتائج «${submittedTerm}»` : 'أحدث الأفراد المعتمدين'}</h2></div>{peopleCount != null && <strong title="عدد تقديري سريع">≈{peopleCount}</strong>}</header>{people.length ? <div className="directory-person-list">{people.map((item) => <PersonCard key={item.id} item={item} onOpen={onOpenPerson} />)}</div> : <div className="directory-empty">لا توجد نتائج أشخاص مطابقة.</div>}{peopleHasMore && <button className="directory-more" type="button" disabled={loadingMore === 'people'} onClick={() => void loadMore('people')}>{loadingMore === 'people' ? 'جارٍ التحميل…' : 'عرض 8 أشخاص إضافيين'}</button>}</section>}
-          {showFamilies && <section className="directory-result-section family-results"><header><div><span>العائلات</span><h2>{submittedTerm ? 'العائلات المطابقة' : 'العائلات المعتمدة'}</h2></div>{familyCount != null && <strong title="عدد تقديري سريع">≈{familyCount}</strong>}</header>{families.length ? <div className="directory-family-grid">{families.map((item) => <FamilyCard key={item.id} item={item} onOpen={onOpenFamily} />)}</div> : <div className="directory-empty">لا توجد عائلات مطابقة.</div>}{familyHasMore && <button className="directory-more" type="button" disabled={loadingMore === 'families'} onClick={() => void loadMore('families')}>{loadingMore === 'families' ? 'جارٍ التحميل…' : 'عرض المزيد من العائلات'}</button>}</section>}
+          {showPeople && (
+            <section className="directory-result-section">
+              <header>
+                <div><span>الأفراد</span><h2>{submittedTerm ? `نتائج «${submittedTerm}»` : 'أحدث الأفراد المعتمدين'}</h2></div>
+                {peopleCount != null && <strong title="عدد تقديري سريع">≈{peopleCount}</strong>}
+              </header>
+              {people.length ? <div className="directory-person-list">{people.map((item) => <PersonCard key={item.id} item={item} onOpen={onOpenPerson} />)}</div> : <div className="directory-empty">لا توجد نتائج أشخاص مطابقة.</div>}
+              {peopleHasMore && <button className="directory-more" type="button" disabled={loadingMore === 'people'} onClick={() => void loadMore('people')}>{loadingMore === 'people' ? 'جارٍ التحميل…' : 'عرض 8 أشخاص إضافيين'}</button>}
+            </section>
+          )}
+
+          {showFamilies && (
+            <section className="directory-result-section family-results">
+              <header>
+                <div><span>العائلات</span><h2>{submittedTerm ? 'العائلات المطابقة' : 'العائلات المعتمدة'}</h2></div>
+                {familyCount != null && <strong title="عدد تقديري سريع">≈{familyCount}</strong>}
+              </header>
+              {families.length ? <div className="directory-family-grid">{families.map((item) => <FamilyCard key={item.id} item={item} onOpen={onOpenFamily} />)}</div> : <div className="directory-empty">لا توجد عائلات مطابقة.</div>}
+              {canLoadMoreFamilies && (
+                <button className="directory-more" type="button" disabled={loadingMore === 'families'} onClick={() => void loadMore('families')}>
+                  {loadingMore === 'families' ? 'جارٍ تحميل المزيد…' : 'عرض 8 عائلات إضافية'}
+                </button>
+              )}
+            </section>
+          )}
         </div>
       )}
     </section>

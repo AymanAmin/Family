@@ -12,6 +12,7 @@ const migrations = [
   'supabase/migrations/202608070016_paginated_secondary_moderation.sql',
   'supabase/migrations/202608070017_full_role_scopes_and_moderation.sql',
   'supabase/migrations/202608070018_family_moderator_event_scope_guard.sql',
+  'supabase/migrations/202608070019_my_submission_activity_feed.sql',
 ]
 
 let setup = fs.readFileSync(setupPath, 'utf8').trimEnd()

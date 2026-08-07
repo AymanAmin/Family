@@ -18,6 +18,7 @@ type Props = {
   personId: string
   families: Family[]
   sessionUserId?: string | null
+  isAdmin?: boolean
   onChanged?: () => void | Promise<void>
 }
 
@@ -30,7 +31,7 @@ const membershipLabels: Record<string, string> = {
   other: 'انتماء آخر',
 }
 
-export default function PersonFamilyMemberships({ personId, families, sessionUserId, onChanged }: Props) {
+export default function PersonFamilyMemberships({ personId, families, sessionUserId, isAdmin = false, onChanged }: Props) {
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -60,21 +61,26 @@ export default function PersonFamilyMemberships({ personId, families, sessionUse
     if (!supabase || !sessionUserId || !form.family_id) return
     setBusy(true)
     setMessage('')
+
+    const status = isAdmin ? 'approved' : 'pending'
+    const now = isAdmin ? new Date().toISOString() : null
     const { error } = await supabase.from('person_family_memberships').insert({
       person_id: personId,
       family_id: form.family_id,
       membership_type: form.membership_type,
       is_primary: hasPrimary ? false : form.is_primary,
       notes: form.notes.trim() || null,
-      status: 'pending',
+      status,
       created_by: sessionUserId,
+      approved_by: isAdmin ? sessionUserId : null,
+      approved_at: now,
     })
     setBusy(false)
     if (error) {
       setMessage(error.message)
       return
     }
-    setMessage('تم إرسال الانتماء العائلي للمراجعة.')
+    setMessage(isAdmin ? 'تمت إضافة الانتماء واعتماده مباشرة.' : 'تم إرسال الانتماء العائلي للمراجعة.')
     setForm({ family_id: '', membership_type: 'marriage', is_primary: false, notes: '' })
     await load()
     await onChanged?.()
@@ -111,7 +117,7 @@ export default function PersonFamilyMemberships({ personId, families, sessionUse
           {!hasPrimary && <label className="edit-check"><input type="checkbox" checked={form.is_primary} onChange={(e) => setForm((current) => ({ ...current, is_primary: e.target.checked }))} /><span>اعتبارها العائلة الأساسية</span></label>}
           <label><span>ملاحظة توضيحية</span><textarea rows={3} value={form.notes} placeholder="مثال: زوجة أحد أفراد العائلة" onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></label>
           {message && <div className="record-edit-message">{message}</div>}
-          <button className="primary" type="submit" disabled={busy}>{busy ? 'جارٍ الإرسال…' : 'إرسال للمراجعة'}</button>
+          <button className="primary" type="submit" disabled={busy}>{busy ? 'جارٍ الإرسال…' : isAdmin ? 'إضافة واعتماد' : 'إرسال للمراجعة'}</button>
         </form>
       )}
     </section>

@@ -13,18 +13,22 @@
 - إبقاء دور المستخدم `member` وعدم أخذ الأدوار من `user_metadata`.
 - فصل حساب الدخول عن سجل الشخص داخل شجرة المنطقة.
 
-## القيم العامة المطلوبة في GitHub
+## مشروع Supabase المرتبط
 
-من إعدادات المستودع:
+- Project URL: `https://rtmdaalabudycimnnena.supabase.co`
+- Project Ref: `rtmdaalabudycimnnena`
+- المفتاح المستخدم في المتصفح هو مفتاح `publishable` فقط.
+
+المفتاح القابل للنشر يظهر في المتصفح بطبيعته؛ الحماية الحقيقية تعتمد على RLS. يمنع نهائيًا إضافة `service_role` أو Google Client Secret إلى GitHub.
+
+يمكن وضع القيم كـGitHub Variables من:
 
 `Settings → Secrets and variables → Actions → Variables`
 
-أضف:
-
-- `VITE_SUPABASE_URL`: رابط مشروع Family مثل `https://PROJECT_REF.supabase.co`
+- `VITE_SUPABASE_URL`: `https://rtmdaalabudycimnnena.supabase.co`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`: المفتاح القابل للنشر الخاص بالمشروع.
 
-المفتاح القابل للنشر يظهر في المتصفح بطبيعته؛ الحماية الحقيقية تعتمد على RLS. يمنع نهائيًا إضافة `service_role` أو Google Client Secret إلى GitHub.
+المصدر يحتوي أيضًا على قيم عامة احتياطية حتى لا يتعطل النشر عند عدم إضافة Variables.
 
 ## إعداد Google Cloud
 
@@ -33,8 +37,8 @@
 3. في Authorized JavaScript origins أضف:
    - `https://aymanamin.github.io`
    - `http://localhost:5173` للتطوير المحلي فقط.
-4. في Authorized redirect URIs أضف رابط callback الخاص بمشروع Supabase:
-   - `https://PROJECT_REF.supabase.co/auth/v1/callback`
+4. في Authorized redirect URIs أضف:
+   - `https://rtmdaalabudycimnnena.supabase.co/auth/v1/callback`
 5. فعّل scopes الأساسية فقط:
    - `openid`
    - `email`
@@ -60,7 +64,7 @@
 
 بعد الإعداد:
 
-1. افتح `https://PROJECT_REF.supabase.co/auth/v1/settings` مع مفتاح publishable في ترويسة `apikey`.
+1. افتح `https://rtmdaalabudycimnnena.supabase.co/auth/v1/settings` مع مفتاح publishable في ترويسة `apikey`.
 2. يجب أن تكون قيمة Google تحت `external` مساوية لـ`true`.
 3. افتح الموقع المنشور واضغط «المتابعة باستخدام Google».
 4. بعد الرجوع يجب أن يظهر اسم المستخدم وصورته.

@@ -7,6 +7,7 @@ import PeoplePicker from './components/PeoplePicker'
 import EventPeopleFields, { eventParticipantPayload, eventParticipantsRequired } from './components/EventPeopleFields'
 import { PersonVerifiedBadge } from './components/VerifiedBadge'
 import EventShareButton from './components/EventShareButton'
+import ModerationRequestDetails from './components/ModerationRequestDetails'
 
 const DirectoryScreen = lazy(() => import('./components/DirectoryScreen'))
 const NewsScreen = lazy(() => import('./components/NewsScreen'))
@@ -1340,7 +1341,11 @@ function App() {
             <div className="admin-console-panel">
               {adminTab === 'requests' && (
                 <>
-                  {pending.length ? <div className="review-list">{pending.map((record) => <article className="review-row" key={`${record.table}-${record.id}`}><div><span className="status pending">معلق</span><h3>{record.title}</h3><p>{record.subtitle} · {formatDate(record.created_at)}</p></div><div className="review-actions"><button className="approve" onClick={() => moderate(record, 'approved')} disabled={busy}>اعتماد</button><button className="reject" onClick={() => moderate(record, 'rejected')} disabled={busy}>رفض</button></div></article>)}</div> : <div className="empty-state"><strong>لا توجد طلبات معلقة</strong><span>جميع الطلبات الأساسية تمت مراجعتها.</span></div>}
+                  {pending.length ? <div className="review-list">{pending.map((record) => <article className="review-row moderation-rich-row" key={`${record.table}-${record.id}`}>
+                    <div><span className="status pending">معلق</span><h3>{record.title}</h3><p>{record.subtitle} · {formatDate(record.created_at)}</p></div>
+                    <ModerationRequestDetails requestType={record.table} requestId={record.id} />
+                    <div className="review-actions"><button className="approve" onClick={() => moderate(record, 'approved')} disabled={busy}>اعتماد</button><button className="reject" onClick={() => moderate(record, 'rejected')} disabled={busy}>رفض</button></div>
+                  </article>)}</div> : <div className="empty-state"><strong>لا توجد طلبات معلقة</strong><span>جميع الطلبات الأساسية تمت مراجعتها.</span></div>}
                   {pendingHasMore && <button className="admin-load-more" type="button" disabled={pendingLoadingMore} onClick={() => void loadPending(pending.length, true)}>{pendingLoadingMore ? 'جارٍ تحميل المزيد…' : 'عرض المزيد من الطلبات'}</button>}
                 </>
               )}

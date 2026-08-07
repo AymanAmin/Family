@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import ModerationRequestDetails from './ModerationRequestDetails'
 
 type Row = {
   id: string
@@ -72,7 +73,11 @@ export default function RelationshipChangeQueue({ active, onChanged }: Props) {
       <div className="section-title"><div><span className="eyebrow">تغييرات صلة القرابة</span><h2>طلبات التعديل والحذف</h2><p>التعديلات على العلاقات المنشورة لا تُطبق قبل اعتماد الإدارة.</p></div></div>
       {message && <div className="admin-users-message">{message}</div>}
       {loading ? <div className="admin-users-skeleton"><i /><i /></div> : <div className="review-list">
-        {rows.map((item) => <article className="review-row" key={item.id}><div><span className={`status ${item.action === 'delete' ? 'danger-status' : 'pending'}`}>{item.action === 'delete' ? 'حذف' : 'تعديل'}</span><h3>{item.title}</h3><p>{item.subtitle}</p></div><div className="review-actions"><button className="approve" disabled={busyId===item.id} onClick={() => void review(item,'approved')}>اعتماد</button><button className="reject" disabled={busyId===item.id} onClick={() => void review(item,'rejected')}>رفض</button></div></article>)}
+        {rows.map((item) => <article className="review-row moderation-rich-row" key={item.id}>
+          <div><span className={`status ${item.action === 'delete' ? 'danger-status' : 'pending'}`}>{item.action === 'delete' ? 'حذف' : 'تعديل'}</span><h3>{item.title}</h3><p>{item.subtitle}</p></div>
+          <ModerationRequestDetails requestType="relationship_change" requestId={item.id} />
+          <div className="review-actions"><button className="approve" disabled={busyId===item.id} onClick={() => void review(item,'approved')}>اعتماد</button><button className="reject" disabled={busyId===item.id} onClick={() => void review(item,'rejected')}>رفض</button></div>
+        </article>)}
       </div>}
       {hasMore && <button className="admin-load-more" type="button" disabled={loadingMore} onClick={() => void load(rows.length,true)}>{loadingMore ? 'جارٍ التحميل…' : 'عرض المزيد'}</button>}
     </section>

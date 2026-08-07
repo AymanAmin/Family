@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import EditRequestDiff from './EditRequestDiff'
+import ModerationRequestDetails from './ModerationRequestDetails'
 
 const PAGE_SIZE = 12
 
@@ -184,6 +185,7 @@ export default function Phase3AdminQueue({ active, isAdmin = false, onChanged }:
             return (
               <article className={`review-row secondary-review-row ${expanded ? 'has-details' : ''}`} key={`${item.request_type}-${item.id}`}>
                 <div className="secondary-review-copy"><span className="status pending">{item.request_type === 'edit' ? 'تعديل' : 'انتماء عائلي'}</span><h3>{item.title}</h3><p>{item.subtitle}</p></div>
+                <ModerationRequestDetails requestType={item.request_type} requestId={item.id} />
                 <div className="review-actions secondary-review-actions">
                   {item.request_type === 'edit' && <button className="review-detail-toggle" type="button" onClick={() => setExpandedDiffId(expanded ? null : item.id)}>{expanded ? 'إخفاء التفاصيل' : 'عرض التفاصيل'}</button>}
                   <button className="approve" disabled={busyId === item.id} onClick={() => void review(item, 'approved')}>اعتماد</button>

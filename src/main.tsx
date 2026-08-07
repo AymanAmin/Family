@@ -24,6 +24,7 @@ import './relationship-manager.css'
 import './person-create-combined.css'
 import './contributor-stats.css'
 import './edit-review-diff.css'
+import './tree-action-buttons.css'
 
 function disablePageZoom() {
   document.documentElement.style.touchAction = 'pan-x pan-y'

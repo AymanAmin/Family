@@ -353,7 +353,7 @@ begin
     raise exception 'Invalid review status';
   end if;
 
-  if private.active_role(auth.uid()) not in ('admin', 'super_admin') then
+  if coalesce(private.active_role(auth.uid()), '') not in ('admin', 'super_admin') then
     raise exception 'Not authorized';
   end if;
 
@@ -418,7 +418,7 @@ declare
   v_limit integer := greatest(1, least(coalesce(p_limit, 16), 50));
   v_offset integer := greatest(0, coalesce(p_offset, 0));
 begin
-  if v_role not in ('family_moderator', 'content_moderator', 'admin', 'super_admin') then
+  if coalesce(v_role, '') not in ('family_moderator', 'content_moderator', 'admin', 'super_admin') then
     raise exception 'Not authorized to review pending content';
   end if;
 
@@ -535,7 +535,7 @@ begin
   if p_status not in ('approved', 'rejected') then
     raise exception 'Invalid review status';
   end if;
-  if v_role not in ('family_moderator', 'content_moderator', 'admin', 'super_admin') then
+  if coalesce(v_role, '') not in ('family_moderator', 'content_moderator', 'admin', 'super_admin') then
     raise exception 'Not authorized';
   end if;
 
@@ -604,7 +604,7 @@ declare
   v_limit integer := greatest(1, least(coalesce(p_limit, 13), 50));
   v_offset integer := greatest(0, coalesce(p_offset, 0));
 begin
-  if v_role not in ('family_moderator', 'content_moderator', 'admin', 'super_admin') then
+  if coalesce(v_role, '') not in ('family_moderator', 'content_moderator', 'admin', 'super_admin') then
     raise exception 'Not authorized to review pending changes';
   end if;
 
@@ -669,7 +669,7 @@ declare
   v_event_family_id uuid;
 begin
   if p_status not in ('approved','rejected') then raise exception 'Invalid review status'; end if;
-  if v_role not in ('family_moderator','content_moderator','admin','super_admin') then raise exception 'Not authorized'; end if;
+  if coalesce(v_role, '') not in ('family_moderator','content_moderator','admin','super_admin') then raise exception 'Not authorized'; end if;
 
   if p_request_type = 'membership' then
     select * into v_membership from public.person_family_memberships where id=p_request_id and status='pending' for update;

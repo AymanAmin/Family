@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 
 // One-shot source patch used by GitHub Actions, removed after it succeeds.
+// Retry marker: push settings TypeScript validation fixed.
 const path = 'src/App.tsx'
 let text = fs.readFileSync(path, 'utf8')
 

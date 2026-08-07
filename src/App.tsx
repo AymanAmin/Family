@@ -1177,6 +1177,26 @@ function App() {
               <div><span className="eyebrow">ملف شخص</span><div className="person-title-line"><h1>{selectedPerson.full_name}</h1><PersonVerifiedBadge personId={selectedPerson.id} /></div><p>{selectedPerson.description || 'لا توجد نبذة مضافة لهذا الشخص.'}</p></div>
               <RecordEditButton entityType="people" recordId={selectedPerson.id} createdBy={selectedPerson.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} initialData={{ full_name: selectedPerson.full_name, gender: selectedPerson.gender, birth_year: selectedPerson.birth_year, is_deceased: selectedPerson.is_deceased, death_date: selectedPerson.death_date, description: selectedPerson.description }} onSaved={loadCommunityData} />
             </div>
+            {session && <div className="person-detail-quick-actions" aria-label="إجراءات إضافة مرتبطة بهذا الشخص">
+              <button className="person-profile-action primary-action" type="button" onClick={() => {
+                if (!requireAccount()) return
+                setPersonRelationForm({ relation_type: 'child', related_person_id: selectedPerson.id, notes: '' })
+                setAddMode('person')
+                setView('add')
+              }}>
+                <span className="person-profile-action-icon" aria-hidden="true">＋</span>
+                <span><strong>إضافة فرد مرتبط</strong><small>أضف الشخص وحدد صلته في نفس الخطوة</small></span>
+              </button>
+              <button className="person-profile-action secondary-action" type="button" onClick={() => {
+                if (!requireAccount()) return
+                setRelationshipForm((current) => ({ ...current, source_person_id: selectedPerson.id }))
+                setAddMode('relationship')
+                setView('add')
+              }}>
+                <span className="person-profile-action-icon" aria-hidden="true">⌘</span>
+                <span><strong>إضافة صلة فقط</strong><small>اربط هذا الشخص بشخص موجود</small></span>
+              </button>
+            </div>}
             <div className="detail-facts">
               <article><span>العائلة الأساسية</span><strong>{familyName(selectedPerson.families) || 'غير محددة'}</strong></article>
               <article><span>سنة الميلاد</span><strong>{selectedPerson.birth_year || 'غير محددة'}</strong></article>

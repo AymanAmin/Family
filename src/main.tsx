@@ -16,6 +16,7 @@ import './family-tree-screen.css'
 import './tree-pan-fix.css'
 import './scale-ui-v2.css'
 import './moderation-pagination.css'
+import './role-management.css'
 import './admin-death.css'
 
 const rootElement = document.getElementById('root')

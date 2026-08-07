@@ -246,6 +246,7 @@ function App() {
   const [relationshipForm, setRelationshipForm] = useState({ source_person_id: '', relation_type: 'parent', target_person_id: '', notes: '' })
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+  const canModerate = profile?.role === 'family_moderator' || profile?.role === 'content_moderator' || isAdmin
 
   const showMessage = useCallback((text: string, tone: MessageTone = 'info') => {
     setMessage(text)
@@ -315,7 +316,7 @@ function App() {
   }, [])
 
   const loadPending = useCallback(async (offset = 0, append = false) => {
-    if (!supabase || !isAdmin) {
+    if (!supabase || !canModerate) {
       setPending([])
       setPendingHasMore(false)
       setPendingLoadingMore(false)
@@ -373,7 +374,7 @@ function App() {
     setPending(rows.sort((a, b) => a.created_at.localeCompare(b.created_at)).slice(0, PENDING_PAGE_SIZE))
     setPendingHasMore(false)
     setPendingLoadingMore(false)
-  }, [isAdmin])
+  }, [canModerate])
 
   useEffect(() => {
     if (!supabase) {
@@ -777,15 +778,24 @@ function App() {
   }
 
   async function moderate(record: PendingRecord, status: 'approved' | 'rejected') {
-    if (!supabase || !session || !isAdmin) return
+    if (!supabase || !session || !canModerate) return
     setBusy(true)
 
-    const result = record.table === 'account_link_requests'
-      ? await supabase.rpc('review_account_link_request', { p_request_id: record.id, p_status: status })
-      : await supabase
-          .from(record.table)
-          .update({ status, approved_by: session.user.id, approved_at: status === 'approved' ? new Date().toISOString() : null })
-          .eq('id', record.id)
+    let result = await supabase.rpc('review_pending_moderation_record', {
+      p_table_name: record.table,
+      p_record_id: record.id,
+      p_status: status,
+    })
+
+    // Compatibility fallback for administrators until migration 017 is applied.
+    if (result.error?.message.toLowerCase().includes('does not exist') && isAdmin) {
+      result = record.table === 'account_link_requests'
+        ? await supabase.rpc('review_account_link_request', { p_request_id: record.id, p_status: status })
+        : await supabase
+            .from(record.table)
+            .update({ status, approved_by: session.user.id, approved_at: status === 'approved' ? new Date().toISOString() : null })
+            .eq('id', record.id)
+    }
 
     setBusy(false)
     if (result.error) return showMessage(friendlyError(result.error.message), 'error')
@@ -809,7 +819,7 @@ function App() {
           <button onClick={() => setView('search')} className={view === 'search' ? 'active' : ''}>البحث</button>
           <button onClick={() => setView('tree')} className={view === 'tree' ? 'active' : ''}>شجرة العائلة</button>
           <button onClick={() => requireAccount() && setView('add')} className={view === 'add' ? 'active' : ''}>إضافة</button>
-          {isAdmin && <button onClick={() => setView('admin')} className={view === 'admin' ? 'active' : ''}>الإدارة</button>}
+          {canModerate && <button onClick={() => setView('admin')} className={view === 'admin' ? 'active' : ''}>الإدارة</button>}
         </nav>
         <div className="account-area">
           {sessionLoading ? <span className="loading-dot" /> : session ? (
@@ -827,7 +837,7 @@ function App() {
         <button type="button" onClick={() => setView('search')} className={view === 'search' ? 'active' : ''}><span className="mobile-nav-icon">⌕</span><span>الدليل</span></button>
         <button type="button" onClick={() => requireAccount() && setView('add')} className={view === 'add' ? 'active add-nav-action' : 'add-nav-action'}><span className="mobile-nav-icon">＋</span><span>إضافة</span></button>
         <button type="button" onClick={() => setView('tree')} className={view === 'tree' ? 'active' : ''}><span className="mobile-nav-icon">⌘</span><span>الشجرة</span></button>
-        {isAdmin ? <button type="button" onClick={() => setView('admin')} className={view === 'admin' ? 'active' : ''}><span className="mobile-nav-icon">▦</span><span>الإدارة</span></button> : <button type="button" onClick={() => { if (session) setView('account'); else { setView('home'); window.setTimeout(() => document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' }), 60) } }} className={view === 'account' ? 'active' : ''}><span className="mobile-nav-icon">◉</span><span>{session ? 'حسابي' : 'دخول'}</span></button>}
+        {canModerate ? <button type="button" onClick={() => setView('admin')} className={view === 'admin' ? 'active' : ''}><span className="mobile-nav-icon">▦</span><span>الإدارة</span></button> : <button type="button" onClick={() => { if (session) setView('account'); else { setView('home'); window.setTimeout(() => document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' }), 60) } }} className={view === 'account' ? 'active' : ''}><span className="mobile-nav-icon">◉</span><span>{session ? 'حسابي' : 'دخول'}</span></button>}
       </nav>
 
       {message && <div className={`global-message ${messageTone}`} role="status"><span>{message}</span><button onClick={() => setMessage('')}>×</button></div>}
@@ -1071,7 +1081,7 @@ function App() {
           </section>
         )}
 
-        {schemaReady && view === 'admin' && isAdmin && (
+        {schemaReady && view === 'admin' && canModerate && (
           <section className="page-section admin-console">
             <div className="admin-console-hero">
               <div><span className="eyebrow">لوحة الإدارة</span><h1>إدارة المحتوى والمستخدمين</h1><p>كل قسم يُحمّل بياناته عند فتحه فقط لتبقى اللوحة سريعة على الجوال.</p></div>
@@ -1091,7 +1101,7 @@ function App() {
                   {pendingHasMore && <button className="admin-load-more" type="button" disabled={pendingLoadingMore} onClick={() => void loadPending(pending.length, true)}>{pendingLoadingMore ? 'جارٍ تحميل المزيد…' : 'عرض المزيد من الطلبات'}</button>}
                 </>
               )}
-              {adminTab === 'edits' && <Suspense fallback={<LazyPanelFallback />}><Phase3AdminQueue active={adminTab === 'edits'} onChanged={loadCommunityData} /></Suspense>}
+              {adminTab === 'edits' && <Suspense fallback={<LazyPanelFallback />}><Phase3AdminQueue active={adminTab === 'edits' && canModerate} isAdmin={isAdmin} onChanged={loadCommunityData} /></Suspense>}
               {adminTab === 'users' && profile?.is_primary_admin && <Suspense fallback={<LazyPanelFallback />}><AdminUserRoles active={adminTab === 'users'} currentUserId={session?.user.id} /></Suspense>}
             </div>
           </section>

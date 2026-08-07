@@ -12,37 +12,8 @@
     <link rel="manifest" href="/Family/manifest.webmanifest" />
     <link rel="icon" type="image/png" sizes="192x192" href="/Family/icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/Family/icons/apple-touch-icon.png" />
-    <title>صلة القرابة</title>
-    <script>
-      (() => {
-        const oldName = 'صلة المنطقة'
-        const newName = 'صلة القرابة'
-        const replaceBrandText = (root) => {
-          const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-          let node
-          while ((node = walker.nextNode())) {
-            if (node.nodeValue && node.nodeValue.includes(oldName)) {
-              node.nodeValue = node.nodeValue.replaceAll(oldName, newName)
-            }
-          }
-        }
-        document.addEventListener('DOMContentLoaded', () => {
-          replaceBrandText(document.body)
-          new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-              for (const addedNode of mutation.addedNodes) {
-                if (addedNode.nodeType === Node.TEXT_NODE) {
-                  if (addedNode.nodeValue && addedNode.nodeValue.includes(oldName)) addedNode.nodeValue = addedNode.nodeValue.replaceAll(oldName, newName)
-                } else if (addedNode.nodeType === Node.ELEMENT_NODE) {
-                  replaceBrandText(addedNode)
-                }
-              }
-            }
-          }).observe(document.body, { childList: true, subtree: true })
-        })
-      })()
-    </script>
-    <script type="module" crossorigin src="/Family/assets/index-C3fkNKCD.js"></script>
+    <title>صلة المنطقة</title>
+    <script type="module" crossorigin src="/Family/assets/index-DEpwKuu_.js"></script>
     <link rel="modulepreload" crossorigin href="/Family/assets/jsx-runtime-v6ECk5Em.js">
     <link rel="stylesheet" crossorigin href="/Family/assets/index-BddVrYGR.css">
   </head>

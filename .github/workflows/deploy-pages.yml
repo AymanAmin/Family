@@ -39,15 +39,18 @@ jobs:
       - name: Keep a production build in the repository root
         shell: bash
         run: |
-          rm -rf assets
+          rm -rf assets icons
           cp -R dist/assets assets
+          cp -R dist/icons icons
           cp dist/index.html index.html
           cp dist/404.html 404.html
+          cp dist/manifest.webmanifest manifest.webmanifest
+          cp dist/sw.js sw.js
           touch .nojekyll
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html 404.html .nojekyll assets
+          git add index.html 404.html .nojekyll assets icons manifest.webmanifest sw.js
 
           if git diff --cached --quiet; then
             echo "Published root files are already current."

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import RecordEditButton from './RecordEditButton'
 import './NewsScreen.css'
 
 type RelatedFamily = { name?: string } | { name?: string }[] | null
@@ -19,6 +20,7 @@ type NewsItem = {
   event_date: string | null
   location_name: string | null
   family_id: string | null
+  created_by: string
   created_at: string
   families?: RelatedFamily
   mentions?: EventMention[]
@@ -28,6 +30,8 @@ type Props = {
   onBack: () => void
   onAdd: () => void
   onOpenPerson: (personId: string) => void | Promise<void>
+  isAdmin: boolean
+  sessionUserId: string | null | undefined
 }
 
 const PAGE_SIZE = 8
@@ -75,7 +79,7 @@ function formatDate(value: string | null): string {
   return new Intl.DateTimeFormat('ar-SA', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(value))
 }
 
-export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
+export default function NewsScreen({ onBack, onAdd, onOpenPerson, isAdmin, sessionUserId }: Props) {
   const [items, setItems] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -95,7 +99,7 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
 
     const result = await supabase
       .from('events')
-      .select('id,event_type,title,description,event_date,location_name,family_id,created_at,families(name)')
+      .select('id,event_type,title,description,event_date,location_name,family_id,created_by,created_at,families(name)')
       .eq('status', 'approved')
       .order('event_date', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
@@ -192,6 +196,26 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
                         })}
                       </div>
                     ) : null}
+                    {isAdmin && (
+                      <div className="news-admin-edit">
+                        <RecordEditButton
+                          entityType="events"
+                          recordId={item.id}
+                          createdBy={item.created_by}
+                          sessionUserId={sessionUserId}
+                          isAdmin
+                          initialData={{
+                            event_type: item.event_type,
+                            title: item.title,
+                            family_id: item.family_id,
+                            event_date: item.event_date,
+                            location_name: item.location_name,
+                            description: item.description,
+                          }}
+                          onSaved={() => loadPage(0, false)}
+                        />
+                      </div>
+                    )}
                   </div>
                 </article>
               )

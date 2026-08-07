@@ -1,0 +1,253 @@
+/* Event cards mirror the branded WhatsApp artwork while staying compact inside the app. */
+.event-card,
+.news-card {
+  --event-ink: #234a78;
+  --event-muted: #6d7d83;
+  --event-accent: #4f9eaa;
+  --event-accent-2: #ef875b;
+  --event-soft: #edf7f5;
+  --event-line: rgb(79 158 170 / 22%);
+  --event-symbol: '◇';
+  --event-bg: linear-gradient(145deg, #ffffff, #f8fcfb);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-color: var(--event-line) !important;
+  background: var(--event-bg) !important;
+  box-shadow: 0 14px 38px rgb(35 74 120 / 8%) !important;
+}
+
+.event-card::before,
+.news-card::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 9% 12%, transparent 0 31px, color-mix(in srgb, var(--event-accent) 15%, transparent) 32px 33px, transparent 34px),
+    radial-gradient(circle at 18% 7%, transparent 0 18px, color-mix(in srgb, var(--event-accent-2) 11%, transparent) 19px 20px, transparent 21px);
+  content: '';
+  opacity: .8;
+}
+
+.event-card::after,
+.news-card::after {
+  position: absolute;
+  z-index: 0;
+  inset-inline-start: 16px;
+  bottom: 7px;
+  pointer-events: none;
+  color: var(--event-accent);
+  content: var(--event-symbol);
+  font-family: 'Noto Kufi Arabic', sans-serif;
+  font-size: clamp(4.2rem, 10vw, 7rem);
+  font-weight: 700;
+  line-height: 1;
+  opacity: .055;
+  transform: rotate(-9deg);
+}
+
+.event-card > *,
+.news-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.event-card h3,
+.news-card h2 {
+  color: var(--event-ink) !important;
+  font-family: 'Noto Kufi Arabic', sans-serif !important;
+  letter-spacing: -.02em;
+}
+
+.event-card p,
+.news-card .news-description,
+.news-card .news-meta {
+  color: var(--event-muted) !important;
+}
+
+.event-card .event-top > span,
+.news-card .news-type-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--event-accent) 22%, transparent);
+  border-radius: 999px;
+  color: var(--event-accent) !important;
+  background: color-mix(in srgb, var(--event-soft) 90%, white) !important;
+  box-shadow: 0 5px 14px rgb(35 74 120 / 5%);
+  font-weight: 900;
+}
+
+.event-card .event-top time,
+.news-card .news-card-kicker time {
+  border-color: color-mix(in srgb, var(--event-accent) 22%, transparent) !important;
+  color: var(--event-ink) !important;
+  background: linear-gradient(135deg, #fffdf9, color-mix(in srgb, var(--event-soft) 68%, white)) !important;
+}
+
+.news-card .news-card-kicker time::before {
+  border-color: var(--event-accent) !important;
+  background:
+    linear-gradient(180deg, var(--event-accent-2) 0 5px, transparent 5px),
+    linear-gradient(135deg, #fff, var(--event-soft)) !important;
+}
+
+.news-card .news-card-accent {
+  background:
+    radial-gradient(circle at 50% 10%, color-mix(in srgb, var(--event-accent) 13%, transparent), transparent 7rem),
+    color-mix(in srgb, var(--event-soft) 74%, white) !important;
+}
+
+.news-card .news-card-accent span {
+  color: var(--event-accent) !important;
+  background: color-mix(in srgb, var(--event-soft) 42%, white) !important;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--event-accent) 12%, transparent) !important;
+}
+
+.news-card .news-meta b {
+  color: var(--event-accent) !important;
+}
+
+.news-card .news-people button,
+.event-card .event-mention-chip {
+  border-color: color-mix(in srgb, var(--event-accent) 25%, #dce8e5) !important;
+  color: color-mix(in srgb, var(--event-accent) 82%, #234a78) !important;
+  background: color-mix(in srgb, var(--event-soft) 76%, white) !important;
+}
+
+/* Wedding: warm peach, ivory and restrained gold. */
+.event-type-wedding,
+.news-type-wedding {
+  --event-ink: #244b77;
+  --event-muted: #766f6a;
+  --event-accent: #d97350;
+  --event-accent-2: #d9a451;
+  --event-soft: #fff0e4;
+  --event-line: rgb(218 153 111 / 27%);
+  --event-symbol: '♡';
+  --event-bg:
+    radial-gradient(circle at 7% 7%, rgb(239 135 91 / 13%), transparent 11rem),
+    radial-gradient(circle at 95% 100%, rgb(217 164 81 / 9%), transparent 12rem),
+    linear-gradient(145deg, #fffefc, #fff8f2);
+}
+
+/* Death/condolence: calm navy and muted teal, with no celebratory color. */
+.event-type-death,
+.news-type-death {
+  --event-ink: #263f5f;
+  --event-muted: #65727a;
+  --event-accent: #54798b;
+  --event-accent-2: #8eb8b1;
+  --event-soft: #edf3f4;
+  --event-line: rgb(75 111 132 / 23%);
+  --event-symbol: '✦';
+  --event-bg:
+    linear-gradient(90deg, rgb(38 63 95 / 5%), transparent 23%),
+    radial-gradient(circle at 94% 7%, rgb(84 121 139 / 12%), transparent 10rem),
+    linear-gradient(145deg, #fffefd, #f5f8f9);
+}
+
+/* Newborn: soft mint and turquoise. */
+.event-type-birth,
+.news-type-birth {
+  --event-ink: #24556f;
+  --event-muted: #677c7a;
+  --event-accent: #318b83;
+  --event-accent-2: #ef9b63;
+  --event-soft: #e7f7f2;
+  --event-line: rgb(70 157 144 / 24%);
+  --event-symbol: '☆';
+  --event-bg:
+    radial-gradient(circle at 7% 8%, rgb(87 191 175 / 17%), transparent 10rem),
+    radial-gradient(circle at 96% 93%, rgb(239 155 99 / 8%), transparent 10rem),
+    linear-gradient(145deg, #ffffff, #f4fbf9);
+}
+
+/* Naming / samaya: turquoise with a gentle moon-like gold accent. */
+.event-type-naming,
+.news-type-naming {
+  --event-ink: #244e72;
+  --event-muted: #6a797c;
+  --event-accent: #398f96;
+  --event-accent-2: #d6a04d;
+  --event-soft: #eaf7f5;
+  --event-line: rgb(57 143 150 / 23%);
+  --event-symbol: '☾';
+  --event-bg:
+    radial-gradient(circle at 10% 6%, rgb(214 160 77 / 10%), transparent 9rem),
+    radial-gradient(circle at 96% 94%, rgb(57 143 150 / 12%), transparent 11rem),
+    linear-gradient(145deg, #fffefa, #f4fbfa);
+}
+
+/* Graduation: Sila navy with dignified gold. */
+.event-type-graduation,
+.news-type-graduation {
+  --event-ink: #21466f;
+  --event-muted: #697782;
+  --event-accent: #315f86;
+  --event-accent-2: #d39b42;
+  --event-soft: #f1f5f7;
+  --event-line: rgb(49 95 134 / 22%);
+  --event-symbol: '◇';
+  --event-bg:
+    radial-gradient(circle at 8% 10%, rgb(211 155 66 / 13%), transparent 10rem),
+    radial-gradient(circle at 96% 90%, rgb(49 95 134 / 10%), transparent 12rem),
+    linear-gradient(145deg, #fffefd, #f7f9fb);
+}
+
+/* General family news: the core Sila navy + teal identity. */
+.event-type-general,
+.news-type-general {
+  --event-ink: #234a78;
+  --event-muted: #687d84;
+  --event-accent: #3f8e9d;
+  --event-accent-2: #ef9a52;
+  --event-soft: #eaf6f4;
+  --event-line: rgb(63 142 157 / 23%);
+  --event-symbol: '◈';
+  --event-bg:
+    radial-gradient(circle at 7% 6%, rgb(35 74 120 / 12%), transparent 10rem),
+    radial-gradient(circle at 98% 100%, rgb(101 183 178 / 15%), transparent 13rem),
+    linear-gradient(145deg, #fffefc, #f3faf9);
+}
+
+/* Other: neutral sand with a teal Sila accent. */
+.event-type-other,
+.news-type-other {
+  --event-ink: #28546f;
+  --event-muted: #716f69;
+  --event-accent: #4e8d8c;
+  --event-accent-2: #d99a61;
+  --event-soft: #f2f6f2;
+  --event-line: rgb(78 141 140 / 21%);
+  --event-symbol: '•';
+  --event-bg:
+    radial-gradient(circle at 8% 8%, rgb(217 154 97 / 10%), transparent 9rem),
+    linear-gradient(145deg, #fffefd, #f8f8f3);
+}
+
+/* A small ornamental divider under home-card headings, inspired by the share artwork. */
+.event-card h3::after {
+  display: block;
+  width: 52px;
+  height: 2px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--event-accent), var(--event-accent-2));
+  content: '';
+  opacity: .55;
+}
+
+@media (max-width: 720px) {
+  .event-card,
+  .news-card {
+    border-radius: 22px !important;
+  }
+
+  .event-card::after,
+  .news-card::after {
+    font-size: 4.6rem;
+  }
+}

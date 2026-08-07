@@ -1,0 +1,215 @@
+/* In-place family/branch membership management inside a person's profile. */
+.family-memberships-section .section-title {
+  align-items: flex-start;
+}
+
+.membership-section-help {
+  max-width: 620px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: .76rem;
+  line-height: 1.8;
+}
+
+.membership-add-link {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 7px 11px;
+  border: 1px solid #c7dfda;
+  border-radius: 12px;
+  color: #285f78;
+  background: #f3faf8;
+}
+
+.membership-card {
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.membership-card.primary-membership {
+  border-color: #a9d2c9;
+  background:
+    radial-gradient(circle at 92% 12%, rgb(116 197 185 / 17%), transparent 9rem),
+    linear-gradient(145deg, #fbfffd, #f2faf7);
+}
+
+.membership-card.is-editing {
+  border-color: #79b9b0;
+  box-shadow: 0 12px 30px rgb(35 74 120 / 8%);
+}
+
+.membership-title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.primary-family-badge {
+  display: inline-flex;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #21695f;
+  background: #ddf3ec;
+  font-size: .6rem;
+  font-weight: 900;
+}
+
+.membership-card-actions {
+  display: flex;
+  max-width: 190px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.membership-inline-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.membership-edit-action,
+.membership-delete-action,
+.make-primary-family {
+  min-height: 34px;
+  padding: 5px 9px;
+  border-radius: 10px;
+  font-size: .66rem;
+  font-weight: 850;
+}
+
+.membership-edit-action,
+.make-primary-family {
+  border: 1px solid #bddbd5;
+  color: #286c71;
+  background: #f4fbf9;
+}
+
+.membership-delete-action {
+  border: 1px solid #ebcccc;
+  color: #a33f43;
+  background: #fff6f5;
+}
+
+.membership-card-editor {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  margin-top: 3px;
+  padding: 13px;
+  border: 1px solid #d7e7e3;
+  border-radius: 15px;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(121 201 190 / 15%), transparent 10rem),
+    #fbfdfc;
+}
+
+.membership-editor-title,
+.membership-form-heading {
+  display: grid;
+  gap: 3px;
+}
+
+.membership-editor-title strong,
+.membership-form-heading strong {
+  color: #234a78;
+  font-family: 'Noto Kufi Arabic';
+  font-size: .82rem;
+}
+
+.membership-editor-title small,
+.membership-form-heading small {
+  color: var(--muted);
+  font-size: .66rem;
+  line-height: 1.6;
+}
+
+.membership-card-editor label {
+  display: grid;
+  gap: 5px;
+  color: #365967;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.membership-card-editor input,
+.membership-card-editor select,
+.membership-card-editor textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid #d4e4df;
+  border-radius: 11px;
+  outline: 0;
+  color: var(--ink);
+  background: white;
+  font: inherit;
+}
+
+.membership-card-editor textarea {
+  min-height: 64px;
+  resize: vertical;
+}
+
+.membership-card-editor input:focus,
+.membership-card-editor select:focus,
+.membership-card-editor textarea:focus {
+  border-color: #68aaa4;
+  box-shadow: 0 0 0 3px rgb(79 158 170 / 10%);
+}
+
+.membership-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.membership-editor-actions button {
+  min-height: 40px;
+}
+
+.membership-add-form {
+  border-color: #cfe3de;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(121 201 190 / 16%), transparent 11rem),
+    linear-gradient(145deg, #fbfefd, #f3faf7);
+}
+
+@media (max-width: 760px) {
+  .family-memberships-section .section-title {
+    gap: 12px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .membership-add-link {
+    align-self: flex-start;
+  }
+
+  .membership-card {
+    grid-template-columns: 46px minmax(0, 1fr) !important;
+    align-items: start;
+  }
+
+  .membership-card-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: none;
+    justify-content: flex-start;
+    padding-inline-start: 57px;
+  }
+
+  .membership-inline-actions {
+    margin-inline-start: auto;
+  }
+
+  .membership-card-editor {
+    padding: 11px;
+  }
+
+  .membership-editor-actions {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+}

@@ -15,7 +15,8 @@ const DuplicatePersonCheck = lazy(() => import('./components/DuplicatePersonChec
 const FamilyTreeScreen = lazy(() => import('./components/FamilyTreeScreen'))
 const AdminUserRoles = lazy(() => import('./components/AdminUserRoles'))
 const MySubmissionActivity = lazy(() => import('./components/MySubmissionActivity'))
-const DirectRelationshipEditor = lazy(() => import('./components/DirectRelationshipEditor'))
+const DirectRelationshipManager = lazy(() => import('./components/DirectRelationshipManager'))
+const RelationshipChangeQueue = lazy(() => import('./components/RelationshipChangeQueue'))
 const FamilyPicker = lazy(() => import('./components/FamilyPicker'))
 import './details.css'
 import './nasab-inspired.css'
@@ -915,7 +916,7 @@ function App() {
             <section className="home-content-grid">
               <article className="home-feed">
                 <div className="home-section-heading"><h2>آخر أخبار العائلة</h2><button type="button" onClick={() => setView('add')}>إضافة مناسبة</button></div>
-                {approvedEvents.length ? <div className="nasab-event-list">{approvedEvents.slice(0, 4).map((item) => <div className="nasab-event-item" key={item.id}><span className="nasab-event-date">{formatDate(item.event_date)}</span><div><h3>{item.title}</h3><p>{eventLabels[item.event_type] || item.event_type} · {item.location_name || familyName(item.families) || 'المكان غير محدد'}</p></div></div>)}</div> : <div className="empty-state compact">لا توجد أخبار أو مناسبات معتمدة بعد.</div>}
+                {approvedEvents.length ? <div className="nasab-event-list">{approvedEvents.slice(0, 4).map((item) => <div className="nasab-event-item" key={item.id}><span className="nasab-event-date">{formatDate(item.event_date)}</span><div><h3>{item.title}</h3><p>{eventLabels[item.event_type] || item.event_type} · {item.location_name || familyName(item.families) || 'المكان غير محدد'}</p>{item.mentions?.length ? <div className="event-mention-chips">{item.mentions.map((mention) => { const id = personId(mention.people); const name = personName(mention.people); return name ? <button className="event-mention-chip" type="button" key={`${item.id}-${id}-${mention.participant_role}`} onClick={() => id && void openPersonById(id)}>@ {name}</button> : null })}</div> : null}</div></div>)}</div> : <div className="empty-state compact">لا توجد أخبار أو مناسبات معتمدة بعد.</div>}
               </article>
 
               <article className="family-tree-preview">
@@ -1039,8 +1040,8 @@ function App() {
               <article><span>سنة الميلاد</span><strong>{selectedPerson.birth_year || 'غير محددة'}</strong></article>
               <article className={selectedPerson.is_deceased ? 'deceased-fact' : 'alive-fact'}><span>الحالة</span><strong>{selectedPerson.is_deceased ? 'متوفى' : 'على قيد الحياة'}</strong>{selectedPerson.is_deceased && <small>تاريخ الوفاة: {formatDate(selectedPerson.death_date)}</small>}</article>
             </div>
-            <PersonFamilyMemberships personId={selectedPerson.id} recordCreatedBy={selectedPerson.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} onChanged={async () => { await loadCommunityData(); await openPersonById(selectedPerson.id) }} />
-            <Suspense fallback={<LazyPanelFallback />}><DirectRelationshipEditor personId={selectedPerson.id} sessionUserId={session?.user.id} isAdmin={isAdmin} onChanged={() => setRelationshipRefresh((value) => value + 1)} /></Suspense>
+            <PersonFamilyMemberships personId={selectedPerson.id} recordCreatedBy={selectedPerson.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} isLinkedPerson={profile?.linked_person_id === selectedPerson.id} onChanged={async () => { await loadCommunityData(); await openPersonById(selectedPerson.id) }} />
+            <Suspense fallback={<LazyPanelFallback />}><DirectRelationshipManager personId={selectedPerson.id} sessionUserId={session?.user.id} isAdmin={isAdmin} onOpenPerson={(id) => void openPersonById(id)} onChanged={() => setRelationshipRefresh((value) => value + 1)} /></Suspense>
             {session && !profile?.linked_person_id && (
               <div className="link-account-card">
                 <div><strong>هل هذا سجلك؟</strong><p>قدّم طلب ربط حسابك بهذا الشخص للوصول إلى ميزات الملف الشخصي لاحقًا.</p></div>
@@ -1155,7 +1156,10 @@ function App() {
                   {pendingHasMore && <button className="admin-load-more" type="button" disabled={pendingLoadingMore} onClick={() => void loadPending(pending.length, true)}>{pendingLoadingMore ? 'جارٍ تحميل المزيد…' : 'عرض المزيد من الطلبات'}</button>}
                 </>
               )}
-              {adminTab === 'edits' && <Suspense fallback={<LazyPanelFallback />}><Phase3AdminQueue active={adminTab === 'edits' && canModerate} isAdmin={isAdmin} onChanged={loadCommunityData} /></Suspense>}
+              {adminTab === 'edits' && <>
+                <Suspense fallback={<LazyPanelFallback />}><Phase3AdminQueue active={adminTab === 'edits' && canModerate} isAdmin={isAdmin} onChanged={loadCommunityData} /></Suspense>
+                {isAdmin && <Suspense fallback={<LazyPanelFallback />}><RelationshipChangeQueue active={adminTab === 'edits'} onChanged={() => { setRelationshipRefresh((value) => value + 1); void loadCommunityData() }} /></Suspense>}
+              </>}
               {adminTab === 'users' && profile?.is_primary_admin && <Suspense fallback={<LazyPanelFallback />}><AdminUserRoles active={adminTab === 'users'} currentUserId={session?.user.id} /></Suspense>}
             </div>
           </section>

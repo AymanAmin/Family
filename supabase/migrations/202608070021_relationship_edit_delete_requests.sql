@@ -1,12 +1,18 @@
 -- PHASE 17: RELATIONSHIP EDIT / DELETE WORKFLOW
 -- Admins apply directly; owners edit/delete their own pending relation directly,
 -- while changes to approved relationships require an admin review request.
+-- Change requests keep an immutable relationship snapshot so approved deletions remain auditable.
 
 begin;
 
 create table if not exists public.relationship_change_requests (
   id uuid primary key default gen_random_uuid(),
-  relationship_id uuid not null references public.person_relationships(id) on delete cascade,
+  relationship_id uuid null,
+  source_person_id uuid null references public.people(id) on delete set null,
+  target_person_id uuid null references public.people(id) on delete set null,
+  source_name text null,
+  target_name text null,
+  original_relation_type text null,
   requested_by uuid not null references auth.users(id) on delete cascade,
   action text not null check (action in ('edit','delete')),
   proposed_relation_type text null check (proposed_relation_type is null or proposed_relation_type in ('parent','child','spouse','sibling','guardian','other')),
@@ -19,9 +25,33 @@ create table if not exists public.relationship_change_requests (
   updated_at timestamptz not null default now()
 );
 
+-- Upgrade safely if an older draft of phase 17 was executed already.
+alter table public.relationship_change_requests add column if not exists source_person_id uuid null references public.people(id) on delete set null;
+alter table public.relationship_change_requests add column if not exists target_person_id uuid null references public.people(id) on delete set null;
+alter table public.relationship_change_requests add column if not exists source_name text null;
+alter table public.relationship_change_requests add column if not exists target_name text null;
+alter table public.relationship_change_requests add column if not exists original_relation_type text null;
+alter table public.relationship_change_requests alter column relationship_id drop not null;
+alter table public.relationship_change_requests drop constraint if exists relationship_change_requests_relationship_id_fkey;
+alter table public.relationship_change_requests
+  add constraint relationship_change_requests_relationship_id_fkey
+  foreign key (relationship_id) references public.person_relationships(id) on delete set null;
+
+update public.relationship_change_requests q
+set source_person_id = coalesce(q.source_person_id, r.source_person_id),
+    target_person_id = coalesce(q.target_person_id, r.target_person_id),
+    source_name = coalesce(q.source_name, s.full_name),
+    target_name = coalesce(q.target_name, t.full_name),
+    original_relation_type = coalesce(q.original_relation_type, r.relation_type)
+from public.person_relationships r
+left join public.people s on s.id=r.source_person_id
+left join public.people t on t.id=r.target_person_id
+where q.relationship_id=r.id
+  and (q.source_person_id is null or q.target_person_id is null or q.source_name is null or q.target_name is null or q.original_relation_type is null);
+
 create unique index if not exists relationship_change_one_pending_idx
   on public.relationship_change_requests (relationship_id)
-  where status='pending';
+  where status='pending' and relationship_id is not null;
 create index if not exists relationship_change_pending_created_idx
   on public.relationship_change_requests (created_at,id) where status='pending';
 create index if not exists relationship_change_owner_idx
@@ -54,6 +84,8 @@ declare
   v_user_id uuid:=auth.uid();
   v_role text:=private.active_role(auth.uid());
   v_relation public.person_relationships%rowtype;
+  v_source_name text;
+  v_target_name text;
 begin
   if v_user_id is null then raise exception 'Authentication required'; end if;
   if p_action not in ('edit','delete') then raise exception 'Invalid action'; end if;
@@ -97,9 +129,17 @@ begin
 
   if v_relation.status<>'approved' then raise exception 'Rejected relationship cannot be changed'; end if;
 
-  insert into public.relationship_change_requests(relationship_id,requested_by,action,proposed_relation_type,proposed_notes)
+  select s.full_name,t.full_name into v_source_name,v_target_name
+  from public.people s, public.people t
+  where s.id=v_relation.source_person_id and t.id=v_relation.target_person_id;
+
+  insert into public.relationship_change_requests(
+    relationship_id,source_person_id,target_person_id,source_name,target_name,original_relation_type,
+    requested_by,action,proposed_relation_type,proposed_notes
+  )
   values (
-    p_relationship_id,v_user_id,p_action,
+    p_relationship_id,v_relation.source_person_id,v_relation.target_person_id,v_source_name,v_target_name,v_relation.relation_type,
+    v_user_id,p_action,
     case when p_action='edit' then p_relation_type else null end,
     case when p_action='edit' then nullif(trim(coalesce(p_notes,'')),'') else null end
   );
@@ -138,14 +178,11 @@ begin
 
   return query
   select q.id,q.relationship_id,q.action,
-    (coalesce(s.full_name,'شخص')||' — '||coalesce(t.full_name,'شخص'))::text,
+    (coalesce(q.source_name,'شخص')||' — '||coalesce(q.target_name,'شخص'))::text,
     (case when q.action='delete' then 'طلب حذف صلة قرابة' else 'تعديل إلى: '||
       case q.proposed_relation_type when 'parent' then 'والد/والدة' when 'child' then 'ابن/ابنة' when 'spouse' then 'زوج/زوجة' when 'sibling' then 'أخ/أخت' when 'guardian' then 'ولي/وصي' else 'صلة أخرى' end end)::text,
     q.created_at
   from public.relationship_change_requests q
-  join public.person_relationships r on r.id=q.relationship_id
-  left join public.people s on s.id=r.source_person_id
-  left join public.people t on t.id=r.target_person_id
   where q.status='pending'
   order by q.created_at,q.id
   limit v_limit offset v_offset;
@@ -179,6 +216,7 @@ begin
   if v_request.id is null then raise exception 'Request not found or already reviewed'; end if;
 
   if p_status='approved' then
+    if v_request.relationship_id is null then raise exception 'The original relationship no longer exists'; end if;
     if v_request.action='delete' then
       delete from public.person_relationships where id=v_request.relationship_id;
     else

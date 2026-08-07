@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'scripts/apply-paginated-moderation.mjs'
+      - 'scripts/apply-paginated-moderation.py'
+      - '.github/workflows/apply-paginated-moderation.yml'
   workflow_dispatch:
 
 permissions:
@@ -21,7 +22,7 @@ jobs:
         with:
           node-version: 22
       - name: Apply integration
-        run: node scripts/apply-paginated-moderation.mjs
+        run: python3 scripts/apply-paginated-moderation.py
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Verify TypeScript and production build

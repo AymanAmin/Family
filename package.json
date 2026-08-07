@@ -8,9 +8,10 @@
   },
   "scripts": {
     "prepare:index": "node scripts/prepare-index.mjs",
+    "check:migrations": "node scripts/check-migration-versions.mjs",
     "dev": "npm run prepare:index && vite",
     "typecheck": "tsc --noEmit",
-    "build": "npm run prepare:index && npm run typecheck && vite build",
+    "build": "npm run check:migrations && npm run prepare:index && npm run typecheck && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

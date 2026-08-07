@@ -12,6 +12,7 @@ import './directory-v2.css'
 import './edit-compact.css'
 import './kinship-extended.css'
 import './public-scale.css'
+import './family-tree-screen.css'
 
 const rootElement = document.getElementById('root')
 

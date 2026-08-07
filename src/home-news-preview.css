@@ -152,8 +152,8 @@
   box-shadow: 0 10px 32px rgb(35 74 120 / 8%);
 }
 
-/* Explicit flex scroller. The touch-action override is required because the
-   mobile shell applies touch-action: manipulation to every button. */
+/* Keep the scroll coordinate system LTR for consistent Android/iOS behavior.
+   Each card switches back to RTL so Arabic content remains correct. */
 .app-services.unified-home-stats {
   display: flex !important;
   width: 100% !important;
@@ -166,13 +166,13 @@
   overflow-x: scroll !important;
   overflow-y: hidden !important;
   padding: 2px 2px 10px;
-  direction: rtl;
-  touch-action: pan-x !important;
+  direction: ltr;
+  touch-action: pan-y !important;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   scroll-padding-inline: 2px;
-  scroll-snap-type: x proximity;
+  scroll-snap-type: none;
   scrollbar-width: none;
 }
 
@@ -186,9 +186,8 @@
   min-width: 0 !important;
   max-width: none;
   flex: 0 0 180px !important;
-  touch-action: pan-x !important;
-  scroll-snap-align: start;
-  scroll-snap-stop: normal;
+  direction: rtl;
+  touch-action: pan-y !important;
   -webkit-user-select: none;
   user-select: none;
 }

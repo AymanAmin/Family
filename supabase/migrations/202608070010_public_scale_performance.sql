@@ -55,6 +55,10 @@ create index if not exists person_relationships_pending_created_idx
 create index if not exists account_link_requests_user_status_idx
   on public.account_link_requests (user_id, status, created_at desc);
 
+create index if not exists content_edit_requests_pending_created_idx
+  on public.content_edit_requests (created_at)
+  where status = 'pending';
+
 -- Public counters are maintained incrementally so every visitor does not execute COUNT(*) scans.
 create table if not exists public.platform_stats (
   id smallint primary key default 1 check (id = 1),
@@ -79,6 +83,8 @@ on conflict (id) do update set
   updated_at = now();
 
 alter table public.platform_stats enable row level security;
+revoke all on table public.platform_stats from anon, authenticated;
+grant select on table public.platform_stats to anon, authenticated;
 
 drop policy if exists "Public can read platform stats" on public.platform_stats;
 create policy "Public can read platform stats"
@@ -99,49 +105,50 @@ declare
   delta bigint := 0;
 begin
   if tg_op <> 'INSERT' then
-    old_approved := coalesce(old.status = 'approved', false);
+    old_approved := (old.status = 'approved');
   end if;
   if tg_op <> 'DELETE' then
-    new_approved := coalesce(new.status = 'approved', false);
+    new_approved := (new.status = 'approved');
   end if;
 
   delta := (case when new_approved then 1 else 0 end) - (case when old_approved then 1 else 0 end);
 
-  if delta = 0 then
-    return coalesce(new, old);
+  if delta <> 0 then
+    if tg_table_name = 'families' then
+      update public.platform_stats
+        set approved_families = greatest(0, approved_families + delta), updated_at = now()
+        where id = 1;
+    elsif tg_table_name = 'people' then
+      update public.platform_stats
+        set approved_people = greatest(0, approved_people + delta), updated_at = now()
+        where id = 1;
+    elsif tg_table_name = 'events' then
+      update public.platform_stats
+        set approved_events = greatest(0, approved_events + delta), updated_at = now()
+        where id = 1;
+    end if;
   end if;
 
-  if tg_table_name = 'families' then
-    update public.platform_stats
-      set approved_families = greatest(0, approved_families + delta), updated_at = now()
-      where id = 1;
-  elsif tg_table_name = 'people' then
-    update public.platform_stats
-      set approved_people = greatest(0, approved_people + delta), updated_at = now()
-      where id = 1;
-  elsif tg_table_name = 'events' then
-    update public.platform_stats
-      set approved_events = greatest(0, approved_events + delta), updated_at = now()
-      where id = 1;
+  if tg_op = 'DELETE' then
+    return old;
   end if;
-
-  return coalesce(new, old);
+  return new;
 end;
 $$;
 
 drop trigger if exists trg_platform_stats_families on public.families;
 create trigger trg_platform_stats_families
-after insert or update of status or delete on public.families
+after insert or delete or update of status on public.families
 for each row execute function public.refresh_platform_stats_delta();
 
 drop trigger if exists trg_platform_stats_people on public.people;
 create trigger trg_platform_stats_people
-after insert or update of status or delete on public.people
+after insert or delete or update of status on public.people
 for each row execute function public.refresh_platform_stats_delta();
 
 drop trigger if exists trg_platform_stats_events on public.events;
 create trigger trg_platform_stats_events
-after insert or update of status or delete on public.events
+after insert or delete or update of status on public.events
 for each row execute function public.refresh_platform_stats_delta();
 
 create or replace function public.get_public_platform_stats()
@@ -161,6 +168,7 @@ as $$
   where s.id = 1;
 $$;
 
+revoke all on function public.get_public_platform_stats() from public;
 grant execute on function public.get_public_platform_stats() to anon, authenticated;
 
 notify pgrst, 'reload schema';

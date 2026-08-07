@@ -10,6 +10,7 @@ import './mobile-v2.css'
 import './kinship-scroll.css'
 import './directory-v2.css'
 import './edit-compact.css'
+import './kinship-extended.css'
 
 const rootElement = document.getElementById('root')
 

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
+const PAGE_SIZE = 12
+
 const membershipLabels: Record<string, string> = {
   birth: 'بالنسب / عائلة الأصل',
   marriage: 'بالزواج',
@@ -10,10 +12,16 @@ const membershipLabels: Record<string, string> = {
   other: 'انتماء آخر',
 }
 
+type QueueItem = {
+  id: string
+  request_type: 'edit' | 'membership'
+  title: string
+  subtitle: string
+  created_at: string
+}
+
 type MembershipRequest = {
   id: string
-  person_id: string
-  family_id: string
   membership_type: string
   is_primary: boolean
   notes: string | null
@@ -25,7 +33,6 @@ type MembershipRequest = {
 type EditRequest = {
   id: string
   entity_type: 'families' | 'people' | 'events'
-  record_id: string
   proposed_data: Record<string, unknown>
   created_at: string
 }
@@ -46,73 +53,131 @@ function personName(value: { full_name?: string } | { full_name?: string }[] | n
 }
 
 export default function Phase3AdminQueue({ active, onChanged }: Props) {
-  const [memberships, setMemberships] = useState<MembershipRequest[]>([])
-  const [edits, setEdits] = useState<EditRequest[]>([])
+  const [rows, setRows] = useState<QueueItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
   const [busyId, setBusyId] = useState('')
+  const [message, setMessage] = useState('')
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (offset = 0, append = false) => {
     if (!supabase || !active) return
+    append ? setLoadingMore(true) : setLoading(true)
+    setMessage('')
+
+    const feedResult = await supabase.rpc('list_pending_secondary_moderation_feed', {
+      p_limit: PAGE_SIZE + 1,
+      p_offset: offset,
+    })
+
+    if (!feedResult.error) {
+      const received = (feedResult.data ?? []) as QueueItem[]
+      const page = received.slice(0, PAGE_SIZE)
+      setHasMore(received.length > PAGE_SIZE)
+      setRows((current) => append ? [...current, ...page] : page)
+      setLoading(false)
+      setLoadingMore(false)
+      return
+    }
+
+    // Compatibility fallback until migration 016 is applied. Keep it intentionally capped.
+    if (offset > 0) {
+      setHasMore(false)
+      setLoading(false)
+      setLoadingMore(false)
+      return
+    }
+
     const [membershipResult, editResult] = await Promise.all([
-      supabase.from('person_family_memberships').select('id,person_id,family_id,membership_type,is_primary,notes,created_at,people(full_name),families(name)').eq('status', 'pending').order('created_at'),
-      supabase.from('content_edit_requests').select('id,entity_type,record_id,proposed_data,created_at').eq('status', 'pending').order('created_at'),
+      supabase.from('person_family_memberships').select('id,membership_type,is_primary,notes,created_at,people(full_name),families(name)').eq('status', 'pending').order('created_at').limit(6),
+      supabase.from('content_edit_requests').select('id,entity_type,proposed_data,created_at').eq('status', 'pending').order('created_at').limit(6),
     ])
-    if (!membershipResult.error) setMemberships((membershipResult.data ?? []) as MembershipRequest[])
-    if (!editResult.error) setEdits((editResult.data ?? []) as EditRequest[])
+
+    if (membershipResult.error || editResult.error) {
+      setRows([])
+      setHasMore(false)
+      setLoading(false)
+      setLoadingMore(false)
+      setMessage('تعذر تحميل طلبات التعديل والانتماء الآن.')
+      return
+    }
+
+    const fallbackRows: QueueItem[] = []
+    for (const item of editResult.data ?? []) {
+      const edit = item as EditRequest
+      fallbackRows.push({ id: edit.id, request_type: 'edit', title: entityLabel(edit.entity_type), subtitle: summary(edit.proposed_data), created_at: edit.created_at })
+    }
+    for (const item of membershipResult.data ?? []) {
+      const membership = item as MembershipRequest
+      fallbackRows.push({
+        id: membership.id,
+        request_type: 'membership',
+        title: `${personName(membership.people) || 'شخص'} ← ${relatedName(membership.families) || 'عائلة'}`,
+        subtitle: `${membershipLabels[membership.membership_type] || membership.membership_type}${membership.is_primary ? ' · عائلة أساسية' : ''}${membership.notes ? ` · ${membership.notes}` : ''}`,
+        created_at: membership.created_at,
+      })
+    }
+
+    setRows(fallbackRows.sort((a, b) => a.created_at.localeCompare(b.created_at)).slice(0, PAGE_SIZE))
+    setHasMore(false)
+    setLoading(false)
+    setLoadingMore(false)
   }, [active])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    if (!active) return
+    void load()
+  }, [active, load])
 
-  async function reviewMembership(id: string, status: 'approved' | 'rejected') {
+  async function review(item: QueueItem, status: 'approved' | 'rejected') {
     if (!supabase) return
-    setBusyId(id)
-    const { error } = await supabase.from('person_family_memberships').update({
-      status,
-      approved_by: (await supabase.auth.getUser()).data.user?.id ?? null,
-      approved_at: status === 'approved' ? new Date().toISOString() : null,
-    }).eq('id', id)
+    setBusyId(item.id)
+    setMessage('')
+
+    const result = item.request_type === 'edit'
+      ? await supabase.rpc('review_content_edit_request', {
+          p_request_id: item.id,
+          p_status: status,
+          p_review_note: null,
+        })
+      : await supabase.from('person_family_memberships').update({
+          status,
+          approved_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+          approved_at: status === 'approved' ? new Date().toISOString() : null,
+        }).eq('id', item.id)
+
     setBusyId('')
-    if (!error) {
-      await load()
-      await onChanged?.()
+    if (result.error) {
+      setMessage(result.error.message || 'تعذر مراجعة الطلب.')
+      return
     }
+
+    await load()
+    await onChanged?.()
   }
 
-  async function reviewEdit(id: string, status: 'approved' | 'rejected') {
-    if (!supabase) return
-    setBusyId(id)
-    const { error } = await supabase.rpc('review_content_edit_request', {
-      p_request_id: id,
-      p_status: status,
-      p_review_note: null,
-    })
-    setBusyId('')
-    if (!error) {
-      await load()
-      await onChanged?.()
-    }
-  }
-
-  if (!active || (!memberships.length && !edits.length)) return null
+  if (!active) return null
 
   return (
     <section className="phase3-admin-queue">
-      <div className="section-title"><div><span className="eyebrow">مراجعات إضافية</span><h2>التعديلات والانتماءات العائلية</h2></div></div>
+      <div className="section-title"><div><span className="eyebrow">مراجعات إضافية</span><h2>التعديلات والانتماءات العائلية</h2><p className="secondary-queue-note">يتم تحميل {PAGE_SIZE} طلبًا فقط في كل دفعة للحفاظ على سرعة لوحة الإدارة.</p></div></div>
 
-      <div className="review-list">
-        {edits.map((item) => (
-          <article className="review-row" key={`edit-${item.id}`}>
-            <div><span className="status pending">تعديل</span><h3>{entityLabel(item.entity_type)}</h3><p>{summary(item.proposed_data)}</p></div>
-            <div className="review-actions"><button className="approve" disabled={busyId === item.id} onClick={() => reviewEdit(item.id, 'approved')}>اعتماد</button><button className="reject" disabled={busyId === item.id} onClick={() => reviewEdit(item.id, 'rejected')}>رفض</button></div>
-          </article>
-        ))}
+      {message && <div className="admin-users-message">{message}</div>}
 
-        {memberships.map((item) => (
-          <article className="review-row" key={`membership-${item.id}`}>
-            <div><span className="status pending">انتماء عائلي</span><h3>{personName(item.people) || 'شخص'} ← {relatedName(item.families) || 'عائلة'}</h3><p>{membershipLabels[item.membership_type] || item.membership_type}{item.is_primary ? ' · عائلة أساسية' : ''}{item.notes ? ` · ${item.notes}` : ''}</p></div>
-            <div className="review-actions"><button className="approve" disabled={busyId === item.id} onClick={() => reviewMembership(item.id, 'approved')}>اعتماد</button><button className="reject" disabled={busyId === item.id} onClick={() => reviewMembership(item.id, 'rejected')}>رفض</button></div>
-          </article>
-        ))}
-      </div>
+      {loading ? (
+        <div className="admin-users-skeleton"><i /><i /><i /></div>
+      ) : rows.length ? (
+        <div className="review-list">
+          {rows.map((item) => (
+            <article className="review-row" key={`${item.request_type}-${item.id}`}>
+              <div><span className="status pending">{item.request_type === 'edit' ? 'تعديل' : 'انتماء عائلي'}</span><h3>{item.title}</h3><p>{item.subtitle}</p></div>
+              <div className="review-actions"><button className="approve" disabled={busyId === item.id} onClick={() => void review(item, 'approved')}>اعتماد</button><button className="reject" disabled={busyId === item.id} onClick={() => void review(item, 'rejected')}>رفض</button></div>
+            </article>
+          ))}
+        </div>
+      ) : <div className="empty-state compact"><strong>لا توجد مراجعات إضافية</strong><span>لا توجد تعديلات أو انتماءات عائلية معلقة حاليًا.</span></div>}
+
+      {hasMore && !loading && <button type="button" className="admin-load-more" disabled={loadingMore} onClick={() => void load(rows.length, true)}>{loadingMore ? 'جارٍ تحميل المزيد…' : 'عرض المزيد من المراجعات'}</button>}
     </section>
   )
 }

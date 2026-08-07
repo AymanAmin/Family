@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -35,6 +35,26 @@ jobs:
 
       - name: Type-check and build
         run: npm run build
+
+      - name: Keep a production build in the repository root
+        shell: bash
+        run: |
+          rm -rf assets
+          cp -R dist/assets assets
+          cp dist/index.html index.html
+          cp dist/404.html 404.html
+          touch .nojekyll
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html 404.html .nojekyll assets
+
+          if git diff --cached --quiet; then
+            echo "Published root files are already current."
+          else
+            git commit -m "Publish production build [skip ci]"
+            git push
+          fi
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

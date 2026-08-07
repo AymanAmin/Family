@@ -26,6 +26,7 @@ import './person-profile-actions.css'
 import './contributor-stats.css'
 import './edit-review-diff.css'
 import './tree-action-buttons.css'
+import './person-name-wrap.css'
 
 function disablePageZoom() {
   document.documentElement.style.touchAction = 'pan-x pan-y'

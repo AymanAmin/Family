@@ -1,0 +1,2 @@
+Release marker for scoped RBAC, approved family scopes, paginated moderation, and personal submission activity.
+2026-08-07

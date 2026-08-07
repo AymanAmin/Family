@@ -63,6 +63,7 @@
 
 .detail-page {
   width: min(100%, 980px);
+  min-width: 0;
   margin-inline: auto;
 }
 
@@ -70,6 +71,7 @@
   display: flex;
   align-items: center;
   gap: 22px;
+  min-width: 0;
   margin-bottom: 24px;
   padding: clamp(22px, 5vw, 36px);
   border: 1px solid var(--border);
@@ -78,15 +80,24 @@
   box-shadow: var(--shadow);
 }
 
+.detail-hero > .detail-avatar + div {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .detail-hero h1 {
+  max-width: 100%;
   margin: 8px 0 9px;
+  overflow-wrap: anywhere;
   color: var(--green-950);
   font-family: 'Noto Kufi Arabic';
   font-size: clamp(1.7rem, 5vw, 3rem);
 }
 
 .detail-hero p {
+  max-width: 100%;
   margin: 0;
+  overflow-wrap: anywhere;
   color: var(--muted);
   line-height: 1.9;
 }
@@ -114,12 +125,14 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+  min-width: 0;
   margin-bottom: 30px;
 }
 
 .detail-facts article {
   display: grid;
   gap: 7px;
+  min-width: 0;
   min-height: 104px;
   padding: 18px;
   border: 1px solid var(--border);
@@ -134,10 +147,12 @@
 }
 
 .detail-facts strong {
+  overflow-wrap: anywhere;
   color: var(--green-950);
 }
 
 .detail-section {
+  min-width: 0;
   margin-top: 28px;
   padding: 23px;
   border: 1px solid var(--border);
@@ -159,6 +174,7 @@
 .relationship-card {
   display: grid;
   gap: 5px;
+  min-width: 0;
   padding: 17px;
   border: 1px solid var(--border);
   border-radius: 17px;
@@ -174,6 +190,7 @@
 }
 
 .relationship-card strong {
+  overflow-wrap: anywhere;
   color: var(--green-950);
 }
 
@@ -233,14 +250,42 @@
   }
 
   .detail-page {
+    max-width: 100%;
+    overflow-x: clip;
     padding-top: 20px;
   }
 
   .detail-hero {
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 66px minmax(0, 1fr);
+    align-items: start;
     gap: 14px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 20px 16px;
+    overflow: hidden;
     border-radius: 23px;
+  }
+
+  .detail-hero > .detail-avatar {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .detail-hero > .detail-avatar + div {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .detail-hero > .record-action-group {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    margin-top: 4px;
   }
 
   .detail-avatar {
@@ -251,8 +296,16 @@
   }
 
   .detail-hero h1 {
+    width: 100%;
+    min-width: 0;
     font-size: 1.5rem;
     line-height: 1.55;
+  }
+
+  .detail-hero .person-title-line {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
   }
 
   .detail-facts {
@@ -265,7 +318,10 @@
   }
 
   .detail-section {
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 16px;
+    overflow: hidden;
     border-radius: 20px;
   }
 

@@ -105,7 +105,7 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
         .or(`source_person_id.eq.${personId},target_person_id.eq.${personId}`)
 
       if (cancelled) return
-      const mapped: KinshipRow[] = (fallback.data ?? []).flatMap((relation) => {
+      const mapped: KinshipRow[] = (fallback.data ?? []).flatMap((relation): KinshipRow[] => {
         const selectedIsSource = relation.source_person_id === personId
         const other = relatedPerson((selectedIsSource ? relation.target : relation.source) as DirectRelatedPerson)
         if (!other?.id || !other.full_name) return []
@@ -121,7 +121,7 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
           relation_type: canonicalType,
           relation_detail: relation.notes ?? null,
           is_inferred: false,
-          shared_parent_count: null,
+          shared_parent_count: null as number | null,
         }]
       })
       setRows(mapped)

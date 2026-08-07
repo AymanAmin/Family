@@ -973,6 +973,11 @@ function App() {
     setBusy(false)
     if (result.error) return showMessage(friendlyError(result.error.message), 'error')
     showMessage(status === 'approved' ? 'تم اعتماد السجل.' : 'تم رفض السجل.', 'success')
+    void supabase.functions.invoke('push-notifications', {
+      body: { action: 'record-status', table: record.table, recordId: record.id, status },
+    }).then(({ error }) => {
+      if (error) console.warn('Push notification was not sent.', error)
+    })
     await loadCommunityData()
     await loadProfile(session)
     await loadPending()

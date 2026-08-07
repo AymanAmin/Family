@@ -1,0 +1,29 @@
+name: Apply smart kinship
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-smart-kinship.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply smart kinship changes
+        run: node scripts/apply-smart-kinship.mjs
+      - name: Commit generated changes
+        run: |
+          if git diff --quiet -- src/App.tsx supabase/SETUP.sql; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx supabase/SETUP.sql
+          git commit -m "Add smart kinship network and inference"
+          git push

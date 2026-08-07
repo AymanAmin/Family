@@ -1,0 +1,46 @@
+name: Apply rich moderation details
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply-rich-moderation-details.py'
+      - '.github/workflows/apply-rich-moderation-details.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply moderation detail integration
+        run: python3 scripts/apply-rich-moderation-details.py
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify TypeScript and production build
+        run: npm run build
+      - name: Capture source patch
+        run: git diff -- src/App.tsx src/components/Phase3AdminQueue.tsx src/components/RelationshipChangeQueue.tsx > /tmp/moderation-details.patch
+      - name: Commit integration on latest main
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git reset --hard origin/main
+          if [ -s /tmp/moderation-details.patch ]; then
+            git apply /tmp/moderation-details.patch
+          fi
+          git add src/App.tsx src/components/Phase3AdminQueue.tsx src/components/RelationshipChangeQueue.tsx
+          if ! git diff --cached --quiet; then
+            git commit -m "Show decision context for all moderation requests"
+            git push origin HEAD:main
+          fi

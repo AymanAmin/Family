@@ -7,6 +7,7 @@ import './mobile-fixes.css'
 import './mobile-shell.css'
 import './phase3.css'
 import './mobile-v2.css'
+import './kinship-scroll.css'
 
 const rootElement = document.getElementById('root')
 

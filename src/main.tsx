@@ -9,6 +9,7 @@ import './phase3.css'
 import './mobile-v2.css'
 import './kinship-scroll.css'
 import './directory-v2.css'
+import './edit-compact.css'
 
 const rootElement = document.getElementById('root')
 

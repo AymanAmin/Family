@@ -1056,17 +1056,35 @@ function App() {
               </div>
             </section>
 
-            <section className="home-content-grid">
-              <article className="home-feed">
-                <div className="home-section-heading"><h2>آخر أخبار العائلة</h2><div className="news-heading-actions"><button type="button" onClick={() => setView('news')}>عرض كل الأخبار</button><button type="button" onClick={() => { if (!requireAccount()) return; setAddMode('event'); setView('add') }}>إضافة مناسبة</button></div></div>
-                {approvedEvents.length ? <div className="nasab-event-list">{approvedEvents.slice(0, 4).map((item) => <div className="nasab-event-item" key={item.id}><span className="nasab-event-date">{formatDate(item.event_date)}</span><div><h3>{item.title}</h3><p>{eventLabels[item.event_type] || item.event_type} · {item.location_name || familyName(item.families) || 'المكان غير محدد'}</p>{item.mentions?.length ? <div className="event-mention-chips">{item.mentions.map((mention) => { const id = personId(mention.people); const name = personName(mention.people); return name ? <button className="event-mention-chip" type="button" key={`${item.id}-${id}-${mention.participant_role}`} onClick={() => id && void openPersonById(id)}>@ {name}</button> : null })}</div> : null}</div></div>)}</div> : <div className="empty-state compact">لا توجد أخبار أو مناسبات معتمدة بعد.</div>}
-              </article>
+            <section className="section-block soft">
+              <div className="section-title"><div><span className="eyebrow">آخر الأخبار</span><h2>المناسبات المعتمدة</h2></div><button className="text-link" type="button" onClick={() => setView('news')}>كل الأخبار</button></div>
+              {approvedEvents.length ? (
+                <div className="cards-grid event-grid">
+                  {approvedEvents.slice(0, 6).map((item) => (
+                    <article className="event-card" key={item.id}>
+                      <div className="event-top"><span>{eventLabels[item.event_type] || item.event_type}</span><time>{formatDate(item.event_date)}</time></div>
+                      <h3>{item.title}</h3>
+                      <p>{item.description || 'لا توجد تفاصيل إضافية.'}</p>
+                      {item.mentions?.length ? <div className="event-mention-chips">{item.mentions.map((mention) => {
+                        const id = personId(mention.people)
+                        const name = personName(mention.people)
+                        return name ? <button className="event-mention-chip" type="button" key={`${item.id}-${id}-${mention.participant_role}`} onClick={() => id && void openPersonById(id)}>@ {name}</button> : null
+                      })}</div> : null}
+                      <small>{item.location_name || familyName(item.families) || 'المكان غير محدد'}</small>
+                      <RecordEditButton entityType="events" recordId={item.id} createdBy={item.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} initialData={{ event_type: item.event_type, title: item.title, family_id: item.family_id, event_date: item.event_date, location_name: item.location_name, description: item.description }} onSaved={loadCommunityData} />
+                    </article>
+                  ))}
+                </div>
+              ) : <div className="empty-state"><strong>لا توجد مناسبات منشورة</strong><span>ستظهر المناسبات هنا بعد اعتمادها.</span></div>}
+            </section>
 
+            <section className="home-content-grid home-tree-only">
               <article className="family-tree-preview">
                 <div className="home-section-heading"><h2>شجرة العائلة</h2><button type="button" onClick={() => setView('tree')}>فتح الشجرة</button></div>
                 <div className="tree-orbit" aria-label="معاينة رمزية لشجرة العائلة"><span className="tree-root">صلة</span><span className="tree-node n1">جد</span><span className="tree-node n2">أب</span><span className="tree-node n3">أم</span><span className="tree-node n4">ابن</span><span className="tree-node n5">ابنة</span></div>
               </article>
             </section>
+
             <section className="hero-panel">
               <div className="hero-copy">
                 <span className="eyebrow">بيانات حقيقية فقط</span>
@@ -1104,27 +1122,7 @@ function App() {
               ) : <div className="empty-state"><strong>لا توجد عائلات معتمدة حتى الآن</strong><span>ابدأ بإضافة أول عائلة في المنطقة.</span></div>}
             </section>
 
-            <section className="section-block soft">
-              <div className="section-title"><div><span className="eyebrow">آخر الأخبار</span><h2>المناسبات المعتمدة</h2></div></div>
-              {approvedEvents.length ? (
-                <div className="cards-grid event-grid">
-                  {approvedEvents.slice(0, 6).map((item) => (
-                    <article className="event-card" key={item.id}>
-                      <div className="event-top"><span>{eventLabels[item.event_type] || item.event_type}</span><time>{formatDate(item.event_date)}</time></div>
-                      <h3>{item.title}</h3>
-                      <p>{item.description || 'لا توجد تفاصيل إضافية.'}</p>
-                      {item.mentions?.length ? <div className="event-mention-chips">{item.mentions.map((mention) => {
-                        const id = personId(mention.people)
-                        const name = personName(mention.people)
-                        return name ? <button className="event-mention-chip" type="button" key={`${item.id}-${id}-${mention.participant_role}`} onClick={() => id && void openPersonById(id)}>@ {name}</button> : null
-                      })}</div> : null}
-                      <small>{item.location_name || familyName(item.families) || 'المكان غير محدد'}</small>
-                      <RecordEditButton entityType="events" recordId={item.id} createdBy={item.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} initialData={{ event_type: item.event_type, title: item.title, family_id: item.family_id, event_date: item.event_date, location_name: item.location_name, description: item.description }} onSaved={loadCommunityData} />
-                    </article>
-                  ))}
-                </div>
-              ) : <div className="empty-state"><strong>لا توجد مناسبات منشورة</strong><span>ستظهر المناسبات هنا بعد اعتمادها.</span></div>}
-            </section>
+
           </>
         )}
 

@@ -160,6 +160,10 @@
   padding: 0 18px 50px;
 }
 
+.home-content-grid.home-tree-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .home-feed,
 .family-tree-preview {
   min-width: 0;

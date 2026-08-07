@@ -1,0 +1,74 @@
+name: Apply news screen integration
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-news-screen.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Integrate lazy news screen into App
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/App.tsx')
+          text = path.read_text(encoding='utf-8')
+
+          def replace_once(old: str, new: str):
+              global text
+              if old not in text:
+                  raise SystemExit(f'Expected App.tsx fragment not found: {old[:100]}')
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              "const DirectoryScreen = lazy(() => import('./components/DirectoryScreen'))\n",
+              "const DirectoryScreen = lazy(() => import('./components/DirectoryScreen'))\nconst NewsScreen = lazy(() => import('./components/NewsScreen'))\n",
+          )
+
+          replace_once(
+              "type View = 'home' | 'search' | 'tree' | 'add' | 'admin' | 'person' | 'family' | 'account'",
+              "type View = 'home' | 'news' | 'search' | 'tree' | 'add' | 'admin' | 'person' | 'family' | 'account'",
+          )
+
+          replace_once(
+              "} else if (target === 'search' || target === 'tree' || target === 'add' || target === 'admin' || target === 'account') {",
+              "} else if (target === 'news' || target === 'search' || target === 'tree' || target === 'add' || target === 'admin' || target === 'account') {",
+          )
+
+          replace_once(
+              "          <button onClick={() => setView('home')} className={view === 'home' ? 'active' : ''}>الرئيسية</button>\n          <button onClick={() => setView('search')} className={view === 'search' ? 'active' : ''}>البحث</button>",
+              "          <button onClick={() => setView('home')} className={view === 'home' ? 'active' : ''}>الرئيسية</button>\n          <button onClick={() => setView('news')} className={view === 'news' ? 'active' : ''}>الأخبار</button>\n          <button onClick={() => setView('search')} className={view === 'search' ? 'active' : ''}>البحث</button>",
+          )
+
+          replace_once(
+              "                <div className=\"home-section-heading\"><h2>آخر أخبار العائلة</h2><button type=\"button\" onClick={() => setView('add')}>إضافة مناسبة</button></div>",
+              "                <div className=\"home-section-heading\"><h2>آخر أخبار العائلة</h2><div className=\"news-heading-actions\"><button type=\"button\" onClick={() => setView('news')}>عرض كل الأخبار</button><button type=\"button\" onClick={() => { if (!requireAccount()) return; setAddMode('event'); setView('add') }}>إضافة مناسبة</button></div></div>",
+          )
+
+          marker = "        {schemaReady && view === 'search' && ("
+          news_block = """        {schemaReady && view === 'news' && (\n          <Suspense fallback={<div className=\"page-section\"><LazyPanelFallback /></div>}>\n            <NewsScreen\n              onBack={() => setView('home')}\n              onAdd={() => { if (!requireAccount()) return; setAddMode('event'); setView('add') }}\n              onOpenPerson={(personId) => openPersonById(personId)}\n            />\n          </Suspense>\n        )}\n\n"""
+          if marker not in text:
+              raise SystemExit('Search view marker was not found')
+          text = text.replace(marker, news_block + marker, 1)
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commit integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx
+          git commit -m "Integrate lazy family news page"
+          git pull --rebase origin main
+          git push origin main

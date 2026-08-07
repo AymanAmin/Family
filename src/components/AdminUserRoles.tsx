@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import FamilyPicker from './FamilyPicker'
 
 type ManagedUser = {
   user_id: string
@@ -11,12 +12,36 @@ type ManagedUser = {
   last_sign_in_at: string | null
 }
 
+type FamilyScope = {
+  family_id: string
+  family_name: string
+  origin_place: string | null
+}
+
 type Props = {
   active: boolean
   currentUserId?: string | null
 }
 
 const PAGE_SIZE = 20
+
+const roleLabels: Record<string, string> = {
+  member: 'عضو',
+  verified_member: 'عضو موثّق',
+  family_moderator: 'مسؤول عائلة',
+  content_moderator: 'مشرف محتوى',
+  admin: 'مدير',
+  super_admin: 'مدير أعلى',
+}
+
+const roleDescriptions: Record<string, string> = {
+  member: 'يرسل الإضافات والتعديلات للمراجعة قبل النشر.',
+  verified_member: 'عضو مرتبط بسجل شخص معتمد؛ هذه الصفة تُمنح تلقائيًا.',
+  family_moderator: 'يراجع فقط الطلبات التابعة للعائلات المحددة له، ولا يعتمد طلبه الشخصي.',
+  content_moderator: 'يراجع المناسبات والمحتوى العام، ولا يعتمد طلبه الشخصي.',
+  admin: 'يضيف مباشرة ويعتمد جميع الطلبات، لكنه لا يدير صلاحيات المدراء.',
+  super_admin: 'الصلاحيات الحساسة وإدارة الأدوار والنطاقات.',
+}
 
 function formatDate(value: string | null) {
   if (!value) return 'لم يسجل الدخول بعد'
@@ -30,8 +55,12 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [message, setMessage] = useState('')
-  const [confirmUserId, setConfirmUserId] = useState<string | null>(null)
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null)
+  const [pendingRole, setPendingRole] = useState<string | null>(null)
   const [busyUserId, setBusyUserId] = useState<string | null>(null)
+  const [scopeFamilyId, setScopeFamilyId] = useState('')
+  const [scopes, setScopes] = useState<FamilyScope[]>([])
+  const [scopesLoading, setScopesLoading] = useState(false)
   const timerRef = useRef<number | null>(null)
   const requestRef = useRef(0)
 
@@ -52,7 +81,7 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
     setLoadingMore(false)
 
     if (error) {
-      setMessage(error.message.toLowerCase().includes('does not exist') ? 'شغّل migration إدارة المدراء أولًا في Supabase.' : 'تعذر تحميل قائمة المستخدمين الآن.')
+      setMessage(error.message.toLowerCase().includes('does not exist') ? 'شغّل أحدث migration لنظام الأدوار في Supabase.' : 'تعذر تحميل قائمة المستخدمين الآن.')
       return
     }
 
@@ -73,38 +102,107 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
     }
   }, [active, query])
 
-  async function changeRole(user: ManagedUser) {
+  async function loadScopes(userId: string) {
+    if (!supabase) return
+    setScopesLoading(true)
+    const { data, error } = await supabase.rpc('list_family_moderator_assignments', { p_user_id: userId })
+    setScopesLoading(false)
+    if (error) {
+      if (!error.message.toLowerCase().includes('does not exist')) setMessage(error.message)
+      setScopes([])
+      return
+    }
+    setScopes((data ?? []) as FamilyScope[])
+  }
+
+  function openRolePanel(user: ManagedUser) {
+    const next = expandedUserId === user.user_id ? null : user.user_id
+    setExpandedUserId(next)
+    setPendingRole(null)
+    setScopeFamilyId('')
+    setScopes([])
+    if (next) void loadScopes(user.user_id)
+  }
+
+  async function changeRole(user: ManagedUser, requestedRole: 'member' | 'content_moderator' | 'admin') {
     if (!supabase || user.is_primary_admin) return
-    const nextRole = user.role === 'admin' ? 'member' : 'admin'
     setBusyUserId(user.user_id)
     setMessage('')
-    const { error } = await supabase.rpc('set_basic_user_role', {
+    const { data, error } = await supabase.rpc('set_platform_user_role', {
       p_user_id: user.user_id,
-      p_role: nextRole,
+      p_role: requestedRole,
     })
     setBusyUserId(null)
-    setConfirmUserId(null)
+    setPendingRole(null)
 
     if (error) {
-      setMessage(error.message || 'تعذر تغيير الصلاحية.')
+      setMessage(error.message.toLowerCase().includes('does not exist') ? 'شغّل migration رقم 017 أولًا في Supabase.' : error.message)
       return
     }
 
-    setRows((current) => current.map((item) => item.user_id === user.user_id ? { ...item, role: nextRole } : item))
-    setMessage(nextRole === 'admin' ? 'تم منح صلاحية المدير.' : 'تمت إعادة المستخدم إلى عضو.')
+    const actualRole = typeof data === 'string' && data ? data : requestedRole
+    setRows((current) => current.map((item) => item.user_id === user.user_id ? { ...item, role: actualRole } : item))
+    setScopes([])
+    setScopeFamilyId('')
+    setMessage(`تم تحديث الصلاحية إلى «${roleLabels[actualRole] || actualRole}».`)
+  }
+
+  async function addFamilyScope(user: ManagedUser) {
+    if (!supabase || !scopeFamilyId || user.is_primary_admin) return
+    setBusyUserId(user.user_id)
+    setMessage('')
+    const { data, error } = await supabase.rpc('set_family_moderator_assignment', {
+      p_user_id: user.user_id,
+      p_family_id: scopeFamilyId,
+      p_enabled: true,
+    })
+    setBusyUserId(null)
+
+    if (error) {
+      setMessage(error.message.toLowerCase().includes('does not exist') ? 'شغّل migration رقم 017 أولًا في Supabase.' : error.message)
+      return
+    }
+
+    const actualRole = typeof data === 'string' && data ? data : 'family_moderator'
+    setRows((current) => current.map((item) => item.user_id === user.user_id ? { ...item, role: actualRole } : item))
+    setScopeFamilyId('')
+    await loadScopes(user.user_id)
+    setMessage('تم تعيين نطاق مسؤول العائلة.')
+  }
+
+  async function removeFamilyScope(user: ManagedUser, familyId: string) {
+    if (!supabase || user.is_primary_admin) return
+    setBusyUserId(user.user_id)
+    setMessage('')
+    const { data, error } = await supabase.rpc('set_family_moderator_assignment', {
+      p_user_id: user.user_id,
+      p_family_id: familyId,
+      p_enabled: false,
+    })
+    setBusyUserId(null)
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    const actualRole = typeof data === 'string' && data ? data : 'member'
+    setRows((current) => current.map((item) => item.user_id === user.user_id ? { ...item, role: actualRole } : item))
+    await loadScopes(user.user_id)
+    setMessage('تمت إزالة نطاق العائلة.')
   }
 
   if (!active) return null
 
   return (
-    <section className="admin-users-panel">
+    <section className="admin-users-panel rbac-users-panel">
       <header className="admin-users-heading">
         <div>
-          <span className="eyebrow">صلاحيات مؤقتة</span>
-          <h2>المستخدمون والمدراء</h2>
-          <p>حاليًا يمكنك التحويل بين «عضو» و«مدير». المدير يستطيع الإضافة المباشرة واعتماد الطلبات، لكنه لا يستطيع إدارة المدراء.</p>
+          <span className="eyebrow">إدارة الصلاحيات</span>
+          <h2>المستخدمون والأدوار</h2>
+          <p>الأدوار الحساسة تُدار من هنا فقط. مسؤول العائلة مقيد بنطاق عائلاته، ومشرف المحتوى مقيد بالمناسبات، والمدير لا يستطيع إدارة الأدوار.</p>
         </div>
-        <span className="primary-admin-lock">◆ المدير الرئيسي فقط</span>
+        <span className="primary-admin-lock">◆ المدير الأعلى فقط</span>
       </header>
 
       <div className="admin-user-search">
@@ -121,15 +219,15 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
         <div className="admin-users-list">
           {rows.map((user) => {
             const isSelf = user.user_id === currentUserId
-            const isAdmin = user.role === 'admin' || user.role === 'super_admin'
-            const confirming = confirmUserId === user.user_id
+            const expanded = expandedUserId === user.user_id
+            const role = user.role || 'member'
             return (
-              <article className={`admin-user-card ${isAdmin ? 'is-admin' : ''}`} key={user.user_id}>
+              <article className={`admin-user-card rbac-user-card role-${role}`} key={user.user_id}>
                 <span className="admin-user-avatar">{(user.display_name || user.email || 'م').trim().charAt(0)}</span>
                 <div className="admin-user-copy">
                   <div className="admin-user-name-line">
                     <strong>{user.display_name || 'مستخدم بدون اسم'}</strong>
-                    {user.is_primary_admin ? <span className="role-badge primary">مدير رئيسي</span> : <span className={`role-badge ${isAdmin ? 'admin' : 'member'}`}>{isAdmin ? 'مدير' : 'عضو'}</span>}
+                    <span className={`role-badge ${user.is_primary_admin ? 'primary' : role}`}>{user.is_primary_admin ? 'مدير أعلى' : roleLabels[role] || role}</span>
                   </div>
                   <small dir="ltr">{user.email || '—'}</small>
                   <p>آخر دخول: {formatDate(user.last_sign_in_at)}{isSelf ? ' · حسابك' : ''}</p>
@@ -137,15 +235,59 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
 
                 {!user.is_primary_admin && (
                   <div className="admin-user-actions">
-                    {!confirming ? (
-                      <button type="button" className={isAdmin ? 'demote' : 'promote'} onClick={() => setConfirmUserId(user.user_id)}>{isAdmin ? 'تحويل لعضو' : 'تعيين مدير'}</button>
-                    ) : (
-                      <div className="role-confirm-actions">
-                        <span>{isAdmin ? 'إزالة صلاحية المدير؟' : 'منح صلاحية المدير؟'}</span>
-                        <button type="button" className="confirm" disabled={busyUserId === user.user_id} onClick={() => void changeRole(user)}>{busyUserId === user.user_id ? '…' : 'تأكيد'}</button>
-                        <button type="button" onClick={() => setConfirmUserId(null)}>إلغاء</button>
+                    <button type="button" className="manage-role" onClick={() => openRolePanel(user)}>{expanded ? 'إغلاق الصلاحيات' : 'إدارة الصلاحية'}</button>
+                  </div>
+                )}
+
+                {expanded && !user.is_primary_admin && (
+                  <div className="rbac-role-panel">
+                    <div className="rbac-current-role">
+                      <span>الدور الحالي</span>
+                      <strong>{roleLabels[role] || role}</strong>
+                      <small>{roleDescriptions[role] || 'صلاحية مخصصة لهذا الحساب.'}</small>
+                    </div>
+
+                    <div className="rbac-role-options" aria-label="اختيار الدور">
+                      {(['member', 'content_moderator', 'admin'] as const).map((nextRole) => (
+                        <button
+                          type="button"
+                          key={nextRole}
+                          className={pendingRole === nextRole ? 'selected' : role === nextRole || (nextRole === 'member' && role === 'verified_member') ? 'current' : ''}
+                          onClick={() => setPendingRole(nextRole)}
+                        >
+                          <strong>{nextRole === 'member' ? 'عضو' : roleLabels[nextRole]}</strong>
+                          <small>{nextRole === 'member' ? 'الموثق يبقى موثقًا تلقائيًا' : roleDescriptions[nextRole]}</small>
+                        </button>
+                      ))}
+                    </div>
+
+                    {pendingRole && (
+                      <div className="rbac-confirm-strip">
+                        <span>تغيير الدور إلى «{pendingRole === 'member' ? 'عضو' : roleLabels[pendingRole]}»؟</span>
+                        <button type="button" className="confirm" disabled={busyUserId === user.user_id} onClick={() => void changeRole(user, pendingRole as 'member' | 'content_moderator' | 'admin')}>{busyUserId === user.user_id ? '…' : 'تأكيد'}</button>
+                        <button type="button" onClick={() => setPendingRole(null)}>إلغاء</button>
                       </div>
                     )}
+
+                    <div className="family-scope-manager">
+                      <div className="family-scope-heading">
+                        <div><strong>مسؤول عائلة أو فرع</strong><small>يمكن تعيين أكثر من عائلة لنفس المسؤول. لن يرى أو يعتمد خارج هذه النطاقات.</small></div>
+                        {role === 'family_moderator' && <span>مفعّل</span>}
+                      </div>
+
+                      {scopesLoading ? <div className="picker-skeleton compact">جارٍ تحميل النطاقات…</div> : scopes.length ? (
+                        <div className="family-scope-chips">
+                          {scopes.map((scope) => (
+                            <span key={scope.family_id}><b>{scope.family_name}</b><small>{scope.origin_place || 'عائلة معتمدة'}</small><button type="button" disabled={busyUserId === user.user_id} onClick={() => void removeFamilyScope(user, scope.family_id)} aria-label={`إزالة ${scope.family_name}`}>×</button></span>
+                          ))}
+                        </div>
+                      ) : <p className="family-scope-empty">لم يتم تعيين عائلة لهذا المستخدم.</p>}
+
+                      <div className="family-scope-add">
+                        <FamilyPicker label="اختر عائلة لإضافتها إلى نطاقه" value={scopeFamilyId} onChange={setScopeFamilyId} required />
+                        <button type="button" className="primary" disabled={!scopeFamilyId || busyUserId === user.user_id} onClick={() => void addFamilyScope(user)}>{busyUserId === user.user_id ? 'جارٍ الحفظ…' : 'تعيين مسؤول عائلة'}</button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </article>

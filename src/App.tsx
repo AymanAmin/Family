@@ -631,7 +631,7 @@ function App() {
           <span className="brand-mark">ص</span>
           <span><strong>صلة المنطقة</strong><small>سجل أهالي المنطقة</small></span>
         </button>
-        <nav>
+        <nav className="desktop-nav">
           <button onClick={() => setView('home')} className={view === 'home' ? 'active' : ''}>الرئيسية</button>
           <button onClick={() => setView('search')} className={view === 'search' ? 'active' : ''}>البحث</button>
           <button onClick={() => requireAccount() && setView('add')} className={view === 'add' ? 'active' : ''}>إضافة</button>
@@ -647,6 +647,13 @@ function App() {
           ) : <button className="primary small" onClick={() => document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' })}>دخول</button>}
         </div>
       </header>
+
+      <nav className="mobile-bottom-nav" aria-label="التنقل الرئيسي">
+        <button type="button" onClick={() => setView('home')} className={view === 'home' ? 'active' : ''}><span className="mobile-nav-icon">⌂</span><span>الرئيسية</span></button>
+        <button type="button" onClick={() => setView('search')} className={view === 'search' ? 'active' : ''}><span className="mobile-nav-icon">⌕</span><span>البحث</span></button>
+        <button type="button" onClick={() => requireAccount() && setView('add')} className={view === 'add' ? 'active add-nav-action' : 'add-nav-action'}><span className="mobile-nav-icon">＋</span><span>إضافة</span></button>
+        {isAdmin && <button type="button" onClick={() => setView('admin')} className={view === 'admin' ? 'active' : ''}><span className="mobile-nav-icon">▦</span><span>الإدارة</span></button>}
+      </nav>
 
       {message && <div className={`global-message ${messageTone}`} role="status"><span>{message}</span><button onClick={() => setMessage('')}>×</button></div>}
 

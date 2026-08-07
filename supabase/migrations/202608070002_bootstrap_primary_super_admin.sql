@@ -20,12 +20,12 @@ declare
   primary_admin_email_sha256 constant text := '55182deea52079a2f264d88e5a1a4a08c93362468bbb22d792daa777beeb530c';
   is_primary boolean :=
     pg_catalog.encode(
-      extensions.digest(pg_catalog.lower(pg_catalog.coalesce(new.email, '')), 'sha256'),
+      extensions.digest(pg_catalog.lower(coalesce(new.email, '')), 'sha256'),
       'hex'
     ) = primary_admin_email_sha256;
   was_primary boolean := false;
 begin
-  select pg_catalog.coalesce(p.is_primary_admin, false)
+  select coalesce(p.is_primary_admin, false)
     into was_primary
   from public.profiles as p
   where p.id = new.id;
@@ -42,11 +42,11 @@ begin
   values (
     new.id,
     new.email,
-    pg_catalog.coalesce(
+    coalesce(
       new.raw_user_meta_data ->> 'full_name',
       new.raw_user_meta_data ->> 'name'
     ),
-    pg_catalog.coalesce(
+    coalesce(
       new.raw_user_meta_data ->> 'avatar_url',
       new.raw_user_meta_data ->> 'picture'
     ),
@@ -57,8 +57,8 @@ begin
   on conflict (id) do update
   set
     email = excluded.email,
-    display_name = pg_catalog.coalesce(public.profiles.display_name, excluded.display_name),
-    avatar_url = pg_catalog.coalesce(public.profiles.avatar_url, excluded.avatar_url),
+    display_name = coalesce(public.profiles.display_name, excluded.display_name),
+    avatar_url = coalesce(public.profiles.avatar_url, excluded.avatar_url),
     role = case
       when is_primary then 'super_admin'
       when public.profiles.is_primary_admin then 'member'
@@ -74,7 +74,7 @@ begin
   if is_primary then
     update auth.users
     set raw_app_meta_data =
-      pg_catalog.coalesce(raw_app_meta_data, '{}'::jsonb)
+      coalesce(raw_app_meta_data, '{}'::jsonb)
       || pg_catalog.jsonb_build_object(
         'app_role', 'super_admin',
         'is_primary_admin', true
@@ -83,7 +83,7 @@ begin
   elsif was_primary then
     update auth.users
     set raw_app_meta_data =
-      (pg_catalog.coalesce(raw_app_meta_data, '{}'::jsonb) - 'is_primary_admin')
+      (coalesce(raw_app_meta_data, '{}'::jsonb) - 'is_primary_admin')
       || pg_catalog.jsonb_build_object('app_role', 'member')
     where id = new.id;
   end if;
@@ -109,11 +109,11 @@ insert into public.profiles (
 select
   u.id,
   u.email,
-  pg_catalog.coalesce(
+  coalesce(
     u.raw_user_meta_data ->> 'full_name',
     u.raw_user_meta_data ->> 'name'
   ),
-  pg_catalog.coalesce(
+  coalesce(
     u.raw_user_meta_data ->> 'avatar_url',
     u.raw_user_meta_data ->> 'picture'
   ),
@@ -122,7 +122,7 @@ select
   true
 from auth.users as u
 where pg_catalog.encode(
-  extensions.digest(pg_catalog.lower(pg_catalog.coalesce(u.email, '')), 'sha256'),
+  extensions.digest(pg_catalog.lower(coalesce(u.email, '')), 'sha256'),
   'hex'
 ) = '55182deea52079a2f264d88e5a1a4a08c93362468bbb22d792daa777beeb530c'
 on conflict (id) do update
@@ -135,13 +135,13 @@ set
 
 update auth.users as u
 set raw_app_meta_data =
-  pg_catalog.coalesce(u.raw_app_meta_data, '{}'::jsonb)
+  coalesce(u.raw_app_meta_data, '{}'::jsonb)
   || pg_catalog.jsonb_build_object(
     'app_role', 'super_admin',
     'is_primary_admin', true
   )
 where pg_catalog.encode(
-  extensions.digest(pg_catalog.lower(pg_catalog.coalesce(u.email, '')), 'sha256'),
+  extensions.digest(pg_catalog.lower(coalesce(u.email, '')), 'sha256'),
   'hex'
 ) = '55182deea52079a2f264d88e5a1a4a08c93362468bbb22d792daa777beeb530c';
 

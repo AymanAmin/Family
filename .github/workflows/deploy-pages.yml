@@ -53,7 +53,17 @@ jobs:
             echo "Published root files are already current."
           else
             git commit -m "Publish production build [skip ci]"
-            git push
+            if git push; then
+              echo "Published root build pushed."
+            else
+              echo "Remote changed during build; retrying once after rebase."
+              if git pull --rebase origin main && git push; then
+                echo "Published root build pushed after rebase."
+              else
+                git rebase --abort >/dev/null 2>&1 || true
+                echo "Root mirror push skipped because another workflow updated main. Pages artifact deployment will continue."
+              fi
+            fi
           fi
 
       - name: Configure Pages

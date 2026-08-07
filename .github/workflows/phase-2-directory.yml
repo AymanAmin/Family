@@ -1,0 +1,461 @@
+name: Implement directory phase two
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/phase-2-directory.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add schema and application features
+        shell: bash
+        run: |
+          cat > /tmp/phase2.sql <<'SQL'
+          -- PHASE 2: PERSON RELATIONSHIPS AND ACCOUNT LINKING
+          create table if not exists public.person_relationships (
+            id uuid primary key default gen_random_uuid(),
+            source_person_id uuid not null references public.people(id) on delete cascade,
+            target_person_id uuid not null references public.people(id) on delete cascade,
+            relation_type text not null check (relation_type in ('parent', 'child', 'spouse', 'sibling', 'guardian', 'other')),
+            notes text,
+            status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+            created_by uuid not null default auth.uid() references auth.users(id) on delete restrict,
+            approved_by uuid references auth.users(id) on delete set null,
+            approved_at timestamptz,
+            created_at timestamptz not null default now(),
+            updated_at timestamptz not null default now(),
+            check (source_person_id <> target_person_id)
+          );
+
+          create table if not exists public.account_link_requests (
+            id uuid primary key default gen_random_uuid(),
+            user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+            person_id uuid not null references public.people(id) on delete cascade,
+            note text,
+            status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+            reviewed_by uuid references auth.users(id) on delete set null,
+            reviewed_at timestamptz,
+            created_at timestamptz not null default now(),
+            updated_at timestamptz not null default now()
+          );
+
+          do $$
+          begin
+            if not exists (
+              select 1 from pg_constraint
+              where conname = 'profiles_linked_person_id_fkey'
+                and conrelid = 'public.profiles'::regclass
+            ) then
+              alter table public.profiles
+                add constraint profiles_linked_person_id_fkey
+                foreign key (linked_person_id) references public.people(id) on delete set null;
+            end if;
+          end
+          $$;
+
+          create index if not exists person_relationships_source_idx on public.person_relationships (source_person_id);
+          create index if not exists person_relationships_target_idx on public.person_relationships (target_person_id);
+          create index if not exists person_relationships_status_idx on public.person_relationships (status);
+          create unique index if not exists person_relationships_no_duplicate_idx
+            on public.person_relationships (source_person_id, target_person_id, relation_type)
+            where status in ('pending', 'approved');
+          create unique index if not exists account_link_requests_one_active_idx
+            on public.account_link_requests (user_id)
+            where status in ('pending', 'approved');
+
+          alter table public.person_relationships enable row level security;
+          alter table public.account_link_requests enable row level security;
+
+          revoke all on table public.person_relationships from anon, authenticated;
+          revoke all on table public.account_link_requests from anon, authenticated;
+          grant select on table public.person_relationships to anon, authenticated;
+          grant insert, update on table public.person_relationships to authenticated;
+          grant select, insert on table public.account_link_requests to authenticated;
+
+          drop policy if exists "Public can read approved relationships" on public.person_relationships;
+          drop policy if exists "Members can read approved or own relationships" on public.person_relationships;
+          drop policy if exists "Members can submit relationships" on public.person_relationships;
+          drop policy if exists "Members can edit own pending relationships" on public.person_relationships;
+          drop policy if exists "Admins can manage relationships" on public.person_relationships;
+          drop policy if exists "Members can read own link requests" on public.account_link_requests;
+          drop policy if exists "Members can submit own link request" on public.account_link_requests;
+
+          create policy "Public can read approved relationships"
+          on public.person_relationships for select to anon
+          using (status = 'approved');
+
+          create policy "Members can read approved or own relationships"
+          on public.person_relationships for select to authenticated
+          using (
+            status = 'approved'
+            or created_by = (select auth.uid())
+            or exists (
+              select 1 from public.profiles p
+              where p.id = (select auth.uid())
+                and p.account_status = 'active'
+                and p.role in ('admin', 'super_admin')
+            )
+          );
+
+          create policy "Members can submit relationships"
+          on public.person_relationships for insert to authenticated
+          with check (created_by = (select auth.uid()) and status = 'pending');
+
+          create policy "Members can edit own pending relationships"
+          on public.person_relationships for update to authenticated
+          using (created_by = (select auth.uid()) and status = 'pending')
+          with check (created_by = (select auth.uid()) and status = 'pending');
+
+          create policy "Admins can manage relationships"
+          on public.person_relationships for update to authenticated
+          using (exists (
+            select 1 from public.profiles p
+            where p.id = (select auth.uid()) and p.account_status = 'active' and p.role in ('admin', 'super_admin')
+          ))
+          with check (exists (
+            select 1 from public.profiles p
+            where p.id = (select auth.uid()) and p.account_status = 'active' and p.role in ('admin', 'super_admin')
+          ));
+
+          create policy "Members can read own link requests"
+          on public.account_link_requests for select to authenticated
+          using (
+            user_id = (select auth.uid())
+            or exists (
+              select 1 from public.profiles p
+              where p.id = (select auth.uid()) and p.account_status = 'active' and p.role in ('admin', 'super_admin')
+            )
+          );
+
+          create policy "Members can submit own link request"
+          on public.account_link_requests for insert to authenticated
+          with check (user_id = (select auth.uid()) and status = 'pending');
+
+          create or replace function public.review_account_link_request(p_request_id uuid, p_status text)
+          returns void
+          language plpgsql
+          security definer
+          set search_path = ''
+          as $$
+          declare
+            v_user_id uuid;
+            v_person_id uuid;
+          begin
+            if p_status not in ('approved', 'rejected') then
+              raise exception 'Invalid review status';
+            end if;
+
+            if not exists (
+              select 1 from public.profiles p
+              where p.id = auth.uid()
+                and p.account_status = 'active'
+                and p.role in ('admin', 'super_admin')
+            ) then
+              raise exception 'Not authorized';
+            end if;
+
+            select user_id, person_id into v_user_id, v_person_id
+            from public.account_link_requests
+            where id = p_request_id and status = 'pending'
+            for update;
+
+            if v_user_id is null then
+              raise exception 'Request not found or already reviewed';
+            end if;
+
+            update public.account_link_requests
+            set status = p_status,
+                reviewed_by = auth.uid(),
+                reviewed_at = now(),
+                updated_at = now()
+            where id = p_request_id;
+
+            if p_status = 'approved' then
+              update public.profiles
+              set linked_person_id = v_person_id,
+                  updated_at = now()
+              where id = v_user_id;
+            end if;
+          end;
+          $$;
+
+          revoke all on function public.review_account_link_request(uuid, text) from public, anon;
+          grant execute on function public.review_account_link_request(uuid, text) to authenticated;
+
+          drop trigger if exists set_person_relationships_updated_at on public.person_relationships;
+          create trigger set_person_relationships_updated_at
+          before update on public.person_relationships
+          for each row execute procedure private.touch_community_record_updated_at();
+
+          drop trigger if exists set_account_link_requests_updated_at on public.account_link_requests;
+          create trigger set_account_link_requests_updated_at
+          before update on public.account_link_requests
+          for each row execute procedure private.touch_community_record_updated_at();
+          SQL
+
+          cp /tmp/phase2.sql supabase/migrations/202608070004_person_relationships_and_account_linking.sql
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          setup = Path('supabase/SETUP.sql')
+          sql = setup.read_text()
+          phase = Path('/tmp/phase2.sql').read_text()
+          marker = '-- PHASE 2: PERSON RELATIONSHIPS AND ACCOUNT LINKING'
+          if marker not in sql:
+              sql = sql.replace("\ncommit;\nnotify pgrst, 'reload schema';", "\n\n" + phase + "\n\ncommit;\nnotify pgrst, 'reload schema';")
+              setup.write_text(sql)
+
+          app_path = Path('src/App.tsx')
+          app = app_path.read_text()
+
+          def replace(old: str, new: str):
+              global app
+              if old not in app:
+                  raise SystemExit(f'Missing App.tsx patch anchor: {old[:100]!r}')
+              app = app.replace(old, new, 1)
+
+          replace(
+              "import { getApplicationUrl, supabase, supabaseConfiguration } from './lib/supabase'\n",
+              "import { getApplicationUrl, supabase, supabaseConfiguration } from './lib/supabase'\nimport './details.css'\n",
+          )
+          replace(
+              "type View = 'home' | 'search' | 'add' | 'admin'\ntype AddMode = 'family' | 'person' | 'event'",
+              "type View = 'home' | 'search' | 'add' | 'admin' | 'person' | 'family' | 'account'\ntype AddMode = 'family' | 'person' | 'event' | 'relationship'",
+          )
+          replace(
+              "  is_primary_admin: boolean\n}",
+              "  is_primary_admin: boolean\n  linked_person_id: string | null\n}",
+          )
+          replace(
+              "type CommunityEvent = {",
+              "type RelatedPerson = { id?: string; full_name?: string } | { id?: string; full_name?: string }[] | null\n\ntype PersonRelationship = {\n  id: string\n  source_person_id: string\n  target_person_id: string\n  relation_type: string\n  notes: string | null\n  status: RecordStatus\n  source?: RelatedPerson\n  target?: RelatedPerson\n  created_at: string\n}\n\ntype AccountLinkRequest = {\n  id: string\n  person_id: string\n  status: RecordStatus\n  note: string | null\n  people?: RelatedPerson\n  created_at: string\n}\n\ntype CommunityEvent = {",
+          )
+          replace(
+              "  table: 'families' | 'people' | 'events'",
+              "  table: 'families' | 'people' | 'events' | 'person_relationships' | 'account_link_requests'",
+          )
+          replace(
+              "const roleLabels: Record<string, string> = {",
+              "const relationshipLabels: Record<string, string> = {\n  parent: 'والد أو والدة',\n  child: 'ابن أو ابنة',\n  spouse: 'زوج أو زوجة',\n  sibling: 'أخ أو أخت',\n  guardian: 'ولي أو وصي',\n  other: 'صلة أخرى',\n}\n\nconst inverseRelationshipLabels: Record<string, string> = {\n  parent: 'ابن أو ابنة',\n  child: 'والد أو والدة',\n  spouse: 'زوج أو زوجة',\n  sibling: 'أخ أو أخت',\n  guardian: 'تحت الوصاية',\n  other: 'صلة أخرى',\n}\n\nconst roleLabels: Record<string, string> = {",
+          )
+          replace(
+              "function formatDate(value: string | null | undefined): string {",
+              "function personName(value: RelatedPerson): string {\n  if (!value) return ''\n  if (Array.isArray(value)) return value[0]?.full_name ?? ''\n  return value.full_name ?? ''\n}\n\nfunction personId(value: RelatedPerson): string {\n  if (!value) return ''\n  if (Array.isArray(value)) return value[0]?.id ?? ''\n  return value.id ?? ''\n}\n\nfunction formatDate(value: string | null | undefined): string {",
+          )
+          replace(
+              "  const [pending, setPending] = useState<PendingRecord[]>([])\n",
+              "  const [pending, setPending] = useState<PendingRecord[]>([])\n  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null)\n  const [selectedFamily, setSelectedFamily] = useState<Family | null>(null)\n  const [relationships, setRelationships] = useState<PersonRelationship[]>([])\n  const [relationsLoading, setRelationsLoading] = useState(false)\n  const [ownLinkRequest, setOwnLinkRequest] = useState<AccountLinkRequest | null>(null)\n",
+          )
+          replace(
+              "  const [eventForm, setEventForm] = useState({ event_type: 'general', title: '', family_id: '', event_date: '', location_name: '', description: '' })\n",
+              "  const [eventForm, setEventForm] = useState({ event_type: 'general', title: '', family_id: '', event_date: '', location_name: '', description: '' })\n  const [relationshipForm, setRelationshipForm] = useState({ source_person_id: '', relation_type: 'parent', target_person_id: '', notes: '' })\n",
+          )
+          replace(
+              ".select('id,email,display_name,avatar_url,role,is_primary_admin')",
+              ".select('id,email,display_name,avatar_url,role,is_primary_admin,linked_person_id')",
+          )
+
+          old_pending = """    const [familyResult, peopleResult, eventResult] = await Promise.all([\n      supabase.from('families').select('id,name,origin_place,created_at').eq('status', 'pending').order('created_at'),\n      supabase.from('people').select('id,full_name,created_at,families(name)').eq('status', 'pending').order('created_at'),\n      supabase.from('events').select('id,title,event_type,created_at').eq('status', 'pending').order('created_at'),\n    ])\n\n    const rows: PendingRecord[] = []\n    for (const item of familyResult.data ?? []) {\n      rows.push({ id: item.id, title: item.name, subtitle: item.origin_place || 'عائلة جديدة', table: 'families', created_at: item.created_at })\n    }\n    for (const item of peopleResult.data ?? []) {\n      rows.push({ id: item.id, title: item.full_name, subtitle: familyName(item.families as RelatedFamily) || 'شخص جديد', table: 'people', created_at: item.created_at })\n    }\n    for (const item of eventResult.data ?? []) {\n      rows.push({ id: item.id, title: item.title, subtitle: eventLabels[item.event_type] || item.event_type, table: 'events', created_at: item.created_at })\n    }"""
+          new_pending = """    const [familyResult, peopleResult, eventResult, relationshipResult, linkResult] = await Promise.all([\n      supabase.from('families').select('id,name,origin_place,created_at').eq('status', 'pending').order('created_at'),\n      supabase.from('people').select('id,full_name,created_at,families(name)').eq('status', 'pending').order('created_at'),\n      supabase.from('events').select('id,title,event_type,created_at').eq('status', 'pending').order('created_at'),\n      supabase.from('person_relationships').select('id,relation_type,created_at,source:people!person_relationships_source_person_id_fkey(full_name),target:people!person_relationships_target_person_id_fkey(full_name)').eq('status', 'pending').order('created_at'),\n      supabase.from('account_link_requests').select('id,created_at,people(full_name)').eq('status', 'pending').order('created_at'),\n    ])\n\n    const rows: PendingRecord[] = []\n    for (const item of familyResult.data ?? []) {\n      rows.push({ id: item.id, title: item.name, subtitle: item.origin_place || 'عائلة جديدة', table: 'families', created_at: item.created_at })\n    }\n    for (const item of peopleResult.data ?? []) {\n      rows.push({ id: item.id, title: item.full_name, subtitle: familyName(item.families as RelatedFamily) || 'شخص جديد', table: 'people', created_at: item.created_at })\n    }\n    for (const item of eventResult.data ?? []) {\n      rows.push({ id: item.id, title: item.title, subtitle: eventLabels[item.event_type] || item.event_type, table: 'events', created_at: item.created_at })\n    }\n    for (const item of relationshipResult.data ?? []) {\n      const source = personName(item.source as RelatedPerson) || 'شخص أول'\n      const target = personName(item.target as RelatedPerson) || 'شخص ثانٍ'\n      rows.push({ id: item.id, title: `${source} — ${target}`, subtitle: relationshipLabels[item.relation_type] || item.relation_type, table: 'person_relationships', created_at: item.created_at })\n    }\n    for (const item of linkResult.data ?? []) {\n      rows.push({ id: item.id, title: personName(item.people as RelatedPerson) || 'طلب ربط حساب', subtitle: 'طلب إثبات أن الحساب يعود لهذا الشخص', table: 'account_link_requests', created_at: item.created_at })\n    }"""
+          replace(old_pending, new_pending)
+
+          replace(
+              "  useEffect(() => {\n    void loadPending()\n  }, [loadPending, families, people, events])\n",
+              "  useEffect(() => {\n    void loadPending()\n  }, [loadPending, families, people, events])\n\n  useEffect(() => {\n    if (!supabase || !session) {\n      setOwnLinkRequest(null)\n      return\n    }\n    void supabase\n      .from('account_link_requests')\n      .select('id,person_id,status,note,created_at,people(id,full_name)')\n      .eq('user_id', session.user.id)\n      .order('created_at', { ascending: false })\n      .limit(1)\n      .maybeSingle()\n      .then(({ data }) => setOwnLinkRequest((data as AccountLinkRequest | null) ?? null))\n  }, [session, profile?.linked_person_id])\n",
+          )
+
+          old_moderate = """  async function moderate(record: PendingRecord, status: 'approved' | 'rejected') {\n    if (!supabase || !session || !isAdmin) return\n    setBusy(true)\n    const { error } = await supabase\n      .from(record.table)\n      .update({ status, approved_by: session.user.id, approved_at: status === 'approved' ? new Date().toISOString() : null })\n      .eq('id', record.id)\n    setBusy(false)\n    if (error) return showMessage(friendlyError(error.message), 'error')\n    showMessage(status === 'approved' ? 'تم اعتماد السجل.' : 'تم رفض السجل.', 'success')\n    await loadCommunityData()\n    await loadPending()\n  }\n\n  const userName"""
+          new_functions = """  function openFamily(item: Family) {\n    setSelectedFamily(item)\n    setView('family')\n    window.scrollTo({ top: 0, behavior: 'smooth' })\n  }\n\n  async function openPerson(item: Person) {\n    setSelectedPerson(item)\n    setView('person')\n    setRelationsLoading(true)\n    setRelationships([])\n    window.scrollTo({ top: 0, behavior: 'smooth' })\n    if (!supabase) return setRelationsLoading(false)\n    const { data, error } = await supabase\n      .from('person_relationships')\n      .select('id,source_person_id,target_person_id,relation_type,notes,status,created_at,source:people!person_relationships_source_person_id_fkey(id,full_name),target:people!person_relationships_target_person_id_fkey(id,full_name)')\n      .or(`source_person_id.eq.${item.id},target_person_id.eq.${item.id}`)\n      .order('created_at')\n    setRelationsLoading(false)\n    if (error) return showMessage(friendlyError(error.message), 'error')\n    setRelationships((data ?? []) as PersonRelationship[])\n  }\n\n  async function submitRelationship(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault()\n    if (!supabase || !session || !requireAccount()) return\n    if (!relationshipForm.source_person_id || !relationshipForm.target_person_id) return showMessage('اختر الشخصين.', 'error')\n    if (relationshipForm.source_person_id === relationshipForm.target_person_id) return showMessage('لا يمكن ربط الشخص بنفسه.', 'error')\n    setBusy(true)\n    const { error } = await supabase.from('person_relationships').insert({\n      source_person_id: relationshipForm.source_person_id,\n      target_person_id: relationshipForm.target_person_id,\n      relation_type: relationshipForm.relation_type,\n      notes: relationshipForm.notes.trim() || null,\n      created_by: session.user.id,\n      status: 'pending',\n    })\n    setBusy(false)\n    if (error) return showMessage(friendlyError(error.message), 'error')\n    setRelationshipForm({ source_person_id: '', relation_type: 'parent', target_person_id: '', notes: '' })\n    showMessage('تم إرسال صلة القرابة للمراجعة.', 'success')\n    await loadPending()\n  }\n\n  async function requestAccountLink(item: Person) {\n    if (!supabase || !session || !requireAccount()) return\n    if (profile?.linked_person_id) return showMessage('حسابك مرتبط بشخص بالفعل.', 'info')\n    if (ownLinkRequest?.status === 'pending') return showMessage('لديك طلب ربط قيد المراجعة.', 'info')\n    setBusy(true)\n    const { data, error } = await supabase.from('account_link_requests').insert({\n      user_id: session.user.id,\n      person_id: item.id,\n      status: 'pending',\n    }).select('id,person_id,status,note,created_at,people(id,full_name)').single()\n    setBusy(false)\n    if (error) return showMessage(friendlyError(error.message), 'error')\n    setOwnLinkRequest(data as AccountLinkRequest)\n    showMessage('تم إرسال طلب ربط الحساب للمراجعة.', 'success')\n  }\n\n  async function moderate(record: PendingRecord, status: 'approved' | 'rejected') {\n    if (!supabase || !session || !isAdmin) return\n    setBusy(true)\n    const result = record.table === 'account_link_requests'\n      ? await supabase.rpc('review_account_link_request', { p_request_id: record.id, p_status: status })\n      : await supabase\n          .from(record.table)\n          .update({ status, approved_by: session.user.id, approved_at: status === 'approved' ? new Date().toISOString() : null })\n          .eq('id', record.id)\n    setBusy(false)\n    if (result.error) return showMessage(friendlyError(result.error.message), 'error')\n    showMessage(status === 'approved' ? 'تم اعتماد السجل.' : 'تم رفض السجل.', 'success')\n    await loadCommunityData()\n    await loadProfile(session)\n    await loadPending()\n  }\n\n  const userName"""
+          replace(old_moderate, new_functions)
+
+          replace(
+              "              <div className=\"account-copy\"><strong>{userName}</strong><small>{roleLabels[profile?.role || 'member']}</small></div>\n              <button className=\"ghost-button\" onClick={signOut} disabled={busy}>خروج</button>",
+              "              <button className=\"account-profile-button\" type=\"button\" onClick={() => setView('account')} aria-label=\"فتح حسابي\">{userName.slice(0, 1)}</button>\n              <button className=\"account-copy account-link\" type=\"button\" onClick={() => setView('account')}><strong>{userName}</strong><small>{roleLabels[profile?.role || 'member']}</small></button>\n              <button className=\"ghost-button\" onClick={signOut} disabled={busy}>خروج</button>",
+          )
+
+          replace(
+              "                    <article className=\"data-card\" key={family.id}>\n                      <span className=\"card-symbol\">{family.name.slice(0, 1)}</span>\n                      <div><h3>{family.name}</h3><p>{family.description || family.origin_place || 'لا توجد نبذة مضافة.'}</p></div>\n                    </article>",
+              "                    <button className=\"data-card interactive-card\" type=\"button\" key={family.id} onClick={() => openFamily(family)}>\n                      <span className=\"card-symbol\">{family.name.slice(0, 1)}</span>\n                      <div><h3>{family.name}</h3><p>{family.description || family.origin_place || 'لا توجد نبذة مضافة.'}</p></div>\n                      <span className=\"card-chevron\">‹</span>\n                    </button>",
+          )
+
+          replacements = {
+            "<article className=\"list-row\" key={item.id}><span className=\"avatar-letter\">{item.name[0]}</span><div><strong>{item.name}</strong><small>{item.origin_place || 'المنطقة'}</small></div></article>": "<button className=\"list-row interactive-row\" type=\"button\" key={item.id} onClick={() => openFamily(item)}><span className=\"avatar-letter\">{item.name[0]}</span><div><strong>{item.name}</strong><small>{item.origin_place || 'المنطقة'}</small></div><span>‹</span></button>",
+            "<article className=\"list-row\" key={item.id}><span className=\"avatar-letter\">{item.full_name[0]}</span><div><strong>{item.full_name}</strong><small>{familyName(item.families) || 'دون عائلة محددة'}{item.is_deceased ? ' · متوفى' : ''}</small></div></article>": "<button className=\"list-row interactive-row\" type=\"button\" key={item.id} onClick={() => void openPerson(item)}><span className=\"avatar-letter\">{item.full_name[0]}</span><div><strong>{item.full_name}</strong><small>{familyName(item.families) || 'دون عائلة محددة'}{item.is_deceased ? ' · متوفى' : ''}</small></div><span>‹</span></button>",
+            "<article className=\"list-row\" key={item.id}><span className=\"avatar-letter\">{item.name[0]}</span><div><strong>{item.name}</strong><small>{item.origin_place || 'المنطقة'} · {item.status === 'pending' ? 'بانتظار الاعتماد' : 'معتمدة'}</small></div></article>": "<button className=\"list-row interactive-row\" type=\"button\" key={item.id} onClick={() => openFamily(item)}><span className=\"avatar-letter\">{item.name[0]}</span><div><strong>{item.name}</strong><small>{item.origin_place || 'المنطقة'} · {item.status === 'pending' ? 'بانتظار الاعتماد' : 'معتمدة'}</small></div><span>‹</span></button>",
+            "<article className=\"list-row\" key={item.id}><span className=\"avatar-letter\">{item.full_name[0]}</span><div><strong>{item.full_name}</strong><small>{familyName(item.families) || 'دون عائلة'} · {item.status === 'pending' ? 'بانتظار الاعتماد' : 'معتمد'}</small></div></article>": "<button className=\"list-row interactive-row\" type=\"button\" key={item.id} onClick={() => void openPerson(item)}><span className=\"avatar-letter\">{item.full_name[0]}</span><div><strong>{item.full_name}</strong><small>{familyName(item.families) || 'دون عائلة'} · {item.status === 'pending' ? 'بانتظار الاعتماد' : 'معتمد'}</small></div><span>‹</span></button>",
+          }
+          for old, new in replacements.items():
+              if old not in app:
+                  raise SystemExit(f'Missing interactive list anchor: {old[:80]!r}')
+              app = app.replace(old, new)
+
+          details_views = """
+        {schemaReady && view === 'family' && selectedFamily && (
+          <section className="page-section detail-page">
+            <button className="back-button" type="button" onClick={() => setView('search')}>→ العودة للدليل</button>
+            <div className="detail-hero">
+              <span className="detail-avatar family-avatar">{selectedFamily.name[0]}</span>
+              <div><span className="eyebrow">ملف العائلة</span><h1>{selectedFamily.name}</h1><p>{selectedFamily.description || 'لا توجد نبذة مضافة لهذه العائلة حتى الآن.'}</p></div>
+            </div>
+            <div className="detail-facts">
+              <article><span>مكان الأصل</span><strong>{selectedFamily.origin_place || 'غير محدد'}</strong></article>
+              <article><span>عدد الأشخاص المعتمدين</span><strong>{approvedPeople.filter((item) => item.family_id === selectedFamily.id).length}</strong></article>
+              <article><span>حالة السجل</span><strong>{selectedFamily.status === 'approved' ? 'معتمد' : 'بانتظار الاعتماد'}</strong></article>
+            </div>
+            <div className="detail-section">
+              <div className="section-title"><div><span className="eyebrow">أفراد العائلة</span><h2>الأشخاص المسجلون</h2></div></div>
+              <div className="detail-list">
+                {approvedPeople.filter((item) => item.family_id === selectedFamily.id).length ? approvedPeople.filter((item) => item.family_id === selectedFamily.id).map((item) => (
+                  <button className="list-row interactive-row" type="button" key={item.id} onClick={() => void openPerson(item)}><span className="avatar-letter">{item.full_name[0]}</span><div><strong>{item.full_name}</strong><small>{item.birth_year ? `مواليد ${item.birth_year}` : 'سنة الميلاد غير محددة'}{item.is_deceased ? ' · متوفى' : ''}</small></div><span>‹</span></button>
+                )) : <div className="empty-state compact">لا يوجد أشخاص معتمدون ضمن هذه العائلة.</div>}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {schemaReady && view === 'person' && selectedPerson && (
+          <section className="page-section detail-page">
+            <button className="back-button" type="button" onClick={() => setView('search')}>→ العودة للدليل</button>
+            <div className="detail-hero">
+              <span className="detail-avatar">{selectedPerson.full_name[0]}</span>
+              <div><span className="eyebrow">ملف شخص</span><h1>{selectedPerson.full_name}</h1><p>{selectedPerson.description || 'لا توجد نبذة مضافة لهذا الشخص.'}</p></div>
+            </div>
+            <div className="detail-facts">
+              <article><span>العائلة</span><strong>{familyName(selectedPerson.families) || 'غير محددة'}</strong></article>
+              <article><span>سنة الميلاد</span><strong>{selectedPerson.birth_year || 'غير محددة'}</strong></article>
+              <article><span>الحالة</span><strong>{selectedPerson.is_deceased ? 'متوفى' : 'على قيد الحياة'}</strong></article>
+            </div>
+            {session && !profile?.linked_person_id && (
+              <div className="link-account-card">
+                <div><strong>هل هذا سجلك؟</strong><p>قدّم طلب ربط حسابك بهذا الشخص للوصول إلى ميزات الملف الشخصي لاحقًا.</p></div>
+                <button className="primary" type="button" disabled={busy || ownLinkRequest?.status === 'pending'} onClick={() => void requestAccountLink(selectedPerson)}>{ownLinkRequest?.status === 'pending' ? 'الطلب قيد المراجعة' : 'هذا أنا — ربط الحساب'}</button>
+              </div>
+            )}
+            <div className="detail-section">
+              <div className="section-title"><div><span className="eyebrow">صلة الرحم</span><h2>العلاقات المعتمدة</h2></div></div>
+              {relationsLoading ? <div className="empty-state compact">جارٍ تحميل العلاقات…</div> : relationships.length ? (
+                <div className="relationship-grid">{relationships.map((relation) => {
+                  const selectedIsSource = relation.source_person_id === selectedPerson.id
+                  const other = selectedIsSource ? relation.target : relation.source
+                  const otherId = personId(other)
+                  const otherRecord = people.find((item) => item.id === otherId)
+                  return <button className="relationship-card" type="button" key={relation.id} onClick={() => otherRecord && void openPerson(otherRecord)}><span>{relationshipLabels[selectedIsSource ? relation.relation_type : ''] || (selectedIsSource ? relationshipLabels[relation.relation_type] : inverseRelationshipLabels[relation.relation_type]) || 'صلة قرابة'}</span><strong>{personName(other) || 'شخص غير محدد'}</strong>{relation.notes && <small>{relation.notes}</small>}</button>
+                })}</div>
+              ) : <div className="empty-state compact">لا توجد صلات قرابة معتمدة لهذا الشخص.</div>}
+            </div>
+          </section>
+        )}
+
+        {schemaReady && view === 'account' && session && (
+          <section className="page-section narrow account-page">
+            <button className="back-button" type="button" onClick={() => setView('home')}>→ العودة للرئيسية</button>
+            <div className="detail-hero account-hero"><span className="detail-avatar">{userName[0]}</span><div><span className="eyebrow">حسابي</span><h1>{userName}</h1><p>{session.user.email}</p></div></div>
+            <div className="account-status-card">
+              <span className={`status ${profile?.linked_person_id ? 'approved' : ownLinkRequest?.status === 'pending' ? 'pending' : ''}`}>{profile?.linked_person_id ? 'مرتبط' : ownLinkRequest?.status === 'pending' ? 'قيد المراجعة' : 'غير مرتبط'}</span>
+              <h2>{profile?.linked_person_id ? 'الحساب مرتبط بسجل شخص' : ownLinkRequest?.status === 'pending' ? 'طلب الربط قيد المراجعة' : 'اربط حسابك بسجلك داخل الدليل'}</h2>
+              <p>{profile?.linked_person_id ? people.find((item) => item.id === profile.linked_person_id)?.full_name || 'تم اعتماد الربط.' : ownLinkRequest?.status === 'pending' ? `السجل المطلوب: ${personName(ownLinkRequest.people)}` : 'ابحث عن اسمك في الدليل وافتح ملف الشخص ثم اضغط «هذا أنا».'}</p>
+              {!profile?.linked_person_id && ownLinkRequest?.status !== 'pending' && <button className="primary" type="button" onClick={() => setView('search')}>البحث عن سجلي</button>}
+            </div>
+          </section>
+        )}
+
+"""
+          anchor = "        {schemaReady && view === 'add' && session && ("
+          if anchor not in app:
+              raise SystemExit('Missing details view insertion anchor')
+          app = app.replace(anchor, details_views + anchor, 1)
+
+          replace(
+              "              <button className={addMode === 'event' ? 'active' : ''} onClick={() => setAddMode('event')}>مناسبة</button>\n            </div>",
+              "              <button className={addMode === 'event' ? 'active' : ''} onClick={() => setAddMode('event')}>مناسبة</button>\n              <button className={addMode === 'relationship' ? 'active' : ''} onClick={() => setAddMode('relationship')}>صلة قرابة</button>\n            </div>",
+          )
+
+          relationship_form = """
+
+            {addMode === 'relationship' && <form className="data-form" onSubmit={submitRelationship}><label><span>الشخص الأول *</span><select value={relationshipForm.source_person_id} onChange={(e) => setRelationshipForm({ ...relationshipForm, source_person_id: e.target.value })} required><option value="">اختر الشخص</option>{approvedPeople.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}</select></label><label><span>صلته بالشخص الثاني *</span><select value={relationshipForm.relation_type} onChange={(e) => setRelationshipForm({ ...relationshipForm, relation_type: e.target.value })}>{Object.entries(relationshipLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label><span>الشخص الثاني *</span><select value={relationshipForm.target_person_id} onChange={(e) => setRelationshipForm({ ...relationshipForm, target_person_id: e.target.value })} required><option value="">اختر الشخص</option>{approvedPeople.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}</select></label><label className="full"><span>ملاحظة أو مصدر المعلومة</span><textarea value={relationshipForm.notes} onChange={(e) => setRelationshipForm({ ...relationshipForm, notes: e.target.value })} rows={4} /></label><button className="primary full" disabled={busy}>إرسال صلة القرابة للمراجعة</button></form>}
+"""
+          anchor2 = "          </section>\n        )}\n\n        {schemaReady && view === 'admin'"
+          if anchor2 not in app:
+              raise SystemExit('Missing relationship form insertion anchor')
+          app = app.replace(anchor2, relationship_form + "          </section>\n        )}\n\n        {schemaReady && view === 'admin'", 1)
+
+          app_path.write_text(app)
+          PY
+
+          cat > src/details.css <<'CSS'
+          .account-profile-button {
+            display: grid;
+            width: 40px;
+            height: 40px;
+            place-items: center;
+            border: 0;
+            border-radius: 50%;
+            color: white;
+            background: linear-gradient(145deg, var(--green-600), var(--green-950));
+            font-weight: 800;
+          }
+          .account-link { padding: 0; border: 0; background: transparent; text-align: right; cursor: pointer; }
+          .interactive-card, .interactive-row { width: 100%; color: inherit; text-align: right; cursor: pointer; }
+          .interactive-card { border: 1px solid var(--border); }
+          .interactive-card:hover, .interactive-row:hover { border-color: #b6d2c7; background: #fbfdfc; transform: translateY(-1px); }
+          .card-chevron { margin-inline-start: auto; color: var(--green-600); font-size: 1.6rem; }
+          .interactive-row { grid-template-columns: auto minmax(0, 1fr) auto; border: 0; border-bottom: 1px solid #edf1ef; background: transparent; }
+          .back-button { min-height: 42px; margin-bottom: 22px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 12px; color: var(--green-700); background: white; font-weight: 800; }
+          .detail-page { width: min(100%, 980px); margin-inline: auto; }
+          .detail-hero { display: flex; align-items: center; gap: 22px; margin-bottom: 24px; padding: clamp(22px, 5vw, 36px); border: 1px solid var(--border); border-radius: 28px; background: linear-gradient(145deg, white, #f1f8f5); box-shadow: var(--shadow); }
+          .detail-hero h1 { margin: 8px 0 9px; color: var(--green-950); font-family: 'Noto Kufi Arabic'; font-size: clamp(1.7rem, 5vw, 3rem); }
+          .detail-hero p { margin: 0; color: var(--muted); line-height: 1.9; }
+          .detail-avatar { display: grid; flex: 0 0 auto; width: 92px; height: 92px; place-items: center; border-radius: 30px; color: white; background: linear-gradient(145deg, var(--green-600), var(--green-950)); font-family: 'Noto Kufi Arabic'; font-size: 2rem; font-weight: 800; box-shadow: 0 15px 35px rgb(7 56 45 / 20%); }
+          .family-avatar { background: linear-gradient(145deg, #bd8730, #765014); }
+          .detail-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 30px; }
+          .detail-facts article { display: grid; gap: 7px; min-height: 104px; padding: 18px; border: 1px solid var(--border); border-radius: 18px; background: white; box-shadow: var(--shadow); }
+          .detail-facts span { color: var(--muted); font-size: .75rem; }
+          .detail-facts strong { color: var(--green-950); }
+          .detail-section { margin-top: 28px; padding: 23px; border: 1px solid var(--border); border-radius: 24px; background: white; box-shadow: var(--shadow); }
+          .detail-list { display: grid; }
+          .relationship-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+          .relationship-card { display: grid; gap: 5px; padding: 17px; border: 1px solid var(--border); border-radius: 17px; color: inherit; background: #fbfdfc; text-align: right; }
+          .relationship-card span { color: var(--green-600); font-size: .72rem; font-weight: 800; }
+          .relationship-card strong { color: var(--green-950); }
+          .relationship-card small { color: var(--muted); }
+          .link-account-card, .account-status-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 20px 0; padding: 22px; border: 1px solid #bbdccc; border-radius: 20px; background: #effaf5; }
+          .link-account-card p, .account-status-card p { margin: 5px 0 0; color: var(--muted); }
+          .account-page { min-height: 75vh; }
+          .account-hero { margin-bottom: 18px; }
+          .account-status-card { display: grid; justify-items: start; }
+          .status.approved { color: var(--success); background: #e8f8f0; }
+          .segmented-control { grid-template-columns: repeat(4, 1fr); }
+
+          @media (max-width: 760px) {
+            .account-copy { display: none; }
+            .account-profile-button { width: 42px; height: 42px; }
+            .detail-page { padding-top: 20px; }
+            .detail-hero { align-items: flex-start; gap: 14px; padding: 20px 16px; border-radius: 23px; }
+            .detail-avatar { width: 66px; height: 66px; border-radius: 21px; font-size: 1.45rem; }
+            .detail-hero h1 { font-size: 1.5rem; line-height: 1.55; }
+            .detail-facts { grid-template-columns: 1fr; gap: 8px; }
+            .detail-facts article { min-height: 76px; }
+            .detail-section { padding: 16px; border-radius: 20px; }
+            .relationship-grid { grid-template-columns: 1fr; }
+            .link-account-card { align-items: stretch; flex-direction: column; }
+            .link-account-card .primary { width: 100%; }
+            .segmented-control { grid-template-columns: repeat(2, 1fr); }
+          }
+          CSS
+
+          rm .github/workflows/phase-2-directory.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/details.css supabase/SETUP.sql supabase/migrations/202608070004_person_relationships_and_account_linking.sql .github/workflows/phase-2-directory.yml
+          git commit -m "Add person family details relationships and account linking"
+          git push

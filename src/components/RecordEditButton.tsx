@@ -60,9 +60,22 @@ export default function RecordEditButton({
     setForm((current) => ({ ...current, [key]: value }))
   }
 
+  function setDeceased(value: boolean) {
+    setForm((current) => ({
+      ...current,
+      is_deceased: value,
+      death_date: value ? current.death_date ?? '' : '',
+    }))
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!supabase) return
+    if (entityType === 'people' && Boolean(form.is_deceased) && !String(form.death_date ?? '').trim()) {
+      setMessage('حدد تاريخ الوفاة أولًا.')
+      return
+    }
+
     setBusy(true)
     setMessage('')
 
@@ -113,7 +126,19 @@ export default function RecordEditButton({
                     <label><span>الجنس</span><select value={String(form.gender ?? '')} onChange={(e) => setValue('gender', e.target.value)}><option value="">غير محدد</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
                     <label><span>سنة الميلاد</span><input inputMode="numeric" type="number" min="1800" max="2100" value={String(form.birth_year ?? '')} onChange={(e) => setValue('birth_year', e.target.value)} /></label>
                   </div>
-                  <label className="edit-check"><input type="checkbox" checked={Boolean(form.is_deceased)} onChange={(e) => setValue('is_deceased', e.target.checked)} /><span>متوفى</span></label>
+
+                  <div className={`life-status-card ${Boolean(form.is_deceased) ? 'deceased' : 'alive'}`}>
+                    <div className="life-status-copy">
+                      <span className="life-status-icon">{Boolean(form.is_deceased) ? '✦' : '●'}</span>
+                      <div><strong>{Boolean(form.is_deceased) ? 'متوفى' : 'على قيد الحياة'}</strong><small>{Boolean(form.is_deceased) ? 'يجب تحديد تاريخ الوفاة' : 'يمكن تغيير الحالة عند الحاجة'}</small></div>
+                    </div>
+                    <label className="life-status-switch"><input type="checkbox" checked={Boolean(form.is_deceased)} onChange={(e) => setDeceased(e.target.checked)} /><span /></label>
+                  </div>
+
+                  {Boolean(form.is_deceased) && (
+                    <label className="death-date-field"><span>تاريخ الوفاة *</span><input type="date" required value={String(form.death_date ?? '')} onChange={(e) => setValue('death_date', e.target.value)} /></label>
+                  )}
+
                   <label><span>نبذة</span><textarea rows={4} value={String(form.description ?? '')} onChange={(e) => setValue('description', e.target.value)} /></label>
                 </>
               )}
@@ -152,11 +177,13 @@ function buildPayload(entityType: EntityType, form: Record<string, string | numb
     return { name: String(form.name ?? '').trim(), origin_place: String(form.origin_place ?? '').trim(), description: String(form.description ?? '').trim() }
   }
   if (entityType === 'people') {
+    const deceased = Boolean(form.is_deceased)
     return {
       full_name: String(form.full_name ?? '').trim(),
       gender: String(form.gender ?? ''),
       birth_year: String(form.birth_year ?? ''),
-      is_deceased: Boolean(form.is_deceased),
+      is_deceased: deceased,
+      death_date: deceased ? String(form.death_date ?? '').trim() : '',
       description: String(form.description ?? '').trim(),
     }
   }

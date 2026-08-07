@@ -1,0 +1,35 @@
+.detail-avatar.detail-avatar--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f7faf8;
+  overflow: hidden;
+}
+
+.detail-avatar.detail-avatar--icon svg {
+  width: 62%;
+  height: 62%;
+  display: block;
+}
+
+.detail-avatar.detail-avatar--female svg {
+  width: 66%;
+  height: 66%;
+}
+
+.detail-avatar.detail-avatar--family-icon svg {
+  width: 70%;
+  height: 70%;
+}
+
+@media (max-width: 760px) {
+  .detail-avatar.detail-avatar--icon svg {
+    width: 60%;
+    height: 60%;
+  }
+
+  .detail-avatar.detail-avatar--family-icon svg {
+    width: 68%;
+    height: 68%;
+  }
+}

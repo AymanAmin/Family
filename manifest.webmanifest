@@ -2,7 +2,7 @@
   "id": "./",
   "name": "صلة المنطقة",
   "short_name": "صلة",
-  "description": "سجل أهالي المنطقة وشجرة العائلة والمناسبات وصلات القرابة.",
+  "description": "تطبيق يربط الأسر والأفراد ويوثق شجرة العائلة والمناسبات وصلات القرابة.",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "./#/home",
@@ -10,8 +10,8 @@
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "portrait-primary",
-  "background_color": "#f4f8f6",
-  "theme_color": "#0f5f4b",
+  "background_color": "#f8f5ee",
+  "theme_color": "#244a78",
   "categories": ["social", "lifestyle", "utilities"],
   "icons": [
     {

@@ -6,6 +6,7 @@ import './brand-identity'
 import './stats-swipe-fix'
 import InstallPrompt from './components/InstallPrompt'
 import PushNotificationSettings from './components/PushNotificationSettings'
+import AdminVisitorStat from './components/AdminVisitorStat'
 import './styles.css'
 import './mobile-app.css'
 import './mobile-fixes.css'
@@ -86,5 +87,6 @@ createRoot(rootElement).render(
     <App />
     <InstallPrompt />
     <PushNotificationSettings />
+    <AdminVisitorStat />
   </StrictMode>,
 )

@@ -9,6 +9,7 @@ const migrations = [
   'supabase/migrations/202608070013_admin_role_management_and_direct_approval.sql',
   'supabase/migrations/202608070014_person_death_date_integrity.sql',
   'supabase/migrations/202608070015_paginated_moderation_feed.sql',
+  'supabase/migrations/202608070016_paginated_secondary_moderation.sql',
 ]
 
 let setup = fs.readFileSync(setupPath, 'utf8').trimEnd()

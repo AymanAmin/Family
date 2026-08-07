@@ -11,7 +11,7 @@ type Person = {
 type Props = {
   familyId: string
   people: Person[]
-  onOpenPerson: (person: Person) => void
+  onOpenPerson: (personId: string) => void
 }
 
 const labels: Record<string, string> = {
@@ -56,7 +56,7 @@ export default function FamilyMembersPanel({ familyId, people, onOpenPerson }: P
       <div className="section-title"><div><span className="eyebrow">كل المنتمين للعائلة</span><h2>الأفراد حسب النسب والزواج والفروع</h2></div></div>
       <div className="detail-list">
         {rows.length ? rows.map(({ person, membership }) => (
-          <button className="list-row interactive-row" type="button" key={membership.id} onClick={() => onOpenPerson(person)}>
+          <button className="list-row interactive-row" type="button" key={membership.id} onClick={() => onOpenPerson(person.id)}>
             <span className="avatar-letter">{person.full_name[0]}</span>
             <div><strong>{person.full_name}</strong><small>{labels[membership.membership_type] || membership.membership_type}{membership.is_primary ? ' · أساسية' : ''}{person.is_deceased ? ' · متوفى' : ''}</small></div>
             <span>‹</span>

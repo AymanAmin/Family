@@ -1,0 +1,43 @@
+name: Apply admin roles and death status
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply-admin-death.mjs'
+      - '.github/workflows/apply-admin-death.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Integrate app changes
+        run: node scripts/apply-admin-death.mjs
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify TypeScript and production build
+        run: npm run build
+      - name: Keep only source changes for the integration commit
+        run: git restore index.html 404.html || true
+      - name: Commit integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx
+          if git diff --cached --quiet; then
+            echo "App already integrated."
+            exit 0
+          fi
+          git commit -m "Integrate admin roles and death status"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main

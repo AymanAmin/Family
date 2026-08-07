@@ -1,0 +1,40 @@
+name: Apply promoted home news layout
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-home-news-priority.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Promote the approved-events news section
+        run: python3 scripts/apply-home-news-priority.py
+
+      - name: Commit home page changes
+        shell: bash
+        run: |
+          if git diff --quiet -- src/App.tsx src/nasab-inspired.css; then
+            echo "No home news changes required"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/nasab-inspired.css
+          git commit -m "Promote approved news cards on home page"
+
+          if git push; then
+            exit 0
+          fi
+
+          echo "Remote changed during the patch; rebasing once and retrying."
+          git pull --rebase origin main
+          git push

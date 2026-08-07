@@ -1,0 +1,110 @@
+/* Horizontal touch canvas for the kinship network. Loaded last to override older overflow rules. */
+
+.kinship-section {
+  overflow: visible !important;
+}
+
+.kinship-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0 8px;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+
+.kinship-scroll .kinship-map {
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+}
+
+.kinship-pan-hint {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .kinship-section {
+    padding-inline: 12px !important;
+  }
+
+  .kinship-scroll {
+    width: calc(100% + 24px);
+    max-width: none;
+    margin-inline: -12px;
+    padding: 2px 12px 10px;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .kinship-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .kinship-scroll .kinship-map {
+    width: 720px;
+    min-width: 720px;
+    max-width: none !important;
+    padding: 14px 18px 16px !important;
+    scroll-snap-align: center;
+  }
+
+  .kinship-scroll .kin-middle {
+    grid-template-columns: minmax(190px, 1fr) 150px minmax(190px, 1fr) !important;
+    min-width: 650px;
+    gap: 18px !important;
+  }
+
+  .kinship-scroll .kin-top,
+  .kinship-scroll .kin-bottom {
+    width: 620px !important;
+    max-width: none !important;
+  }
+
+  .kinship-scroll .kin-extended {
+    min-width: 620px;
+  }
+
+  .kinship-pan-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: fit-content;
+    margin: -2px auto 8px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    color: #58756b;
+    background: #edf5f1;
+    font-size: .62rem;
+    font-weight: 800;
+  }
+
+  .kinship-pan-hint span {
+    color: var(--green-700);
+    font-size: .9rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .kinship-scroll .kinship-map {
+    width: 680px;
+    min-width: 680px;
+  }
+
+  .kinship-scroll .kin-middle {
+    min-width: 610px;
+    grid-template-columns: minmax(175px, 1fr) 140px minmax(175px, 1fr) !important;
+  }
+
+  .kinship-scroll .kin-top,
+  .kinship-scroll .kin-bottom,
+  .kinship-scroll .kin-extended {
+    width: 580px !important;
+    min-width: 580px;
+  }
+}

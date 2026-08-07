@@ -1,8 +1,10 @@
 name: Apply directory v2 integration
+
 on:
   push:
     paths:
-      - '.github/workflows/apply-directory-v2.yml'
+      - 'scripts/trigger-directory-v2.txt'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -12,113 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Patch App and setup
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          path = Path('src/App.tsx')
-          s = path.read_text()
-
-          if "./components/DirectoryScreen" not in s:
-              s = s.replace(
-                  "import KinshipNetwork from './components/KinshipNetwork'\n",
-                  "import KinshipNetwork from './components/KinshipNetwork'\nimport DirectoryScreen from './components/DirectoryScreen'\nimport PeoplePicker from './components/PeoplePicker'\n"
-              )
-
-          s = s.replace(
-              ".order('full_name').limit(100),",
-              ".order('created_at', { ascending: false }).limit(12),",
-              1
-          )
-
-          start = s.find('  async function runSearch(')
-          end = s.find('  function requireAccount()', start)
-          if start != -1 and end != -1:
-              s = s[:start] + """  async function runSearch(event?: FormEvent<HTMLFormElement>) {
-    event?.preventDefault()
-    if (!schemaReady) return
-    setView('search')
-  }
-
-""" + s[end:]
-
-          if 'async function openPersonById' not in s:
-              marker = '  async function submitRelationship(event: FormEvent<HTMLFormElement>) {'
-              helper = """  async function openPersonById(id: string) {
-    const cached = people.find((item) => item.id === id)
-    if (cached) {
-      await openPerson(cached)
-      return
-    }
-    if (!supabase) return
-
-    const { data, error } = await supabase
-      .from('people')
-      .select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)')
-      .eq('id', id)
-      .maybeSingle()
-
-    if (error) return showMessage(friendlyError(error.message), 'error')
-    if (data) await openPerson(data as Person)
-  }
-
-"""
-              s = s.replace(marker, helper + marker, 1)
-
-          search_start = s.find("        {schemaReady && view === 'search' && (")
-          family_start = s.find("        {schemaReady && view === 'family' && selectedFamily && (", search_start)
-          if search_start != -1 and family_start != -1:
-              search_block = """        {schemaReady && view === 'search' && (
-          <DirectoryScreen
-            initialTerm={searchTerm}
-            onOpenPerson={(item) => void openPerson(item as Person)}
-            onOpenFamily={(item) => openFamily(item as Family)}
-          />
-        )}
-
-"""
-              s = s[:search_start] + search_block + s[family_start:]
-
-          s = s.replace(
-              "onOpenPerson={(id) => { const person = people.find((item) => item.id === id); if (person) void openPerson(person) }}",
-              "onOpenPerson={(id) => void openPersonById(id)}"
-          )
-
-          s = re.sub(
-              r"onOpenPerson=\{\(id\) => \{\s*const person = people\.find\(\(item\) => item\.id === id\)\s*if \(person\) void openPerson\(person\)\s*\}\}",
-              "onOpenPerson={(id) => void openPersonById(id)}",
-              s
-          )
-
-          source_pattern = re.compile(
-              r'<label><span>الشخص الأول \*</span><select value=\{relationshipForm\.source_person_id\}.*?</select></label>',
-              re.S
-          )
-          source_replacement = """<PeoplePicker label="الشخص الأول" value={relationshipForm.source_person_id} onChange={(personId) => setRelationshipForm({ ...relationshipForm, source_person_id: personId })} excludeId={relationshipForm.target_person_id || undefined} required />"""
-          s = source_pattern.sub(source_replacement, s, count=1)
-
-          target_pattern = re.compile(
-              r'<label><span>الشخص الثاني \*</span><select value=\{relationshipForm\.target_person_id\}.*?</select></label>',
-              re.S
-          )
-          target_replacement = """<PeoplePicker label="الشخص الثاني" value={relationshipForm.target_person_id} onChange={(personId) => setRelationshipForm({ ...relationshipForm, target_person_id: personId })} excludeId={relationshipForm.source_person_id || undefined} required />"""
-          s = target_pattern.sub(target_replacement, s, count=1)
-
-          path.write_text(s)
-
-          setup = Path('supabase/SETUP.sql')
-          setup_text = setup.read_text()
-          migration = Path('supabase/migrations/202608070008_extended_kinship_rules.sql').read_text()
-          if 'PHASE 5: EXTENDED KINSHIP INFERENCE' not in setup_text:
-              setup.write_text(setup_text.rstrip() + '\n\n' + migration + '\n')
-          PY
-      - name: Commit generated changes
-        shell: bash
+      - name: Apply integration
+        run: python3 scripts/apply-directory-v2.py
+      - name: Commit integration
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

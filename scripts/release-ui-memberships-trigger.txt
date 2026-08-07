@@ -1,2 +1,2 @@
-2026-08-07T18:30Z
-Mobile edit portal, family membership management, and event-card themes source bundle staged.
+2026-08-07T18:33Z
+Deploy final mobile edit portal, family membership management, and event-specific in-app card themes.

@@ -22,37 +22,24 @@ const migrations = [
   'supabase/migrations/202608070026_admin_contributor_stats_and_link_integrity.sql',
 ]
 
-let setup = fs.readFileSync(setupPath, 'utf8').trimEnd()
-let changed = false
+const current = fs.readFileSync(setupPath, 'utf8')
+const marker = '\n-- INCLUDED MIGRATION:'
+const firstMarker = current.indexOf(marker)
+const base = (firstMarker === -1 ? current : current.slice(0, firstMarker)).trimEnd()
 
-for (const migration of migrations) {
-  if (!fs.existsSync(migration)) continue
-  const fileName = migration.split('/').pop()
-  const marker = `-- INCLUDED MIGRATION: ${fileName}`
-  const sql = fs.readFileSync(migration, 'utf8').trim()
-  const block = `${marker}\n${sql}`
-  const start = setup.indexOf(marker)
+const blocks = migrations
+  .filter((migration) => fs.existsSync(migration))
+  .map((migration) => {
+    const fileName = migration.split('/').pop()
+    const sql = fs.readFileSync(migration, 'utf8').trim()
+    return `-- INCLUDED MIGRATION: ${fileName}\n${sql}`
+  })
 
-  if (start === -1) {
-    setup += `\n\n${block}`
-    changed = true
-    continue
-  }
+const next = `${base}\n\n${blocks.join('\n\n')}\n`
 
-  const nextMarker = setup.indexOf('\n-- INCLUDED MIGRATION:', start + marker.length)
-  const end = nextMarker === -1 ? setup.length : nextMarker
-  const currentBlock = setup.slice(start, end).trimEnd()
-
-  if (currentBlock !== block) {
-    const suffix = nextMarker === -1 ? '' : setup.slice(nextMarker)
-    setup = `${setup.slice(0, start).trimEnd()}\n\n${block}${suffix}`
-    changed = true
-  }
-}
-
-if (changed) {
-  fs.writeFileSync(setupPath, `${setup.trimEnd()}\n`)
-  console.log('SETUP.sql refreshed with current migration contents')
+if (next !== current) {
+  fs.writeFileSync(setupPath, next)
+  console.log('SETUP.sql rebuilt canonically from current migrations')
 } else {
-  console.log('SETUP.sql already current')
+  console.log('SETUP.sql already canonical')
 }

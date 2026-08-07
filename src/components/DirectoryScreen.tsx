@@ -95,7 +95,7 @@ export default function DirectoryScreen({ initialTerm = '', onOpenPerson, onOpen
         .select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)', { count: 'exact' })
         .eq('status', 'approved')
       if (queryTerm) query = query.ilike('full_name', `%${queryTerm}%`)
-      const result = await query.order(queryTerm ? 'full_name' : 'created_at', { ascending: queryTerm }).range(from, to)
+      const result = await query.order(queryTerm ? 'full_name' : 'created_at', { ascending: Boolean(queryTerm) }).range(from, to)
       if (result.error) throw result.error
       const rows = (result.data ?? []) as DirectoryPerson[]
       setPeople((current) => append ? [...current, ...rows.filter((row) => !current.some((old) => old.id === row.id))] : rows)
@@ -110,7 +110,7 @@ export default function DirectoryScreen({ initialTerm = '', onOpenPerson, onOpen
       .select('id,name,description,origin_place,status,created_by,created_at', { count: 'exact' })
       .eq('status', 'approved')
     if (queryTerm) query = query.ilike('name', `%${queryTerm}%`)
-    const result = await query.order(queryTerm ? 'name' : 'created_at', { ascending: queryTerm }).range(from, to)
+    const result = await query.order(queryTerm ? 'name' : 'created_at', { ascending: Boolean(queryTerm) }).range(from, to)
     if (result.error) throw result.error
     const rows = (result.data ?? []) as DirectoryFamily[]
     setFamilies((current) => append ? [...current, ...rows.filter((row) => !current.some((old) => old.id === row.id))] : rows)

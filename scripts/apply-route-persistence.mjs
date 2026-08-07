@@ -14,7 +14,52 @@ replaceOnce(
   'routeReady state',
 )
 
-const routeEffects = `  useEffect(() => {\n    if (routeReady || dataLoading || sessionLoading || !schemaReady) return\n    let cancelled = false\n\n    async function restoreRoute() {\n      const rawHash = window.location.hash\n      if (rawHash.startsWith('#access_token=') || rawHash.startsWith('#error=')) {\n        if (!cancelled) setRouteReady(true)\n        return\n      }\n\n      const route = decodeURIComponent(rawHash.replace(/^#\\/?/, ''))\n      const [target, id] = route.split('/')\n\n      if (target === 'person' && id) {\n        await openPersonById(id)\n      } else if (target === 'family' && id) {\n        await openFamilyById(id)\n      } else if (target === 'search' || target === 'add' || target === 'admin' || target === 'account') {\n        setView(target as View)\n      } else {\n        setView('home')\n      }\n\n      if (!cancelled) setRouteReady(true)\n    }\n\n    void restoreRoute()\n    return () => { cancelled = true }\n  }, [routeReady, dataLoading, sessionLoading, schemaReady])\n\n  useEffect(() => {\n    if (!routeReady) return\n\n    let route = view\n    if (view === 'person' && selectedPerson?.id) route = \\`person/\\${selectedPerson.id}\\` as View\n    if (view === 'family' && selectedFamily?.id) route = \\`family/\\${selectedFamily.id}\\` as View\n\n    const nextHash = \\`#/\\${route}\\`\n    if (window.location.hash !== nextHash) {\n      window.history.replaceState(null, '', nextHash)\n    }\n  }, [routeReady, view, selectedPerson?.id, selectedFamily?.id])\n\n`
+const routeEffects = [
+  "  useEffect(() => {",
+  "    if (routeReady || dataLoading || sessionLoading || !schemaReady) return",
+  "    let cancelled = false",
+  "",
+  "    async function restoreRoute() {",
+  "      const rawHash = window.location.hash",
+  "      if (rawHash.startsWith('#access_token=') || rawHash.startsWith('#error=')) {",
+  "        if (!cancelled) setRouteReady(true)",
+  "        return",
+  "      }",
+  "",
+  "      const route = decodeURIComponent(rawHash.replace(/^#\\/?/, ''))",
+  "      const [target, id] = route.split('/')",
+  "",
+  "      if (target === 'person' && id) {",
+  "        await openPersonById(id)",
+  "      } else if (target === 'family' && id) {",
+  "        await openFamilyById(id)",
+  "      } else if (target === 'search' || target === 'add' || target === 'admin' || target === 'account') {",
+  "        setView(target as View)",
+  "      } else {",
+  "        setView('home')",
+  "      }",
+  "",
+  "      if (!cancelled) setRouteReady(true)",
+  "    }",
+  "",
+  "    void restoreRoute()",
+  "    return () => { cancelled = true }",
+  "  }, [routeReady, dataLoading, sessionLoading, schemaReady])",
+  "",
+  "  useEffect(() => {",
+  "    if (!routeReady) return",
+  "",
+  "    let route: string = view",
+  "    if (view === 'person' && selectedPerson?.id) route = `person/${selectedPerson.id}`",
+  "    if (view === 'family' && selectedFamily?.id) route = `family/${selectedFamily.id}`",
+  "",
+  "    const nextHash = `#/${route}`",
+  "    if (window.location.hash !== nextHash) {",
+  "      window.history.replaceState(null, '', nextHash)",
+  "    }",
+  "  }, [routeReady, view, selectedPerson?.id, selectedFamily?.id])",
+  "",
+].join('\n') + '\n'
 
 replaceOnce(
   "  }, [session, profile?.linked_person_id])\n\n  const visibleFamilies",
@@ -22,9 +67,35 @@ replaceOnce(
   'route effects insertion',
 )
 
-const oldOpenFamily = `  function openFamily(item: Family) {\n    setSelectedFamily(item)\n    setView('family')\n    window.scrollTo({ top: 0, behavior: 'smooth' })\n  }\n\n`
+const oldOpenFamily = [
+  "  function openFamily(item: Family) {",
+  "    setSelectedFamily(item)",
+  "    setView('family')",
+  "    window.scrollTo({ top: 0, behavior: 'smooth' })",
+  "  }",
+  "",
+].join('\n')
 
-const newOpenFamily = oldOpenFamily + `  async function openFamilyById(id: string) {\n    const cached = families.find((item) => item.id === id)\n    if (cached) {\n      openFamily(cached)\n      return\n    }\n    if (!supabase) return\n\n    const { data, error } = await supabase\n      .from('families')\n      .select('id,name,description,origin_place,status,created_by,created_at')\n      .eq('id', id)\n      .maybeSingle()\n\n    if (error) return showMessage(friendlyError(error.message), 'error')\n    if (data) openFamily(data as Family)\n  }\n\n`
+const newOpenFamily = oldOpenFamily + [
+  "  async function openFamilyById(id: string) {",
+  "    const cached = families.find((item) => item.id === id)",
+  "    if (cached) {",
+  "      openFamily(cached)",
+  "      return",
+  "    }",
+  "    if (!supabase) return",
+  "",
+  "    const { data, error } = await supabase",
+  "      .from('families')",
+  "      .select('id,name,description,origin_place,status,created_by,created_at')",
+  "      .eq('id', id)",
+  "      .maybeSingle()",
+  "",
+  "    if (error) return showMessage(friendlyError(error.message), 'error')",
+  "    if (data) openFamily(data as Family)",
+  "  }",
+  "",
+].join('\n')
 
 replaceOnce(oldOpenFamily, newOpenFamily, 'openFamilyById')
 

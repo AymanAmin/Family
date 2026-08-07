@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from 're
 import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import '../modal-position-fix.css'
+import '../record-archive.css'
 
 const FamilyPicker = lazy(() => import('./FamilyPicker'))
 
@@ -39,10 +40,16 @@ export default function RecordEditButton({
   const directCanEdit = Boolean(isAdmin || (sessionUserId && createdBy === sessionUserId))
   const [scopedCanEdit, setScopedCanEdit] = useState(false)
   const canEdit = directCanEdit || scopedCanEdit
+  const canArchive = isAdmin && (entityType === 'families' || entityType === 'people')
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [form, setForm] = useState<Record<string, string | number | boolean | null>>(() => normalize(initialData))
+  const [archiveOpen, setArchiveOpen] = useState(false)
+  const [archiveBusy, setArchiveBusy] = useState(false)
+  const [archiveMessage, setArchiveMessage] = useState('')
+  const [archiveReason, setArchiveReason] = useState('')
+  const [archiveConfirmation, setArchiveConfirmation] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -62,12 +69,14 @@ export default function RecordEditButton({
   }, [directCanEdit, entityType, recordId, sessionUserId])
 
   useEffect(() => {
-    if (!open || typeof document === 'undefined') return
+    if ((!open && !archiveOpen) || typeof document === 'undefined') return
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !busy) setOpen(false)
+      if (event.key !== 'Escape') return
+      if (open && !busy) setOpen(false)
+      if (archiveOpen && !archiveBusy) setArchiveOpen(false)
     }
     document.addEventListener('keydown', closeOnEscape)
 
@@ -75,7 +84,7 @@ export default function RecordEditButton({
       document.body.style.overflow = previousOverflow
       document.removeEventListener('keydown', closeOnEscape)
     }
-  }, [open, busy])
+  }, [open, busy, archiveOpen, archiveBusy])
 
   const title = useMemo(() => {
     if (entityType === 'families') return 'تعديل بيانات العائلة'
@@ -83,12 +92,25 @@ export default function RecordEditButton({
     return 'تعديل المناسبة'
   }, [entityType])
 
-  if (!canEdit) return null
+  const recordLabel = useMemo(() => {
+    if (entityType === 'families') return String(initialData.name ?? '').trim()
+    if (entityType === 'people') return String(initialData.full_name ?? '').trim()
+    return String(initialData.title ?? '').trim()
+  }, [entityType, initialData])
+
+  if (!canEdit && !canArchive) return null
 
   function resetAndOpen() {
     setForm(normalize(initialData))
     setMessage('')
     setOpen(true)
+  }
+
+  function openArchiveDialog() {
+    setArchiveMessage('')
+    setArchiveReason('')
+    setArchiveConfirmation('')
+    setArchiveOpen(true)
   }
 
   function setValue(key: string, value: string | number | boolean | null) {
@@ -132,7 +154,54 @@ export default function RecordEditButton({
     window.setTimeout(() => setOpen(false), 900)
   }
 
-  const modal = open && typeof document !== 'undefined' ? createPortal(
+  async function archiveRecord(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!supabase || !canArchive) return
+
+    if (archiveConfirmation.trim() !== recordLabel) {
+      setArchiveMessage(`اكتب الاسم كما هو للتأكيد: ${recordLabel}`)
+      return
+    }
+
+    setArchiveBusy(true)
+    setArchiveMessage('')
+
+    const { error } = await supabase.rpc('archive_community_record', {
+      p_entity_type: entityType,
+      p_record_id: recordId,
+      p_reason: archiveReason.trim() || null,
+    })
+
+    if (error) {
+      setArchiveBusy(false)
+      const lowered = error.message.toLowerCase()
+      if (lowered.includes('linked to an active user account')) {
+        setArchiveMessage('لا يمكن حذف هذا الفرد لأنه مرتبط بحساب مستخدم نشط. يجب فك ارتباط الحساب أولًا حفاظًا على سلامة بيانات المستخدم.')
+        return
+      }
+      if (lowered.includes('not authorized')) {
+        setArchiveMessage('ليست لديك صلاحية حذف هذا السجل.')
+        return
+      }
+      if (lowered.includes('already archived') || lowered.includes('not found')) {
+        setArchiveMessage('السجل غير موجود أو تم حذفه مسبقًا.')
+        return
+      }
+      setArchiveMessage(error.message || 'تعذر حذف السجل.')
+      return
+    }
+
+    await onSaved?.()
+    setArchiveBusy(false)
+    setArchiveMessage(entityType === 'families' ? 'تم حذف العائلة من الدليل.' : 'تم حذف الفرد من الدليل.')
+
+    window.setTimeout(() => {
+      const base = `${window.location.pathname}${window.location.search}#/search`
+      window.location.assign(base)
+    }, 650)
+  }
+
+  const editModal = open && typeof document !== 'undefined' ? createPortal(
     <div className="record-edit-overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && !busy && setOpen(false)}>
       <section className="record-edit-sheet" role="dialog" aria-modal="true" aria-label={title}>
         <div className="record-edit-heading">
@@ -203,10 +272,55 @@ export default function RecordEditButton({
     document.body,
   ) : null
 
+  const archiveModal = archiveOpen && canArchive && typeof document !== 'undefined' ? createPortal(
+    <div className="record-archive-overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && !archiveBusy && setArchiveOpen(false)}>
+      <section className="record-archive-sheet" role="dialog" aria-modal="true" aria-labelledby={`archive-title-${recordId}`}>
+        <div className="record-archive-heading">
+          <div><span>إجراء إداري حساس</span><h2 id={`archive-title-${recordId}`}>{entityType === 'families' ? 'حذف العائلة' : 'حذف الفرد'}</h2></div>
+          <button type="button" onClick={() => !archiveBusy && setArchiveOpen(false)} aria-label="إغلاق">×</button>
+        </div>
+
+        <div className="record-archive-warning">
+          <span aria-hidden="true">!</span>
+          <div>
+            <strong>سيختفي «{recordLabel}» من الدليل والبحث مباشرة.</strong>
+            <small>{entityType === 'families'
+              ? 'لن يتم حذف أفراد العائلة أو المناسبات المرتبطة بها. تُحفظ الروابط التاريخية داخليًا لتجنب فقدان بيانات النسب.'
+              : 'لن يتم إتلاف علاقات القرابة أو المشاركات التاريخية فعليًا. وإذا كان الفرد مرتبطًا بحساب مستخدم نشط فسيتم منع الحذف.'}</small>
+          </div>
+        </div>
+
+        <form className="record-archive-form" onSubmit={archiveRecord}>
+          <label>
+            <span>سبب الحذف</span>
+            <textarea maxLength={500} value={archiveReason} onChange={(e) => setArchiveReason(e.target.value)} placeholder="اختياري — مثال: سجل مكرر أو أضيف بالخطأ" />
+          </label>
+          <label>
+            <span>تأكيد الاسم</span>
+            <small>اكتب الاسم التالي كما هو: <strong>{recordLabel}</strong></small>
+            <input value={archiveConfirmation} onChange={(e) => setArchiveConfirmation(e.target.value)} autoComplete="off" required />
+          </label>
+
+          {archiveMessage && <div className="record-archive-message" role="status">{archiveMessage}</div>}
+
+          <div className="record-archive-actions">
+            <button className="record-archive-cancel" type="button" disabled={archiveBusy} onClick={() => setArchiveOpen(false)}>إلغاء</button>
+            <button className="record-archive-confirm" type="submit" disabled={archiveBusy || archiveConfirmation.trim() !== recordLabel}>{archiveBusy ? 'جارٍ الحذف…' : 'تأكيد الحذف'}</button>
+          </div>
+        </form>
+      </section>
+    </div>,
+    document.body,
+  ) : null
+
   return (
     <>
-      <button className="record-edit-trigger" type="button" onClick={resetAndOpen}>تعديل</button>
-      {modal}
+      <div className="record-action-group">
+        {canEdit && <button className="record-edit-trigger" type="button" onClick={resetAndOpen}>تعديل</button>}
+        {canArchive && <button className="record-archive-trigger" type="button" onClick={openArchiveDialog}>{entityType === 'families' ? 'حذف العائلة' : 'حذف الفرد'}</button>}
+      </div>
+      {editModal}
+      {archiveModal}
     </>
   )
 }

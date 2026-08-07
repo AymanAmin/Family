@@ -18,6 +18,7 @@ const migrations = [
   'supabase/migrations/202608070021_relationship_edit_delete_requests.sql',
   'supabase/migrations/202608070022_social_feature_hardening.sql',
   'supabase/migrations/202608070022_admin_contributor_stats_and_link_integrity.sql',
+  'supabase/migrations/202608070023_relationship_edit_delete_requests.sql',
   'supabase/migrations/202608070023_relationship_changes_in_my_activity.sql',
   'supabase/migrations/202608070025_link_integrity_repair_and_unique_guard.sql',
 ]

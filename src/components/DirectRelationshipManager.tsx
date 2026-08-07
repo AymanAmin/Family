@@ -84,7 +84,7 @@ export default function DirectRelationshipManager({ personId, sessionUserId, isA
     })
     setBusyId('')
     if (error) {
-      setMessage(error.message.toLowerCase().includes('does not exist') ? 'شغّل migration رقم 021 لتفعيل تعديل وحذف صلات القرابة.' : error.message)
+      setMessage(error.message.toLowerCase().includes('does not exist') ? 'شغّل migration رقم 023 لتفعيل تعديل وحذف صلات القرابة.' : error.message)
       return
     }
     setEditingId('')

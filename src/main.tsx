@@ -6,6 +6,7 @@ import './mobile-app.css'
 import './mobile-fixes.css'
 import './mobile-shell.css'
 import './phase3.css'
+import './mobile-v2.css'
 
 const rootElement = document.getElementById('root')
 

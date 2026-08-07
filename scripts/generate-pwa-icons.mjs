@@ -7,9 +7,7 @@ function crc32(buffer) {
   let crc = 0xffffffff
   for (const byte of buffer) {
     crc ^= byte
-    for (let bit = 0; bit < 8; bit += 1) {
-      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1))
-    }
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1))
   }
   return (crc ^ 0xffffffff) >>> 0
 }
@@ -38,9 +36,6 @@ function encodePng(width, height, rgba) {
   header.writeUInt32BE(height, 4)
   header[8] = 8
   header[9] = 6
-  header[10] = 0
-  header[11] = 0
-  header[12] = 0
 
   return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
@@ -63,91 +58,135 @@ function mix(a, b, amount) {
   return Math.round(a + (b - a) * amount)
 }
 
-function createIcon(size, safeScale = 1) {
-  const sample = 2
-  const w = size * sample
-  const rgbaHigh = Buffer.alloc(w * w * 4)
-  const nodes = [
-    [0.30, 0.30, 0.075],
-    [0.70, 0.30, 0.075],
-    [0.28, 0.70, 0.075],
-    [0.72, 0.70, 0.075],
-  ].map(([x, y, r]) => [0.5 + (x - 0.5) * safeScale, 0.5 + (y - 0.5) * safeScale, r * safeScale])
-  const center = [0.5, 0.5, 0.125 * safeScale]
-  const lineWidth = 0.035 * safeScale
+function colorMix(left, right, amount) {
+  return [mix(left[0], right[0], amount), mix(left[1], right[1], amount), mix(left[2], right[2], amount), 255]
+}
 
-  for (let y = 0; y < w; y += 1) {
-    for (let x = 0; x < w; x += 1) {
-      const nx = (x + 0.5) / w
-      const ny = (y + 0.5) / w
-      const diagonal = Math.max(0, Math.min(1, (nx + ny) / 2))
-      const radial = Math.min(1, Math.hypot(nx - 0.5, ny - 0.46) * 1.35)
-      const glow = Math.max(0, 1 - radial)
-
-      let r = mix(5, 15, diagonal)
-      let g = mix(73, 105, diagonal)
-      let b = mix(58, 82, diagonal)
-      r = mix(r, 22, glow * 0.18)
-      g = mix(g, 126, glow * 0.18)
-      b = mix(b, 96, glow * 0.18)
-
-      const edgeShade = Math.max(0, (Math.hypot(nx - 0.5, ny - 0.5) - 0.42) / 0.3)
-      r = mix(r, 4, edgeShade * 0.32)
-      g = mix(g, 52, edgeShade * 0.32)
-      b = mix(b, 42, edgeShade * 0.32)
-
-      let color = [r, g, b, 255]
-
-      for (const [nodeX, nodeY] of nodes) {
-        if (distanceToSegment(nx, ny, center[0], center[1], nodeX, nodeY) <= lineWidth) {
-          color = [234, 244, 239, 255]
-        }
-      }
-
-      for (const [index, [nodeX, nodeY, radius]] of nodes.entries()) {
-        const d = Math.hypot(nx - nodeX, ny - nodeY)
-        if (d <= radius * 1.18) color = [13, 95, 75, 255]
-        if (d <= radius) color = index === 1 ? [215, 168, 78, 255] : [244, 249, 246, 255]
-      }
-
-      const centerDistance = Math.hypot(nx - center[0], ny - center[1])
-      if (centerDistance <= center[2] * 1.16) color = [6, 74, 58, 255]
-      if (centerDistance <= center[2]) color = [247, 250, 248, 255]
-      if (centerDistance <= center[2] * 0.44) color = [11, 102, 78, 255]
-      if (centerDistance <= center[2] * 0.20) color = [215, 168, 78, 255]
-
-      const offset = (y * w + x) * 4
-      rgbaHigh[offset] = color[0]
-      rgbaHigh[offset + 1] = color[1]
-      rgbaHigh[offset + 2] = color[2]
-      rgbaHigh[offset + 3] = color[3]
-    }
+function heartPath(scale = 1) {
+  const raw = []
+  for (let i = 0; i <= 48; i += 1) {
+    const t = (Math.PI * 2 * i) / 48
+    raw.push([
+      16 * Math.sin(t) ** 3,
+      13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t),
+    ])
   }
+  const xs = raw.map(([x]) => x)
+  const ys = raw.map(([, y]) => y)
+  const minX = Math.min(...xs)
+  const maxX = Math.max(...xs)
+  const minY = Math.min(...ys)
+  const maxY = Math.max(...ys)
 
+  return raw.map(([x, y]) => {
+    const nx = 0.5 + ((((x - minX) / (maxX - minX)) - 0.5) * 0.70 * scale)
+    const ny = 0.49 + ((((maxY - y) / (maxY - minY)) - 0.5) * 0.70 * scale)
+    return [nx, ny]
+  })
+}
+
+function pathDistance(px, py, points) {
+  let best = Infinity
+  for (let index = 1; index < points.length; index += 1) {
+    const [x1, y1] = points[index - 1]
+    const [x2, y2] = points[index]
+    const distance = distanceToSegment(px, py, x1, y1, x2, y2)
+    if (distance < best) best = distance
+  }
+  return best
+}
+
+function createIconRgba(size, safeScale = 1) {
   const rgba = Buffer.alloc(size * size * 4)
+  const outline = heartPath(safeScale)
+  const navy = [35, 74, 120]
+  const teal = [121, 201, 190]
+  const cream = [248, 245, 238]
+  const orange = [239, 122, 80]
+  const amber = [247, 172, 94]
+
+  const people = [
+    { x: 0.42, y: 0.43, r: 0.055, shoulders: [0.34, 0.58, 0.50, 0.58] },
+    { x: 0.59, y: 0.44, r: 0.052, shoulders: [0.52, 0.58, 0.67, 0.58] },
+    { x: 0.30, y: 0.54, r: 0.041, shoulders: [0.24, 0.65, 0.36, 0.65] },
+    { x: 0.70, y: 0.55, r: 0.040, shoulders: [0.64, 0.66, 0.76, 0.66] },
+  ].map((person) => ({
+    ...person,
+    x: 0.5 + (person.x - 0.5) * safeScale,
+    y: 0.5 + (person.y - 0.5) * safeScale,
+    r: person.r * safeScale,
+    shoulders: person.shoulders.map((value, index) => 0.5 + (value - 0.5) * safeScale),
+  }))
+
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
-      const totals = [0, 0, 0, 0]
-      for (let sy = 0; sy < sample; sy += 1) {
-        for (let sx = 0; sx < sample; sx += 1) {
-          const sourceOffset = (((y * sample + sy) * w) + (x * sample + sx)) * 4
-          for (let channel = 0; channel < 4; channel += 1) totals[channel] += rgbaHigh[sourceOffset + channel]
-        }
+      const nx = (x + 0.5) / size
+      const ny = (y + 0.5) / size
+      const glow = Math.max(0, 1 - Math.hypot(nx - 0.52, ny - 0.42) * 1.45)
+      let color = [
+        mix(cream[0], 255, glow * 0.23),
+        mix(cream[1], 253, glow * 0.23),
+        mix(cream[2], 248, glow * 0.23),
+        255,
+      ]
+
+      const heartDistance = pathDistance(nx, ny, outline)
+      if (heartDistance <= 0.028 * safeScale) color = colorMix(navy, teal, Math.max(0, Math.min(1, nx)))
+
+      const smallX = (nx - 0.5) / (0.075 * safeScale)
+      const smallY = -(ny - (0.135 - (1 - safeScale) * 0.02)) / (0.068 * safeScale)
+      const heartField = (smallX * smallX + smallY * smallY - 1) ** 3 - smallX * smallX * smallY ** 3
+      if (heartField <= 0) color = colorMix(amber, orange, Math.max(0, Math.min(1, ny * 4)))
+
+      for (const person of people) {
+        const figureColor = colorMix(navy, teal, Math.max(0, Math.min(1, person.x)))
+        const headDistance = Math.abs(Math.hypot(nx - person.x, ny - person.y) - person.r)
+        if (headDistance <= 0.012 * safeScale) color = figureColor
+
+        const [sx1, sy1, sx2, sy2] = person.shoulders
+        const midX = (sx1 + sx2) / 2
+        const bodyTop = person.y + person.r + 0.025 * safeScale
+        const bodyBottom = sy1
+        if (distanceToSegment(nx, ny, midX, bodyTop, midX, bodyBottom) <= 0.010 * safeScale) color = figureColor
+        if (distanceToSegment(nx, ny, sx1, sy1, midX, bodyTop) <= 0.010 * safeScale) color = figureColor
+        if (distanceToSegment(nx, ny, sx2, sy2, midX, bodyTop) <= 0.010 * safeScale) color = figureColor
       }
-      const targetOffset = (y * size + x) * 4
-      for (let channel = 0; channel < 4; channel += 1) rgba[targetOffset + channel] = Math.round(totals[channel] / (sample * sample))
+
+      const offset = (y * size + x) * 4
+      rgba[offset] = color[0]
+      rgba[offset + 1] = color[1]
+      rgba[offset + 2] = color[2]
+      rgba[offset + 3] = color[3]
     }
   }
+  return rgba
+}
 
-  return encodePng(size, size, rgba)
+function resizeNearest(source, sourceSize, targetSize) {
+  const target = Buffer.alloc(targetSize * targetSize * 4)
+  for (let y = 0; y < targetSize; y += 1) {
+    for (let x = 0; x < targetSize; x += 1) {
+      const sx = Math.min(sourceSize - 1, Math.floor((x / targetSize) * sourceSize))
+      const sy = Math.min(sourceSize - 1, Math.floor((y / targetSize) * sourceSize))
+      const sourceOffset = (sy * sourceSize + sx) * 4
+      const targetOffset = (y * targetSize + x) * 4
+      source.copy(target, targetOffset, sourceOffset, sourceOffset + 4)
+    }
+  }
+  return target
 }
 
 await mkdir(outputDir, { recursive: true })
+const normal512 = createIconRgba(512, 0.92)
+const maskable512 = createIconRgba(512, 0.74)
+const icon192 = resizeNearest(normal512, 512, 192)
+const apple180 = resizeNearest(normal512, 512, 180)
+
 await Promise.all([
-  writeFile(new URL('icon-192.png', outputDir), createIcon(192)),
-  writeFile(new URL('icon-512.png', outputDir), createIcon(512)),
-  writeFile(new URL('maskable-512.png', outputDir), createIcon(512, 0.76)),
-  writeFile(new URL('apple-touch-icon.png', outputDir), createIcon(180, 0.88)),
+  writeFile(new URL('icon-192.png', outputDir), encodePng(192, 192, icon192)),
+  writeFile(new URL('icon-512.png', outputDir), encodePng(512, 512, normal512)),
+  writeFile(new URL('maskable-512.png', outputDir), encodePng(512, 512, maskable512)),
+  writeFile(new URL('apple-touch-icon.png', outputDir), encodePng(180, 180, apple180)),
 ])
 
-console.log('Generated PWA icons: 192, 512, maskable 512, apple-touch 180.')
+console.log('Generated Sila family-heart PWA icons: 192, 512, maskable 512, apple-touch 180.')

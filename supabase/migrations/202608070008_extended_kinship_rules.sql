@@ -259,7 +259,7 @@ as $$
     union all select * from great_grandparents
     union all select * from great_grandchildren
   )
-  select distinct on (c.related_person_id, c.relation_type)
+  select distinct on (c.id, c.relation_type)
     c.id as related_person_id,
     c.full_name,
     c.gender,
@@ -269,7 +269,7 @@ as $$
     c.shared_parent_count
   from combined c
   where c.id <> p_person_id
-  order by c.related_person_id, c.relation_type, c.is_inferred asc,
+  order by c.id, c.relation_type, c.is_inferred asc,
            c.shared_parent_count desc nulls last;
 $$;
 

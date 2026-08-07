@@ -142,7 +142,7 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
         <div className="tree-workspace">
           <section className="tree-focus-card">
             <div className="tree-card-heading"><div><span>نقطة البداية</span><h2>اختر شخصًا لبناء المشهد</h2></div>{focus && <button type="button" onClick={() => onOpenPerson(focus.id)}>فتح الملف</button>}</div>
-            <PeoplePicker label="الشخص المحوري" value={focusId} onChange={(id) => { setFocusId(id); if (id && !fromId) setFromId(id) }} />
+            <PeoplePicker searchMode="broad" label="الشخص المحوري" value={focusId} onChange={(id) => { setFocusId(id); if (id && !fromId) setFromId(id) }} />
             {focusLoading && <div className="tree-inline-loading">جارٍ تجهيز الشجرة…</div>}
             {focus && !focusLoading && (
               <div className="tree-focus-summary">
@@ -171,9 +171,9 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
           <section className="path-picker-card">
             <div className="tree-card-heading"><div><span>اكتشاف ذكي</span><h2>ما صلة فلان بفلان؟</h2></div></div>
             <div className="path-pickers">
-              <PeoplePicker label="من" value={fromId} onChange={(id) => { setFromId(id); setPath([]); setPathMessage('') }} excludeId={toId || undefined} required />
+              <PeoplePicker searchMode="broad" label="من" value={fromId} onChange={(id) => { setFromId(id); setPath([]); setPathMessage('') }} excludeId={toId || undefined} required />
               <span className="path-switch" aria-hidden="true">↔</span>
-              <PeoplePicker label="إلى" value={toId} onChange={(id) => { setToId(id); setPath([]); setPathMessage('') }} excludeId={fromId || undefined} required />
+              <PeoplePicker searchMode="broad" label="إلى" value={toId} onChange={(id) => { setToId(id); setPath([]); setPathMessage('') }} excludeId={fromId || undefined} required />
             </div>
             <button className="path-discover-button" type="button" disabled={pathLoading || !fromId || !toId} onClick={() => void discoverPath()}>{pathLoading ? 'جارٍ تحليل شجرة النسب…' : 'اكتشف صلة القرابة'}</button>
           </section>

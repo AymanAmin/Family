@@ -5,6 +5,7 @@ const migrations = [
   'supabase/migrations/202608070009_extended_parent_sibling_kinship.sql',
   'supabase/migrations/202608070010_public_scale_performance.sql',
   'supabase/migrations/202608070011_smart_duplicate_person_search.sql',
+  'supabase/migrations/202608070012_kinship_path_explorer.sql',
 ]
 
 let setup = fs.readFileSync(setupPath, 'utf8').trimEnd()

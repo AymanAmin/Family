@@ -1,0 +1,89 @@
+/* Final touch/scroll correction for nested family-tree canvases.
+   The app shell used to force pan-y on body/main, which prevents horizontal
+   touch scrolling in descendants on Android/Chrome. */
+
+@media (max-width: 760px) {
+  html,
+  body,
+  #root,
+  .app-shell,
+  main {
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+
+  /* The page itself never becomes horizontally scrollable. */
+  html,
+  body,
+  #root,
+  .app-shell,
+  main,
+  .family-tree-page,
+  .tree-workspace,
+  .kinship-section {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Only this nested viewport owns horizontal movement. */
+  .family-tree-page .kinship-scroll,
+  .detail-page .kinship-scroll {
+    position: relative;
+    display: block !important;
+    width: calc(100% + 24px) !important;
+    max-width: none !important;
+    margin-inline: -12px !important;
+    padding-inline: 12px !important;
+    overflow-x: scroll !important;
+    overflow-y: hidden !important;
+    overscroll-behavior-x: contain !important;
+    overscroll-behavior-y: auto !important;
+    touch-action: pan-x pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    scroll-snap-type: none !important;
+  }
+
+  .family-tree-page .kinship-scroll::-webkit-scrollbar,
+  .detail-page .kinship-scroll::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Force a real canvas wider than the phone so horizontal movement exists. */
+  .family-tree-page .kinship-scroll > .kinship-map,
+  .detail-page .kinship-scroll > .kinship-map {
+    display: grid !important;
+    width: 760px !important;
+    min-width: 760px !important;
+    max-width: none !important;
+    flex: 0 0 760px !important;
+  }
+
+  .family-tree-page .kinship-scroll .kin-middle,
+  .detail-page .kinship-scroll .kin-middle {
+    width: 690px !important;
+    min-width: 690px !important;
+    max-width: none !important;
+  }
+
+  .family-tree-page .kinship-pan-hint {
+    position: sticky;
+    right: 0;
+    left: 0;
+    z-index: 2;
+  }
+}
+
+@media (max-width: 390px) {
+  .family-tree-page .kinship-scroll > .kinship-map,
+  .detail-page .kinship-scroll > .kinship-map {
+    width: 720px !important;
+    min-width: 720px !important;
+    flex-basis: 720px !important;
+  }
+
+  .family-tree-page .kinship-scroll .kin-middle,
+  .detail-page .kinship-scroll .kin-middle {
+    width: 650px !important;
+    min-width: 650px !important;
+  }
+}

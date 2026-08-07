@@ -13,6 +13,7 @@ import './edit-compact.css'
 import './kinship-extended.css'
 import './public-scale.css'
 import './family-tree-screen.css'
+import './tree-pan-fix.css'
 
 const rootElement = document.getElementById('root')
 

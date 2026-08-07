@@ -1,0 +1,33 @@
+name: Apply public scale app optimizations
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-public-scale-app.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply App performance patch
+        run: node scripts/apply-public-scale-app.mjs
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify production build
+        run: npm run build
+      - name: Commit optimized App
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Optimize app loading for public scale"
+            git push
+          fi

@@ -193,7 +193,7 @@ async function shareFile(file: File, title: string) {
   const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean }
   if (typeof nav.share === 'function' && (!nav.canShare || nav.canShare({ files: [file] }))) {
     try {
-      await nav.share({ title, text: 'من منصة صلة المنطقة', files: [file] })
+      await nav.share({ title, text: 'من منصة صلة القرابة', files: [file] })
       return 'shared' as const
     } catch (error) {
       if ((error as DOMException)?.name === 'AbortError') return 'cancelled' as const
@@ -210,7 +210,7 @@ function drawBrand(ctx: CanvasRenderingContext2D, width: number) {
   gradient.addColorStop(1, COLORS.teal)
   fillRoundRect(ctx, right - 110, 54, 110, 110, 34, gradient as unknown as string)
   drawText(ctx, 'ص', right - 55, 132, '700 64px Arial', COLORS.white, 'center')
-  drawText(ctx, 'صلة المنطقة', right - 142, 102, '700 36px Arial', COLORS.navy)
+  drawText(ctx, 'صلة القرابة', right - 142, 102, '700 36px Arial', COLORS.navy)
   drawText(ctx, 'سجل أهالي المنطقة', right - 142, 143, '400 24px Arial', COLORS.muted)
   drawText(ctx, 'بطاقة مشاركة موثقة من البيانات المنشورة', 92, 116, '400 22px Arial', COLORS.muted, 'left')
 }
@@ -376,7 +376,7 @@ async function renderPersonCard(recordId: string) {
     for (const key of groupKeys) y = drawPeopleSection(ctx, relationLabels[key] || key, grouped.get(key) ?? [], y, width)
   }
 
-  drawText(ctx, 'صلة المنطقة · تم إنشاء الصورة من البيانات المعتمدة في الدليل', width / 2, height - 78, '400 21px Arial', COLORS.muted, 'center')
+  drawText(ctx, 'صلة القرابة · تم إنشاء الصورة من البيانات المعتمدة في الدليل', width / 2, height - 78, '400 21px Arial', COLORS.muted, 'center')
   drawText(ctx, new Intl.DateTimeFormat('ar-SA', { dateStyle: 'medium' }).format(new Date()), width / 2, height - 45, '400 18px Arial', COLORS.muted, 'center')
   return { canvas, title: person.full_name, filename: `صلة-الشخص-${sanitizedFilePart(person.full_name)}.png` }
 }
@@ -450,7 +450,7 @@ async function renderFamilyCard(recordId: string) {
     if (meta) drawText(ctx, meta, avatarX - 38, y + 60, '400 16px Arial', COLORS.muted)
   })
 
-  drawText(ctx, 'صلة المنطقة · تم إنشاء الصورة من البيانات المعتمدة في الدليل', width / 2, height - 78, '400 21px Arial', COLORS.muted, 'center')
+  drawText(ctx, 'صلة القرابة · تم إنشاء الصورة من البيانات المعتمدة في الدليل', width / 2, height - 78, '400 21px Arial', COLORS.muted, 'center')
   drawText(ctx, new Intl.DateTimeFormat('ar-SA', { dateStyle: 'medium' }).format(new Date()), width / 2, height - 45, '400 18px Arial', COLORS.muted, 'center')
   return { canvas, title: family.name, filename: `صلة-العائلة-${sanitizedFilePart(family.name)}.png` }
 }

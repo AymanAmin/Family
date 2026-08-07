@@ -35,7 +35,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
   const [results, setResults] = useState<PersonOption[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
-  const rootRef = useRef<HTMLLabelElement | null>(null)
+  const rootRef = useRef<HTMLDivElement | null>(null)
   const timerRef = useRef<number | null>(null)
   const requestRef = useRef(0)
 
@@ -171,7 +171,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
   }
 
   return (
-    <label className="people-picker-label" ref={rootRef}>
+    <div className="people-picker-label" ref={rootRef}>
       <span>{label}{required ? ' *' : ''}</span>
       <div className={`people-picker ${open ? 'open' : ''}`}>
         {selected ? (
@@ -197,6 +197,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
             placeholder={searchMode === 'prefix' ? 'اكتب بداية الاسم — حرفين على الأقل' : 'اكتب حرفين على الأقل للبحث'}
             autoComplete="off"
             enterKeyHint="search"
+            aria-label={label}
             required={required && !value}
           />
         )}
@@ -204,7 +205,15 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
         {open && !selected && (
           <div className="people-picker-menu" aria-live="polite">
             {loading ? <div className="people-picker-state">جارٍ البحث…</div> : query.trim().length < 2 ? <div className="people-picker-state">ابدأ بكتابة حرفين من الاسم.</div> : results.length ? results.map((person) => (
-              <button type="button" key={person.id} onClick={() => choose(person)}>
+              <button
+                type="button"
+                key={person.id}
+                onPointerDown={(event) => {
+                  event.preventDefault()
+                  choose(person)
+                }}
+                onClick={() => choose(person)}
+              >
                 <span className="people-picker-avatar">{person.full_name.charAt(0)}</span>
                 <span><span className="verified-name-line"><strong>{person.full_name}</strong>{person.is_verified && <VerifiedBadge compact />}</span><small>{person.birth_year || 'سنة الميلاد غير محددة'}</small></span>
               </button>
@@ -212,6 +221,6 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
           </div>
         )}
       </div>
-    </label>
+    </div>
   )
 }

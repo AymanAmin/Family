@@ -1,0 +1,255 @@
+/* Google-first authentication + PWA install experience. Loaded last. */
+.auth-card {
+  display: flex !important;
+  flex-direction: column;
+}
+
+.auth-card > .google-button {
+  order: 1;
+  min-height: 58px;
+  margin: 4px 0 2px;
+  border: 1px solid #c9d8d2;
+  border-radius: 16px;
+  color: #173e34;
+  background: #fff;
+  box-shadow: 0 10px 24px rgb(7 56 45 / 9%);
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.auth-card > .google-button:hover {
+  border-color: #9fc6b8;
+  background: #fbfefc;
+  transform: translateY(-1px);
+}
+
+.auth-card > .divider {
+  order: 2;
+  margin: 13px 0 10px;
+  color: #7a8b84;
+}
+
+.auth-card > .divider::before,
+.auth-card > .divider::after {
+  background: #dfe8e4;
+}
+
+.auth-card > .auth-tabs {
+  order: 3;
+  margin-top: 0;
+  padding: 4px;
+  border: 1px solid #e1e9e6;
+  border-radius: 13px;
+  background: #f5f9f7;
+}
+
+.auth-card > .auth-tabs button {
+  min-height: 38px;
+  border-radius: 10px;
+  font-size: .64rem;
+}
+
+.auth-card > .auth-tabs button.active {
+  background: #fff;
+  box-shadow: 0 3px 10px rgb(7 56 45 / 7%);
+}
+
+.auth-card > .auth-form {
+  order: 4;
+  margin-top: 10px;
+  padding: 13px;
+  border: 1px solid #e5ece9;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #fbfdfc, #f5f9f7);
+}
+
+.auth-card > .auth-form .primary {
+  min-height: 44px;
+  color: var(--green-800);
+  border: 1px solid #bdd5cb;
+  background: #edf6f2;
+  box-shadow: none;
+}
+
+.auth-card > .auth-links {
+  order: 5;
+}
+
+.pwa-install-prompt {
+  position: fixed;
+  z-index: 1300;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  width: min(390px, calc(100vw - 28px));
+  padding: 16px;
+  border: 1px solid rgb(182 211 200 / 88%);
+  border-radius: 24px;
+  color: var(--green-950, #07382d);
+  background: linear-gradient(150deg, rgb(255 255 255 / 98%), rgb(238 248 244 / 98%));
+  box-shadow: 0 22px 60px rgb(5 48 38 / 22%);
+  backdrop-filter: blur(18px);
+  animation: pwa-prompt-in .35s ease both;
+}
+
+@keyframes pwa-prompt-in {
+  from { opacity: 0; transform: translateY(18px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.pwa-install-close {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 11px;
+  color: #61766d;
+  background: #e9f1ed;
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+.pwa-install-brand {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding-inline-start: 38px;
+}
+
+.pwa-install-brand img {
+  width: 64px;
+  height: 64px;
+  border-radius: 19px;
+  box-shadow: 0 9px 23px rgb(7 56 45 / 20%);
+}
+
+.pwa-install-brand > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.pwa-install-brand span {
+  color: #158066;
+  font-size: .55rem;
+  font-weight: 900;
+}
+
+.pwa-install-brand strong {
+  font-family: 'Noto Kufi Arabic', sans-serif;
+  font-size: .92rem;
+  line-height: 1.65;
+}
+
+.pwa-install-brand small {
+  color: #687b73;
+  font-size: .56rem;
+  line-height: 1.65;
+}
+
+.pwa-install-benefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 13px;
+}
+
+.pwa-install-benefits span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #326454;
+  background: #e7f3ee;
+  font-size: .5rem;
+  font-weight: 800;
+}
+
+.pwa-ios-steps {
+  display: grid;
+  gap: 5px;
+  margin-top: 11px;
+  padding: 11px;
+  border: 1px solid #dbe7e2;
+  border-radius: 13px;
+  color: #5f746b;
+  background: #fff;
+  font-size: .56rem;
+  line-height: 1.65;
+}
+
+.pwa-ios-steps strong {
+  color: var(--green-900, #0b4d3e);
+  font-size: .63rem;
+}
+
+.pwa-install-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.pwa-install-primary,
+.pwa-install-later {
+  min-height: 44px;
+  border-radius: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.pwa-install-primary {
+  border: 0;
+  color: #fff;
+  background: linear-gradient(145deg, #117259, #07503f);
+  box-shadow: 0 8px 18px rgb(8 85 65 / 18%);
+}
+
+.pwa-install-primary:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+
+.pwa-install-later {
+  padding-inline: 14px;
+  border: 1px solid #d5e1dc;
+  color: #60746c;
+  background: #fff;
+}
+
+@media (max-width: 760px) {
+  .auth-card > .google-button {
+    min-height: 55px;
+    border-radius: 15px;
+  }
+
+  .pwa-install-prompt {
+    right: 12px;
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    width: calc(100vw - 24px);
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .pwa-install-brand {
+    grid-template-columns: 58px minmax(0, 1fr);
+    padding-inline-start: 34px;
+  }
+
+  .pwa-install-brand img {
+    width: 58px;
+    height: 58px;
+    border-radius: 17px;
+  }
+
+  .pwa-install-actions {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+@media (display-mode: standalone) {
+  .pwa-install-prompt { display: none !important; }
+  .app-shell { min-height: 100dvh; }
+}

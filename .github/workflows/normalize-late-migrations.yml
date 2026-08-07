@@ -1,0 +1,34 @@
+name: Normalize late migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/normalize-late-migrations.py'
+      - '.github/workflows/normalize-late-migrations.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Normalize migration files
+        run: python3 scripts/normalize-late-migrations.py
+      - name: Commit normalization
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A supabase/migrations src/components/DirectRelationshipManager.tsx scripts/sync-setup-latest.mjs
+          if ! git diff --cached --quiet; then
+            git commit -m "Normalize late migration numbering"
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi

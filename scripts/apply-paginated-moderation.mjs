@@ -78,7 +78,7 @@ const oldLoader = `  const loadPending = useCallback(async () => {
     for (const item of relationshipResult.data ?? []) {
       const source = personName(item.source as RelatedPerson) || 'شخص أول'
       const target = personName(item.target as RelatedPerson) || 'شخص ثانٍ'
-      rows.push({ id: item.id, title: \`${'${source}'} — ${'${target}'}\`, subtitle: relationshipLabels[item.relation_type] || item.relation_type, table: 'person_relationships', created_at: item.created_at })
+      rows.push({ id: item.id, title: `${source} — ${target}`, subtitle: relationshipLabels[item.relation_type] || item.relation_type, table: 'person_relationships', created_at: item.created_at })
     }
     for (const item of linkResult.data ?? []) {
       rows.push({ id: item.id, title: personName(item.people as RelatedPerson) || 'طلب ربط حساب', subtitle: 'طلب إثبات أن الحساب يعود لهذا الشخص', table: 'account_link_requests', created_at: item.created_at })
@@ -138,7 +138,7 @@ const newLoader = `  const loadPending = useCallback(async (offset = 0, append =
     for (const item of relationshipResult.data ?? []) {
       const source = personName(item.source as RelatedPerson) || 'شخص أول'
       const target = personName(item.target as RelatedPerson) || 'شخص ثانٍ'
-      rows.push({ id: item.id, title: \`${'${source}'} — ${'${target}'}\`, subtitle: relationshipLabels[item.relation_type] || item.relation_type, table: 'person_relationships', created_at: item.created_at })
+      rows.push({ id: item.id, title: `${source} — ${target}`, subtitle: relationshipLabels[item.relation_type] || item.relation_type, table: 'person_relationships', created_at: item.created_at })
     }
     for (const item of linkResult.data ?? []) rows.push({ id: item.id, title: personName(item.people as RelatedPerson) || 'طلب ربط حساب', subtitle: 'طلب إثبات أن الحساب يعود لهذا الشخص', table: 'account_link_requests', created_at: item.created_at })
 
@@ -167,11 +167,11 @@ app = replaceOnce(
   'admin count label',
 )
 
-const oldRequests = `{adminTab === 'requests' && (pending.length ? <div className="review-list">{pending.map((record) => <article className="review-row" key={\`${'${record.table}'}-${'${record.id}'}\`}><div><span className="status pending">معلق</span><h3>{record.title}</h3><p>{record.subtitle} · {formatDate(record.created_at)}</p></div><div className="review-actions"><button className="approve" onClick={() => moderate(record, 'approved')} disabled={busy}>اعتماد</button><button className="reject" onClick={() => moderate(record, 'rejected')} disabled={busy}>رفض</button></div></article>)}</div> : <div className="empty-state"><strong>لا توجد طلبات معلقة</strong><span>جميع الطلبات الأساسية تمت مراجعتها.</span></div>)}`
+const oldRequests = `{adminTab === 'requests' && (pending.length ? <div className="review-list">{pending.map((record) => <article className="review-row" key={`${record.table}-${record.id}`}><div><span className="status pending">معلق</span><h3>{record.title}</h3><p>{record.subtitle} · {formatDate(record.created_at)}</p></div><div className="review-actions"><button className="approve" onClick={() => moderate(record, 'approved')} disabled={busy}>اعتماد</button><button className="reject" onClick={() => moderate(record, 'rejected')} disabled={busy}>رفض</button></div></article>)}</div> : <div className="empty-state"><strong>لا توجد طلبات معلقة</strong><span>جميع الطلبات الأساسية تمت مراجعتها.</span></div>)}`
 
 const newRequests = `{adminTab === 'requests' && (
                 <>
-                  {pending.length ? <div className="review-list">{pending.map((record) => <article className="review-row" key={\`${'${record.table}'}-${'${record.id}'}\`}><div><span className="status pending">معلق</span><h3>{record.title}</h3><p>{record.subtitle} · {formatDate(record.created_at)}</p></div><div className="review-actions"><button className="approve" onClick={() => moderate(record, 'approved')} disabled={busy}>اعتماد</button><button className="reject" onClick={() => moderate(record, 'rejected')} disabled={busy}>رفض</button></div></article>)}</div> : <div className="empty-state"><strong>لا توجد طلبات معلقة</strong><span>جميع الطلبات الأساسية تمت مراجعتها.</span></div>}
+                  {pending.length ? <div className="review-list">{pending.map((record) => <article className="review-row" key={`${record.table}-${record.id}`}><div><span className="status pending">معلق</span><h3>{record.title}</h3><p>{record.subtitle} · {formatDate(record.created_at)}</p></div><div className="review-actions"><button className="approve" onClick={() => moderate(record, 'approved')} disabled={busy}>اعتماد</button><button className="reject" onClick={() => moderate(record, 'rejected')} disabled={busy}>رفض</button></div></article>)}</div> : <div className="empty-state"><strong>لا توجد طلبات معلقة</strong><span>جميع الطلبات الأساسية تمت مراجعتها.</span></div>}
                   {pendingHasMore && <button className="admin-load-more" type="button" disabled={pendingLoadingMore} onClick={() => void loadPending(pending.length, true)}>{pendingLoadingMore ? 'جارٍ تحميل المزيد…' : 'عرض المزيد من الطلبات'}</button>}
                 </>
               )}`
@@ -185,3 +185,5 @@ if (!main.includes("import './moderation-pagination.css'")) {
 fs.writeFileSync(appPath, app)
 fs.writeFileSync(mainPath, main)
 console.log('Applied paginated moderation feed integration.')
+
+// Integration trigger: 2026-08-07

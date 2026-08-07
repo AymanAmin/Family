@@ -1,0 +1,177 @@
+/* Compact record editor: app-like modal instead of a full-page mobile sheet. */
+
+@media (max-width: 760px) {
+  .record-edit-overlay {
+    align-items: center !important;
+    justify-items: center !important;
+    overflow: hidden !important;
+    padding:
+      calc(10px + env(safe-area-inset-top))
+      14px
+      calc(84px + env(safe-area-inset-bottom)) !important;
+    background: rgb(4 28 22 / 38%) !important;
+    backdrop-filter: blur(3px) !important;
+  }
+
+  .record-edit-sheet {
+    display: flex !important;
+    width: min(100%, 430px) !important;
+    max-height: min(72dvh, 560px) !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border: 1px solid rgb(205 224 216 / 92%) !important;
+    border-radius: 20px !important;
+    background: rgb(255 255 255 / 98%) !important;
+    box-shadow: 0 22px 65px rgb(3 31 24 / 25%) !important;
+  }
+
+  .record-edit-heading {
+    flex: 0 0 auto !important;
+    gap: 8px !important;
+    margin: 0 !important;
+    padding: 11px 12px 9px !important;
+    border-bottom: 1px solid #e5ede9 !important;
+    background: linear-gradient(180deg, #fbfdfc, #f7faf8) !important;
+  }
+
+  .record-edit-heading span {
+    font-size: .56rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .record-edit-heading h2 {
+    margin: 2px 0 0 !important;
+    font-size: .86rem !important;
+    line-height: 1.4 !important;
+  }
+
+  .record-edit-heading > button {
+    width: 30px !important;
+    min-width: 30px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    border-radius: 10px !important;
+    font-size: 1rem !important;
+  }
+
+  .edit-review-note {
+    flex: 0 0 auto !important;
+    margin: 8px 10px 0 !important;
+    padding: 7px 9px !important;
+    border-radius: 10px !important;
+    font-size: .61rem !important;
+    line-height: 1.55 !important;
+  }
+
+  .record-edit-form {
+    display: grid !important;
+    flex: 1 1 auto !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    padding: 10px 12px 12px !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .record-edit-form::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .record-edit-form label {
+    gap: 4px !important;
+    font-size: .66rem !important;
+    line-height: 1.3 !important;
+  }
+
+  .record-edit-form label > span {
+    font-size: .66rem !important;
+    line-height: 1.3 !important;
+  }
+
+  .record-edit-form input,
+  .record-edit-form select,
+  .record-edit-form textarea {
+    min-height: 39px !important;
+    height: 39px !important;
+    padding: 7px 9px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+  }
+
+  .record-edit-form textarea {
+    height: 64px !important;
+    min-height: 64px !important;
+    max-height: 92px !important;
+    resize: none !important;
+  }
+
+  .record-edit-form .edit-form-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 7px !important;
+  }
+
+  .record-edit-form .edit-check {
+    display: inline-flex !important;
+    width: fit-content !important;
+    min-height: 30px !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 3px 7px !important;
+    border: 1px solid #e0eae6 !important;
+    border-radius: 9px !important;
+    background: #f8fbf9 !important;
+  }
+
+  .record-edit-form .edit-check input {
+    width: 16px !important;
+    min-width: 16px !important;
+    height: 16px !important;
+    min-height: 16px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .record-edit-form .edit-check span {
+    font-size: .62rem !important;
+  }
+
+  .record-edit-message {
+    padding: 7px 9px !important;
+    border-radius: 9px !important;
+    font-size: .62rem !important;
+    line-height: 1.45 !important;
+  }
+
+  .record-edit-form > .primary {
+    position: sticky !important;
+    z-index: 2 !important;
+    bottom: -12px !important;
+    width: 100% !important;
+    min-height: 41px !important;
+    margin-top: 1px !important;
+    padding: 7px 10px !important;
+    border-radius: 11px !important;
+    font-size: .7rem !important;
+    box-shadow: 0 -8px 18px rgb(255 255 255 / 92%) !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .record-edit-overlay {
+    padding-inline: 9px !important;
+  }
+
+  .record-edit-sheet {
+    max-height: 75dvh !important;
+  }
+
+  .record-edit-form {
+    padding-inline: 10px !important;
+  }
+}

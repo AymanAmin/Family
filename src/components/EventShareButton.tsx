@@ -268,12 +268,10 @@ function drawCrescent(ctx: CanvasRenderingContext2D, x: number, y: number, r: nu
   ctx.beginPath()
   ctx.arc(x, y, r, 0, Math.PI * 2)
   ctx.fill()
-  ctx.globalCompositeOperation = 'destination-out'
+  ctx.fillStyle = cutout
   ctx.beginPath()
   ctx.arc(x + r * .42, y - r * .14, r * .78, 0, Math.PI * 2)
   ctx.fill()
-  ctx.globalCompositeOperation = 'source-over'
-  ctx.fillStyle = cutout
   ctx.restore()
 }
 
@@ -380,7 +378,8 @@ function drawEventOrnament(ctx: CanvasRenderingContext2D, type: string, x: numbe
     return
   }
   if (type === 'general') {
-    drawLantern(ctx, x, y, t.accent)
+    drawSparkle(ctx, x - 10, y, 10, t.accent)
+    drawSparkle(ctx, x + 16, y - 10, 6, t.accent2)
     return
   }
   drawSparkle(ctx, x, y, 12, t.accent)
@@ -501,31 +500,31 @@ function drawPrayerBox(ctx: CanvasRenderingContext2D, type: string, t: Theme) {
   drawLeafSprig(ctx, x + 78, y + h - 32, t.accent, false)
   drawLeafSprig(ctx, x + w - 78, y + h - 32, t.accent, true)
 
-  drawEventOrnament(ctx, type, 540, y + 28, t, t.prayer)
+  drawEventOrnament(ctx, type, 540, y + 24, t, t.prayer)
 
   ctx.textAlign = 'center'
   ctx.fillStyle = t.accent
   setFont(ctx, 800, 17)
-  ctx.fillText(b.heading, 540, y + 34)
+  ctx.fillText(b.heading, 540, y + 57)
 
-  const primary = fitWrappedText(ctx, b.primary, 690, 2, 25, 21, 800)
+  const primary = fitWrappedText(ctx, b.primary, 690, 2, 24, 20, 800)
   ctx.fillStyle = t.ink
   setFont(ctx, 800, primary.size)
-  const primaryLineHeight = primary.size + 15
-  let py = y + 82
+  const primaryLineHeight = primary.size + 13
+  let py = y + 96
   for (const line of primary.lines) {
     ctx.fillText(line, 540, py)
     py += primaryLineHeight
   }
 
-  const secondary = fitWrappedText(ctx, b.secondary, 690, 2, 20, 17, 500)
+  const secondary = fitWrappedText(ctx, b.secondary, 690, 2, 19, 16, 500)
   ctx.fillStyle = '#65747e'
   setFont(ctx, 500, secondary.size)
-  let sy = Math.max(y + 143, py + 7)
+  let sy = Math.max(y + 157, py + 4)
   for (const line of secondary.lines) {
-    if (sy > y + h - 22) break
+    if (sy > y + h - 19) break
     ctx.fillText(line, 540, sy)
-    sy += secondary.size + 11
+    sy += secondary.size + 9
   }
   ctx.textAlign = 'right'
 }
@@ -603,10 +602,10 @@ async function renderEventImage(event: EventShareData) {
   ctx.fillText(badgeLabel, 925, 301)
   drawSparkle(ctx, badgeX + 30, 290, 7, t.accent2)
 
-  const title = fitWrappedText(ctx, event.title, 810, 2, 44, 34, 900)
+  const title = fitWrappedText(ctx, event.title, 810, 2, 40, 32, 900)
   ctx.fillStyle = t.ink
   setFont(ctx, 900, title.size)
-  const titleLineHeight = title.size + 24
+  const titleLineHeight = title.size + 23
   let y = 405
   y = drawLines(ctx, title.lines, 930, y, titleLineHeight)
 

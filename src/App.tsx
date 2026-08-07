@@ -12,6 +12,7 @@ const Phase3AdminQueue = lazy(() => import('./components/Phase3AdminQueue'))
 const DuplicatePersonCheck = lazy(() => import('./components/DuplicatePersonCheck'))
 const FamilyTreeScreen = lazy(() => import('./components/FamilyTreeScreen'))
 const AdminUserRoles = lazy(() => import('./components/AdminUserRoles'))
+const MySubmissionActivity = lazy(() => import('./components/MySubmissionActivity'))
 const FamilyPicker = lazy(() => import('./components/FamilyPicker'))
 import './details.css'
 import './nasab-inspired.css'
@@ -1031,6 +1032,14 @@ function App() {
               <p>{profile?.linked_person_id ? people.find((item) => item.id === profile.linked_person_id)?.full_name || 'تم اعتماد الربط.' : ownLinkRequest?.status === 'pending' ? `السجل المطلوب: ${personName(ownLinkRequest.people)}` : 'ابحث عن اسمك في الدليل وافتح ملف الشخص ثم اضغط «هذا أنا».'}</p>
               {!profile?.linked_person_id && ownLinkRequest?.status !== 'pending' && <button className="primary" type="button" onClick={() => setView('search')}>البحث عن سجلي</button>}
             </div>
+            <Suspense fallback={<LazyPanelFallback />}>
+              <MySubmissionActivity
+                active={view === 'account'}
+                role={profile?.role || 'member'}
+                onOpenPerson={(id) => void openPersonById(id)}
+                onOpenFamily={(id) => void openFamilyById(id)}
+              />
+            </Suspense>
           </section>
         )}
 

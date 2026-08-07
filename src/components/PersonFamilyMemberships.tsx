@@ -21,6 +21,7 @@ type Props = {
   recordCreatedBy?: string | null
   sessionUserId?: string | null
   isAdmin?: boolean
+  isLinkedPerson?: boolean
   onChanged?: () => void | Promise<void>
 }
 
@@ -39,7 +40,7 @@ function familyName(value: RelatedFamily): string {
   return value.name ?? ''
 }
 
-export default function PersonFamilyMemberships({ personId, recordCreatedBy, sessionUserId, isAdmin = false, onChanged }: Props) {
+export default function PersonFamilyMemberships({ personId, recordCreatedBy, sessionUserId, isAdmin = false, isLinkedPerson = false, onChanged }: Props) {
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -63,7 +64,7 @@ export default function PersonFamilyMemberships({ personId, recordCreatedBy, ses
   const approved = useMemo(() => memberships.filter((item) => item.status === 'approved'), [memberships])
   const visible = useMemo(() => memberships.filter((item) => item.status === 'approved' || item.created_by === sessionUserId), [memberships, sessionUserId])
   const hasPrimary = approved.some((item) => item.is_primary)
-  const canChangePrimary = Boolean(sessionUserId && (isAdmin || recordCreatedBy === sessionUserId))
+  const canChangePrimary = Boolean(sessionUserId && (isAdmin || isLinkedPerson || recordCreatedBy === sessionUserId))
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -106,7 +107,7 @@ export default function PersonFamilyMemberships({ personId, recordCreatedBy, ses
     })
     setPrimaryBusyId('')
     if (error) {
-      setMessage(error.message)
+      setMessage(error.message.toLowerCase().includes('does not exist') ? 'شغّل أحدث migration لتفعيل تغيير العائلة الأساسية.' : error.message)
       return
     }
     const direct = data === 'approved'

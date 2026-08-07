@@ -1,0 +1,30 @@
+/* Moderation pagination: compact mobile-first continuation control. */
+.admin-load-more {
+  display: flex;
+  min-width: 148px;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 13px auto 0;
+  padding-inline: 16px;
+  border: 1px solid #cfe0d9;
+  border-radius: 13px;
+  color: var(--green-800);
+  background: #f0f7f4;
+  font-size: .68rem;
+  font-weight: 900;
+  box-shadow: 0 6px 18px rgb(7 56 45 / 4%);
+}
+.admin-load-more:disabled { opacity: .58; }
+.admin-load-more::after { content: '↓'; font-size: .8rem; }
+
+.admin-console-count small { max-width: 58px; line-height: 1.25; text-align: center; }
+
+@media (max-width: 760px) {
+  .admin-load-more { min-height: 39px; margin-top: 10px; font-size: .62rem; }
+  .admin-console-panel .review-list { gap: 8px; }
+  .admin-console-panel .review-row { padding: 12px; border-radius: 16px; }
+  .admin-console-panel .review-row h3 { margin-top: 6px; font-size: .83rem; }
+  .admin-console-panel .review-row p { font-size: .61rem; line-height: 1.55; }
+}

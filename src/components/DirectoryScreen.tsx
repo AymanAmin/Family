@@ -10,6 +10,7 @@ export type DirectoryPerson = {
   gender: 'male' | 'female' | null
   birth_year: number | null
   is_deceased: boolean
+  death_date: string | null
   is_verified: boolean
   description: string | null
   status: 'pending' | 'approved' | 'rejected'
@@ -59,6 +60,25 @@ function cacheKey(term: string, page: number) {
   return `${term.trim().toLocaleLowerCase('ar')}::${page}`
 }
 
+function normalizeFallbackPerson(item: Record<string, unknown>): DirectoryPerson {
+  return {
+    id: String(item.id ?? ''),
+    full_name: String(item.full_name ?? ''),
+    gender: item.gender === 'male' || item.gender === 'female' ? item.gender : null,
+    birth_year: typeof item.birth_year === 'number' ? item.birth_year : null,
+    is_deceased: Boolean(item.is_deceased),
+    death_date: typeof item.death_date === 'string' ? item.death_date : null,
+    is_verified: Boolean(item.is_verified),
+    description: typeof item.description === 'string' ? item.description : null,
+    status: item.status === 'pending' || item.status === 'rejected' ? item.status : 'approved',
+    family_id: typeof item.family_id === 'string' ? item.family_id : null,
+    family_name: typeof item.family_name === 'string' ? item.family_name : null,
+    families: (item.families as RelatedFamily | undefined) ?? null,
+    created_by: String(item.created_by ?? ''),
+    created_at: String(item.created_at ?? ''),
+  }
+}
+
 function PersonCard({ item, onOpen }: { item: DirectoryPerson; onOpen: (item: DirectoryPerson) => void }) {
   return (
     <button className="directory-person-card" type="button" onClick={() => onOpen(item)}>
@@ -82,6 +102,21 @@ function FamilyCard({ item, onOpen }: { item: DirectoryFamily; onOpen: (item: Di
   )
 }
 
+async function fallbackPeoplePage(page: number, queryTerm: string): Promise<PeoplePage> {
+  if (!supabase) return { rows: [], count: null, hasMore: false }
+  const from = page * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+  let query = supabase
+    .from('people')
+    .select('id,full_name,gender,birth_year,is_deceased,death_date,description,status,family_id,created_by,created_at,families(name)', { count: 'planned' })
+    .eq('status', 'approved')
+  if (queryTerm) query = query.ilike('full_name', `%${queryTerm}%`)
+  const result = await query.order(queryTerm ? 'full_name' : 'created_at', { ascending: Boolean(queryTerm) }).range(from, to)
+  if (result.error) throw result.error
+  const rows = (result.data ?? []).map((item) => normalizeFallbackPerson(item as unknown as Record<string, unknown>))
+  return { rows, count: result.count ?? null, hasMore: rows.length === PAGE_SIZE && (result.count == null || to + 1 < result.count) }
+}
+
 async function fetchPeoplePage(page: number, queryTerm: string): Promise<PeoplePage> {
   if (!supabase) return { rows: [], count: null, hasMore: false }
   const key = cacheKey(queryTerm, page)
@@ -90,28 +125,34 @@ async function fetchPeoplePage(page: number, queryTerm: string): Promise<PeopleP
 
   const from = page * PAGE_SIZE
   if (queryTerm.trim()) {
-    const { data, error } = await supabase.rpc('search_directory_people', {
-      p_query: queryTerm,
-      p_limit: PAGE_SIZE + 1,
-      p_offset: from,
-    })
-    if (error) throw error
-    const received = (data ?? []) as DirectoryPerson[]
-    const value = { rows: received.slice(0, PAGE_SIZE), count: null, hasMore: received.length > PAGE_SIZE }
-    peopleCache.set(key, { ...value, savedAt: Date.now() })
-    return value
+    const smart = await supabase.rpc('search_directory_people', { p_query: queryTerm, p_limit: PAGE_SIZE + 1, p_offset: from })
+    if (!smart.error) {
+      const received = (smart.data ?? []).map((item) => normalizeFallbackPerson(item as Record<string, unknown>))
+      const value: PeoplePage = { rows: received.slice(0, PAGE_SIZE), count: null, hasMore: received.length > PAGE_SIZE }
+      peopleCache.set(key, { ...value, savedAt: Date.now() })
+      return value
+    }
+    const fallback = await fallbackPeoplePage(page, queryTerm)
+    peopleCache.set(key, { ...fallback, savedAt: Date.now() })
+    return fallback
   }
 
   const to = from + PAGE_SIZE - 1
-  const result = await supabase
+  const enriched = await supabase
     .from('people')
-    .select('id,full_name,gender,birth_year,is_deceased,is_verified,description,status,family_id,created_by,created_at,families(name)', { count: 'planned' })
+    .select('id,full_name,gender,birth_year,is_deceased,death_date,is_verified,description,status,family_id,created_by,created_at,families(name)', { count: 'planned' })
     .eq('status', 'approved')
     .order('created_at', { ascending: false })
     .range(from, to)
-  if (result.error) throw result.error
-  const rows = (result.data ?? []) as DirectoryPerson[]
-  const value = { rows, count: result.count ?? null, hasMore: rows.length === PAGE_SIZE && (result.count == null || to + 1 < result.count) }
+
+  if (enriched.error) {
+    const fallback = await fallbackPeoplePage(page, '')
+    peopleCache.set(key, { ...fallback, savedAt: Date.now() })
+    return fallback
+  }
+
+  const rows = (enriched.data ?? []).map((item) => normalizeFallbackPerson(item as unknown as Record<string, unknown>))
+  const value: PeoplePage = { rows, count: enriched.count ?? null, hasMore: rows.length === PAGE_SIZE && (enriched.count == null || to + 1 < enriched.count) }
   peopleCache.set(key, { ...value, savedAt: Date.now() })
   return value
 }
@@ -124,28 +165,25 @@ async function fetchFamilyPage(page: number, queryTerm: string): Promise<FamilyP
 
   const from = page * PAGE_SIZE
   if (queryTerm.trim()) {
-    const { data, error } = await supabase.rpc('search_directory_families', {
-      p_query: queryTerm,
-      p_limit: PAGE_SIZE + 1,
-      p_offset: from,
-    })
-    if (error) throw error
-    const received = (data ?? []) as DirectoryFamily[]
-    const value = { rows: received.slice(0, PAGE_SIZE), count: null, hasMore: received.length > PAGE_SIZE }
-    familyCache.set(key, { ...value, savedAt: Date.now() })
-    return value
+    const smart = await supabase.rpc('search_directory_families', { p_query: queryTerm, p_limit: PAGE_SIZE + 1, p_offset: from })
+    if (!smart.error) {
+      const received = (smart.data ?? []) as DirectoryFamily[]
+      const value: FamilyPage = { rows: received.slice(0, PAGE_SIZE), count: null, hasMore: received.length > PAGE_SIZE }
+      familyCache.set(key, { ...value, savedAt: Date.now() })
+      return value
+    }
   }
 
   const to = from + PAGE_SIZE - 1
-  const result = await supabase
+  let query = supabase
     .from('families')
     .select('id,name,description,origin_place,status,created_by,created_at', { count: 'planned' })
     .eq('status', 'approved')
-    .order('created_at', { ascending: false })
-    .range(from, to)
+  if (queryTerm) query = query.ilike('name', `%${queryTerm}%`)
+  const result = await query.order(queryTerm ? 'name' : 'created_at', { ascending: Boolean(queryTerm) }).range(from, to)
   if (result.error) throw result.error
   const rows = (result.data ?? []) as DirectoryFamily[]
-  const value = { rows, count: result.count ?? null, hasMore: rows.length === PAGE_SIZE && (result.count == null || to + 1 < result.count) }
+  const value: FamilyPage = { rows, count: result.count ?? null, hasMore: rows.length === PAGE_SIZE && (result.count == null || to + 1 < result.count) }
   familyCache.set(key, { ...value, savedAt: Date.now() })
   return value
 }

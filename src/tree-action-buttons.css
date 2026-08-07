@@ -1,0 +1,79 @@
+/* Action buttons inside the selected-person card on the family tree. */
+.tree-focus-summary {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.tree-focus-actions {
+  grid-column: 1 / -1;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px !important;
+  margin-top: 6px;
+}
+
+.tree-focus-actions button {
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 12px;
+  border-radius: 13px;
+  font-family: inherit;
+  font-size: .68rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, border-color .16s ease;
+}
+
+.tree-focus-actions button:active {
+  transform: scale(.98);
+}
+
+.tree-focus-actions .tree-add-person {
+  border: 1px solid var(--green-700);
+  color: #fff;
+  background: linear-gradient(145deg, var(--green-600), var(--green-800));
+  box-shadow: 0 7px 17px rgb(8 79 60 / 18%);
+}
+
+.tree-focus-actions button:not(.tree-add-person) {
+  border: 1px solid #bfd8ce;
+  color: var(--green-800);
+  background: #fff;
+  box-shadow: 0 5px 14px rgb(8 61 48 / 7%);
+}
+
+.tree-focus-actions .tree-add-person:hover {
+  box-shadow: 0 9px 21px rgb(8 79 60 / 24%);
+}
+
+.tree-focus-actions button:not(.tree-add-person):hover {
+  border-color: #8dbbab;
+  background: #f4faf7;
+}
+
+.tree-card-heading > button {
+  min-height: 34px;
+  padding-inline: 12px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgb(8 61 48 / 5%);
+}
+
+@media (min-width: 761px) {
+  .tree-focus-summary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .tree-focus-actions {
+    grid-column: auto;
+    display: flex !important;
+    align-items: center;
+    gap: 7px !important;
+    margin-top: 0;
+  }
+
+  .tree-focus-actions button {
+    min-width: 82px;
+    min-height: 38px;
+    padding-inline: 14px;
+  }
+}

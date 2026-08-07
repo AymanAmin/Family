@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Apply mobile shell patch
+      - name: Apply latest mobile shell patch
         run: node scripts/fix-mobile-shell.mjs
 
       - name: Commit generated App shell

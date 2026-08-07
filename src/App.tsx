@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { getApplicationUrl, supabase, supabaseConfiguration } from './lib/supabase'
+import RecordEditButton from './components/RecordEditButton'
+import PersonFamilyMemberships from './components/PersonFamilyMemberships'
+import FamilyMembersPanel from './components/FamilyMembersPanel'
+import Phase3AdminQueue from './components/Phase3AdminQueue'
 import './details.css'
 import './nasab-inspired.css'
 
@@ -26,6 +30,7 @@ type Family = {
   description: string | null
   origin_place: string | null
   status: RecordStatus
+  created_by: string
   created_at: string
 }
 
@@ -41,6 +46,7 @@ type Person = {
   status: RecordStatus
   family_id: string | null
   families?: RelatedFamily
+  created_by: string
   created_at: string
 }
 
@@ -80,6 +86,7 @@ type CommunityEvent = {
   status: RecordStatus
   family_id: string | null
   families?: RelatedFamily
+  created_by: string
   created_at: string
 }
 
@@ -250,9 +257,9 @@ function App() {
 
     setDataLoading(true)
     const [familyResult, peopleResult, eventResult] = await Promise.all([
-      supabase.from('families').select('id,name,description,origin_place,status,created_at').order('name').limit(100),
-      supabase.from('people').select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_at,families(name)').order('full_name').limit(100),
-      supabase.from('events').select('id,event_type,title,description,event_date,location_name,status,family_id,created_at,families(name)').order('event_date', { ascending: false, nullsFirst: false }).limit(30),
+      supabase.from('families').select('id,name,description,origin_place,status,created_by,created_at').order('name').limit(100),
+      supabase.from('people').select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)').order('full_name').limit(100),
+      supabase.from('events').select('id,event_type,title,description,event_date,location_name,status,family_id,created_by,created_at,families(name)').order('event_date', { ascending: false, nullsFirst: false }).limit(30),
     ])
 
     const firstError = familyResult.error || peopleResult.error || eventResult.error
@@ -455,8 +462,8 @@ function App() {
     setSearching(true)
     setView('search')
     const [familyResult, peopleResult] = await Promise.all([
-      supabase.from('families').select('id,name,description,origin_place,status,created_at').ilike('name', `%${term}%`).order('name').limit(50),
-      supabase.from('people').select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_at,families(name)').ilike('full_name', `%${term}%`).order('full_name').limit(50),
+      supabase.from('families').select('id,name,description,origin_place,status,created_by,created_at').ilike('name', `%${term}%`).order('name').limit(50),
+      supabase.from('people').select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)').ilike('full_name', `%${term}%`).order('full_name').limit(50),
     ])
     setSearching(false)
     if (familyResult.error || peopleResult.error) return showMessage(friendlyError((familyResult.error || peopleResult.error)!.message), 'error')
@@ -496,7 +503,7 @@ function App() {
     if (!supabase || !session || !requireAccount()) return
     if (personForm.full_name.trim().length < 3) return showMessage('اكتب الاسم الكامل.', 'error')
     setBusy(true)
-    const { error } = await supabase.from('people').insert({
+    const { data: newPerson, error } = await supabase.from('people').insert({
       full_name: personForm.full_name.trim(),
       family_id: personForm.family_id || null,
       gender: personForm.gender || null,
@@ -504,11 +511,31 @@ function App() {
       description: personForm.description.trim() || null,
       created_by: session.user.id,
       status: 'pending',
-    })
+    }).select('id').single()
+
+    if (error) {
+      setBusy(false)
+      return showMessage(friendlyError(error.message), 'error')
+    }
+
+    if (newPerson?.id && personForm.family_id) {
+      const { error: membershipError } = await supabase.from('person_family_memberships').insert({
+        person_id: newPerson.id,
+        family_id: personForm.family_id,
+        membership_type: 'birth',
+        is_primary: true,
+        status: 'pending',
+        created_by: session.user.id,
+      })
+      if (membershipError && !membershipError.message.toLowerCase().includes('does not exist')) {
+        setBusy(false)
+        return showMessage(friendlyError(membershipError.message), 'error')
+      }
+    }
+
     setBusy(false)
-    if (error) return showMessage(friendlyError(error.message), 'error')
     setPersonForm({ full_name: '', family_id: '', gender: '', birth_year: '', description: '' })
-    showMessage('تم إرسال الشخص للمراجعة.', 'success')
+    showMessage('تم إرسال الشخص وانتمائه العائلي للمراجعة.', 'success')
     void loadCommunityData()
   }
 
@@ -749,6 +776,7 @@ function App() {
                       <h3>{item.title}</h3>
                       <p>{item.description || 'لا توجد تفاصيل إضافية.'}</p>
                       <small>{item.location_name || familyName(item.families) || 'المكان غير محدد'}</small>
+                      <RecordEditButton entityType="events" recordId={item.id} createdBy={item.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} familyOptions={approvedFamilies} initialData={{ event_type: item.event_type, title: item.title, family_id: item.family_id, event_date: item.event_date, location_name: item.location_name, description: item.description }} onSaved={loadCommunityData} />
                     </article>
                   ))}
                 </div>
@@ -786,20 +814,14 @@ function App() {
             <div className="detail-hero">
               <span className="detail-avatar family-avatar">{selectedFamily.name[0]}</span>
               <div><span className="eyebrow">ملف العائلة</span><h1>{selectedFamily.name}</h1><p>{selectedFamily.description || 'لا توجد نبذة مضافة لهذه العائلة حتى الآن.'}</p></div>
+              <RecordEditButton entityType="families" recordId={selectedFamily.id} createdBy={selectedFamily.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} initialData={{ name: selectedFamily.name, origin_place: selectedFamily.origin_place, description: selectedFamily.description }} onSaved={loadCommunityData} />
             </div>
             <div className="detail-facts">
               <article><span>مكان الأصل</span><strong>{selectedFamily.origin_place || 'غير محدد'}</strong></article>
-              <article><span>عدد الأشخاص المعتمدين</span><strong>{approvedPeople.filter((item) => item.family_id === selectedFamily.id).length}</strong></article>
+              <article><span>الأفراد الأساسيون</span><strong>{approvedPeople.filter((item) => item.family_id === selectedFamily.id).length}</strong></article>
               <article><span>حالة السجل</span><strong>{selectedFamily.status === 'approved' ? 'معتمد' : 'بانتظار الاعتماد'}</strong></article>
             </div>
-            <div className="detail-section">
-              <div className="section-title"><div><span className="eyebrow">أفراد العائلة</span><h2>الأشخاص المسجلون</h2></div></div>
-              <div className="detail-list">
-                {approvedPeople.filter((item) => item.family_id === selectedFamily.id).length ? approvedPeople.filter((item) => item.family_id === selectedFamily.id).map((item) => (
-                  <button className="list-row interactive-row" type="button" key={item.id} onClick={() => void openPerson(item)}><span className="avatar-letter">{item.full_name[0]}</span><div><strong>{item.full_name}</strong><small>{item.birth_year ? `مواليد ${item.birth_year}` : 'سنة الميلاد غير محددة'}{item.is_deceased ? ' · متوفى' : ''}</small></div><span>‹</span></button>
-                )) : <div className="empty-state compact">لا يوجد أشخاص معتمدون ضمن هذه العائلة.</div>}
-              </div>
-            </div>
+            <FamilyMembersPanel familyId={selectedFamily.id} people={approvedPeople} onOpenPerson={(id) => { const person = people.find((item) => item.id === id); if (person) void openPerson(person) }} />
           </section>
         )}
 
@@ -809,12 +831,14 @@ function App() {
             <div className="detail-hero">
               <span className="detail-avatar">{selectedPerson.full_name[0]}</span>
               <div><span className="eyebrow">ملف شخص</span><h1>{selectedPerson.full_name}</h1><p>{selectedPerson.description || 'لا توجد نبذة مضافة لهذا الشخص.'}</p></div>
+              <RecordEditButton entityType="people" recordId={selectedPerson.id} createdBy={selectedPerson.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} initialData={{ full_name: selectedPerson.full_name, gender: selectedPerson.gender, birth_year: selectedPerson.birth_year, is_deceased: selectedPerson.is_deceased, description: selectedPerson.description }} onSaved={loadCommunityData} />
             </div>
             <div className="detail-facts">
-              <article><span>العائلة</span><strong>{familyName(selectedPerson.families) || 'غير محددة'}</strong></article>
+              <article><span>العائلة الأساسية</span><strong>{familyName(selectedPerson.families) || 'غير محددة'}</strong></article>
               <article><span>سنة الميلاد</span><strong>{selectedPerson.birth_year || 'غير محددة'}</strong></article>
               <article><span>الحالة</span><strong>{selectedPerson.is_deceased ? 'متوفى' : 'على قيد الحياة'}</strong></article>
             </div>
+            <PersonFamilyMemberships personId={selectedPerson.id} families={approvedFamilies} sessionUserId={session?.user.id} onChanged={loadCommunityData} />
             {session && !profile?.linked_person_id && (
               <div className="link-account-card">
                 <div><strong>هل هذا سجلك؟</strong><p>قدّم طلب ربط حسابك بهذا الشخص للوصول إلى ميزات الملف الشخصي لاحقًا.</p></div>
@@ -876,6 +900,8 @@ function App() {
             {pending.length ? <div className="review-list">{pending.map((record) => <article className="review-row" key={`${record.table}-${record.id}`}><div><span className="status pending">معلق</span><h3>{record.title}</h3><p>{record.subtitle} · {formatDate(record.created_at)}</p></div><div className="review-actions"><button className="approve" onClick={() => moderate(record, 'approved')} disabled={busy}>اعتماد</button><button className="reject" onClick={() => moderate(record, 'rejected')} disabled={busy}>رفض</button></div></article>)}</div> : <div className="empty-state"><strong>لا توجد طلبات معلقة</strong><span>جميع الطلبات تمت مراجعتها.</span></div>}
           </section>
         )}
+
+        {schemaReady && view === 'admin' && isAdmin && <Phase3AdminQueue active={isAdmin} onChanged={loadCommunityData} />}
 
         {!session && view === 'home' && (
           <section className="auth-section" id="auth-panel">

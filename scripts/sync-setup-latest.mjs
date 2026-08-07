@@ -6,6 +6,8 @@ const migrations = [
   'supabase/migrations/202608070010_public_scale_performance.sql',
   'supabase/migrations/202608070011_smart_duplicate_person_search.sql',
   'supabase/migrations/202608070012_kinship_path_explorer.sql',
+  'supabase/migrations/202608070013_admin_role_management_and_direct_approval.sql',
+  'supabase/migrations/202608070014_person_death_date_integrity.sql',
 ]
 
 let setup = fs.readFileSync(setupPath, 'utf8').trimEnd()

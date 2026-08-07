@@ -27,18 +27,30 @@
 }
 
 .home-feed .nasab-event-date {
+  position: static !important;
+  inset: auto !important;
   grid-column: 2;
   grid-row: 1;
-  display: inline-flex;
+  display: inline-flex !important;
+  width: max-content !important;
+  min-width: max-content;
+  max-width: 100%;
+  min-height: 34px;
   align-items: center;
-  min-height: 31px;
-  padding-inline: 9px;
-  border-radius: 10px;
+  justify-content: center;
+  padding: 7px 11px;
+  box-sizing: border-box;
+  border-radius: 11px;
   color: #35677f;
   background: #eaf5f4;
   font-size: .68rem;
   font-weight: 800;
+  line-height: 1.45;
+  text-align: center;
   white-space: nowrap;
+  transform: none !important;
+  translate: none !important;
+  overflow: visible;
 }
 
 .home-feed .nasab-event-item > div {
@@ -79,7 +91,8 @@
 
 @media (max-width: 720px) {
   .home-feed .nasab-event-item {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
   }
 
   .home-feed .nasab-event-date,
@@ -90,6 +103,11 @@
   .home-feed .nasab-event-date {
     grid-row: 1;
     justify-self: start;
+    align-self: start;
+    width: auto !important;
+    min-width: 0;
+    max-width: 100%;
+    padding-inline: 10px;
   }
 
   .home-feed .nasab-event-item > div {

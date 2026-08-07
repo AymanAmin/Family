@@ -1,3 +1,4 @@
+// Decision context is loaded for every visible moderation card so reviewers can act with full identity and impact context.
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import './ModerationRequestDetails.css'

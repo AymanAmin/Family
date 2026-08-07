@@ -5,6 +5,7 @@ import RecordEditButton from './components/RecordEditButton'
 import PersonFamilyMemberships from './components/PersonFamilyMemberships'
 import FamilyMembersPanel from './components/FamilyMembersPanel'
 import Phase3AdminQueue from './components/Phase3AdminQueue'
+import KinshipNetwork from './components/KinshipNetwork'
 import './details.css'
 import './nasab-inspired.css'
 
@@ -845,18 +846,20 @@ function App() {
                 <button className="primary" type="button" disabled={busy || ownLinkRequest?.status === 'pending'} onClick={() => void requestAccountLink(selectedPerson)}>{ownLinkRequest?.status === 'pending' ? 'الطلب قيد المراجعة' : 'هذا أنا — ربط الحساب'}</button>
               </div>
             )}
-            <div className="detail-section">
-              <div className="section-title"><div><span className="eyebrow">صلة الرحم</span><h2>العلاقات المعتمدة</h2></div></div>
-              {relationsLoading ? <div className="empty-state compact">جارٍ تحميل العلاقات…</div> : relationships.length ? (
-                <div className="relationship-grid">{relationships.map((relation) => {
-                  const selectedIsSource = relation.source_person_id === selectedPerson.id
-                  const other = selectedIsSource ? relation.target : relation.source
-                  const otherRecord = people.find((item) => item.id === personId(other))
-                  const relationLabel = selectedIsSource ? relationshipLabels[relation.relation_type] : inverseRelationshipLabels[relation.relation_type]
-                  return <button className="relationship-card" type="button" key={relation.id} onClick={() => otherRecord && void openPerson(otherRecord)}><span>{relationLabel || 'صلة قرابة'}</span><strong>{personName(other) || 'شخص غير محدد'}</strong>{relation.notes && <small>{relation.notes}</small>}</button>
-                })}</div>
-              ) : <div className="empty-state compact">لا توجد صلات قرابة معتمدة لهذا الشخص.</div>}
-            </div>
+            <KinshipNetwork
+              personId={selectedPerson.id}
+              personName={selectedPerson.full_name}
+              onOpenPerson={(id) => {
+                const person = people.find((item) => item.id === id)
+                if (person) void openPerson(person)
+              }}
+              onAddRelation={() => {
+                if (!requireAccount()) return
+                setRelationshipForm((current) => ({ ...current, source_person_id: selectedPerson.id }))
+                setAddMode('relationship')
+                setView('add')
+              }}
+            />
           </section>
         )}
 

@@ -1,0 +1,31 @@
+name: Apply home search and unified stats layout
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-home-search-unified-stats.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply home layout patch
+        run: node scripts/apply-home-search-unified-stats.mjs
+
+      - name: Commit updated home layout
+        run: |
+          if git diff --quiet -- src/App.tsx src/home-news-preview.css public/sw.js; then
+            echo "No home layout changes required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/home-news-preview.css public/sw.js
+          git commit -m "Move search to top and unify home stats"
+          git push

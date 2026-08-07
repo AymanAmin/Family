@@ -241,6 +241,12 @@
   font-weight: 800;
 }
 
+.news-admin-edit {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 15px;
+}
+
 .news-load-more-wrap {
   display: grid;
   place-items: center;

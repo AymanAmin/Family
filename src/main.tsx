@@ -14,6 +14,7 @@ import './kinship-extended.css'
 import './public-scale.css'
 import './family-tree-screen.css'
 import './tree-pan-fix.css'
+import './admin-death.css'
 
 const rootElement = document.getElementById('root')
 

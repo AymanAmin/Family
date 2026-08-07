@@ -4,6 +4,7 @@ import App from './App'
 import './styles.css'
 import './mobile-app.css'
 import './mobile-fixes.css'
+import './mobile-shell.css'
 
 const rootElement = document.getElementById('root')
 

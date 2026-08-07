@@ -44,4 +44,7 @@ jobs:
             exit 0
           fi
           git commit -m "Send push after moderation decisions"
-          git push origin main
+          if ! git push origin main; then
+            git pull --rebase origin main
+            git push origin main
+          fi

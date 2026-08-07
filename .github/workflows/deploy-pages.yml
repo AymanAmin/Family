@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+  VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://rtmdaalabudycimnnena.supabase.co' }}
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_hEgXfE49mamGngH0tIs8CA_P3QrKNYT' }}
 
 jobs:
   build:

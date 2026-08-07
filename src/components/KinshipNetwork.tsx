@@ -63,6 +63,16 @@ function relatedPerson(value: DirectRelatedPerson) {
   return Array.isArray(value) ? value[0] ?? null : value
 }
 
+function dedupeRows(items: KinshipRow[]): KinshipRow[] {
+  const map = new Map<string, KinshipRow>()
+  for (const row of items) {
+    const key = `${row.related_person_id}:${row.relation_type}`
+    const existing = map.get(key)
+    if (!existing || (existing.is_inferred && !row.is_inferred)) map.set(key, row)
+  }
+  return [...map.values()]
+}
+
 function KinNode({ row, onOpen }: { row: KinshipRow; onOpen: (id: string) => void }) {
   return <button className="kin-node" type="button" onClick={() => onOpen(row.related_person_id)}>
     <span className="kin-avatar">{row.full_name.trim().charAt(0) || '؟'}</span>
@@ -86,6 +96,7 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
   const [rows, setRows] = useState<KinshipRow[]>([])
   const [loading, setLoading] = useState(true)
   const [smartAvailable, setSmartAvailable] = useState(true)
+  const [extendedAvailable, setExtendedAvailable] = useState(true)
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -93,10 +104,21 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
     async function load() {
       if (!supabase) { setLoading(false); return }
       setLoading(true)
-      const smart = await supabase.rpc('get_person_kinship', { p_person_id: personId })
+
+      const [smart, extended] = await Promise.all([
+        supabase.rpc('get_person_kinship', { p_person_id: personId }),
+        supabase.rpc('get_person_extended_kinship', { p_person_id: personId }),
+      ])
+      const extendedRows = extended.error ? [] : (extended.data ?? []) as KinshipRow[]
+
       if (!cancelled && !smart.error) {
-        setRows((smart.data ?? []) as KinshipRow[]); setSmartAvailable(true); setLoading(false); return
+        setRows(dedupeRows([...(smart.data ?? []) as KinshipRow[], ...extendedRows]))
+        setSmartAvailable(true)
+        setExtendedAvailable(!extended.error)
+        setLoading(false)
+        return
       }
+
       const fallback = await supabase.from('person_relationships')
         .select('source_person_id,target_person_id,relation_type,notes,source:people!person_relationships_source_person_id_fkey(id,full_name,gender),target:people!person_relationships_target_person_id_fkey(id,full_name,gender)')
         .eq('status', 'approved').or(`source_person_id.eq.${personId},target_person_id.eq.${personId}`)
@@ -110,7 +132,10 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
         if (relation.relation_type === 'child') canonicalType = selectedIsSource ? 'parent' : 'child'
         return [{ related_person_id: other.id, full_name: other.full_name, gender: other.gender ?? null, relation_type: canonicalType, relation_detail: relation.notes ?? null, is_inferred: false, shared_parent_count: null }]
       })
-      setRows(mapped); setSmartAvailable(false); setLoading(false)
+      setRows(dedupeRows([...mapped, ...extendedRows]))
+      setSmartAvailable(false)
+      setExtendedAvailable(!extended.error)
+      setLoading(false)
     }
     void load(); return () => { cancelled = true }
   }, [personId])
@@ -134,7 +159,7 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
 
   return <section className="detail-section kinship-section">
     <div className="kinship-heading">
-      <div><span className="eyebrow">شبكة القرابة</span><h2>العلاقات حول {personName.split(' ')[0]}</h2><p>تُستنتج القرابات تلقائيًا من الوالدين والأبناء: الإخوة، الأجداد، الأعمام والعمات، الأخوال والخالات وأبناءهم.</p></div>
+      <div><span className="eyebrow">شبكة القرابة</span><h2>العلاقات حول {personName.split(' ')[0]}</h2><p>تُستنتج القرابات تلقائيًا من الوالدين والأبناء وصلات إخوة الوالدين: الإخوة، الأجداد، الأعمام والعمات، الأخوال والخالات وأبناءهم.</p></div>
       <div className="kinship-heading-actions">{smartAvailable && <span className="smart-badge">✦ استنتاج ذكي</span>}{onAddRelation && <button className="text-link" type="button" onClick={onAddRelation}>إضافة صلة</button>}</div>
     </div>
     {loading ? <div className="empty-state compact">جارٍ بناء شبكة القرابة…</div> : rows.length ? <>
@@ -143,9 +168,13 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
         <KinGroup type="parent" rows={parents} onOpen={onOpenPerson} className="kin-top" />
         <div className="kin-middle"><KinGroup type="sibling" rows={siblings} onOpen={onOpenPerson} /><div className="kin-self"><span className="kin-self-ring"><b>{personName.trim().charAt(0) || '؟'}</b></span><strong>{personName}</strong><small>الشخص الحالي</small></div><KinGroup type="spouse" rows={spouses} onOpen={onOpenPerson} /></div>
         <KinGroup type="child" rows={children} onOpen={onOpenPerson} className="kin-bottom" />
-        {hasExtended && <div className="kin-extended">{extendedTypes.map((type) => <KinGroup key={type} type={type} rows={grouped.get(type) ?? []} onOpen={onOpenPerson} />)}</div>}
       </div></div>
+      {hasExtended && <section className="kin-extended-panel">
+        <div className="kin-extended-heading"><div><span>✦ قرابات مستنتجة</span><h3>القرابة الممتدة</h3></div><small>تظهر تلقائيًا من شبكة النسب المسجلة</small></div>
+        <div className="kin-extended-grid">{extendedTypes.map((type) => <KinGroup key={type} type={type} rows={grouped.get(type) ?? []} onOpen={onOpenPerson} />)}</div>
+      </section>}
     </> : <div className="empty-state compact"><strong>لم تُسجّل علاقات لهذا الشخص بعد</strong><span>أضف الأب أو الأم مرة واحدة، وستستنتج المنصة بقية القرابات تلقائيًا.</span></div>}
-    {!smartAvailable && <div className="kinship-update-note">شغّل أحدث <code>supabase/SETUP.sql</code> لتفعيل الاستنتاج الممتد للقرابة.</div>}
+    {!smartAvailable && <div className="kinship-update-note">شغّل أحدث <code>supabase/SETUP.sql</code> لتفعيل الاستنتاج الأساسي للقرابة.</div>}
+    {!extendedAvailable && <div className="kinship-update-note extended-note">لتفعيل العم والعمة والخال والخالة وأبناءهم شغّل <code>supabase/migrations/202608070009_extended_parent_sibling_kinship.sql</code> مرة واحدة.</div>}
   </section>
 }

@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import VerifiedBadge from './VerifiedBadge'
 
 type PersonOption = {
   id: string
   full_name: string
   gender: string | null
   birth_year: number | null
+  is_verified?: boolean
 }
 
 type Props = {
@@ -43,7 +45,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
     const requestId = ++requestRef.current
     void supabase
       .from('people')
-      .select('id,full_name,gender,birth_year')
+      .select('id,full_name,gender,birth_year,is_verified')
       .eq('id', value)
       .eq('status', 'approved')
       .maybeSingle()
@@ -84,19 +86,32 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
       const requestId = ++requestRef.current
       setLoading(true)
 
-      let request = supabase
+      const smart = await supabase.rpc('search_people_names', {
+        p_query: normalized,
+        p_limit: 6,
+        p_exclude_id: excludeId || null,
+      })
+      if (requestId !== requestRef.current) return
+
+      if (!smart.error) {
+        const rows = (smart.data ?? []) as PersonOption[]
+        resultCache.set(key, { savedAt: Date.now(), rows })
+        setResults(rows)
+        setLoading(false)
+        return
+      }
+
+      let fallback = supabase
         .from('people')
-        .select('id,full_name,gender,birth_year')
+        .select('id,full_name,gender,birth_year,is_verified')
         .eq('status', 'approved')
         .ilike('full_name', `%${normalized}%`)
         .order('full_name')
         .limit(6)
-      if (excludeId) request = request.neq('id', excludeId)
-
-      const { data, error } = await request
+      if (excludeId) fallback = fallback.neq('id', excludeId)
+      const { data } = await fallback
       if (requestId !== requestRef.current) return
-      const rows = error ? [] : (data ?? []) as PersonOption[]
-      if (!error) resultCache.set(key, { savedAt: Date.now(), rows })
+      const rows = (data ?? []) as PersonOption[]
       setResults(rows)
       setLoading(false)
     }, SEARCH_DELAY)
@@ -129,19 +144,11 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
         {selected ? (
           <div className="people-picker-selected">
             <span className="people-picker-avatar">{selected.full_name.charAt(0)}</span>
-            <span><strong>{selected.full_name}</strong><small>{selected.gender === 'female' ? 'أنثى' : selected.gender === 'male' ? 'ذكر' : 'غير محدد'}{selected.birth_year ? ` · ${selected.birth_year}` : ''}</small></span>
+            <span><span className="verified-name-line"><strong>{selected.full_name}</strong>{selected.is_verified && <VerifiedBadge compact />}</span><small>{selected.gender === 'female' ? 'أنثى' : selected.gender === 'male' ? 'ذكر' : 'غير محدد'}{selected.birth_year ? ` · ${selected.birth_year}` : ''}</small></span>
             <button type="button" onClick={clear} aria-label="إزالة الاختيار">×</button>
           </div>
         ) : (
-          <input
-            value={query}
-            onChange={(event) => search(event.target.value)}
-            onFocus={() => setOpen(true)}
-            placeholder="اكتب حرفين على الأقل للبحث"
-            autoComplete="off"
-            enterKeyHint="search"
-            required={required && !value}
-          />
+          <input value={query} onChange={(event) => search(event.target.value)} onFocus={() => setOpen(true)} placeholder="اكتب حرفين على الأقل للبحث" autoComplete="off" enterKeyHint="search" required={required && !value} />
         )}
 
         {open && !selected && (
@@ -149,7 +156,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
             {loading ? <div className="people-picker-state">جارٍ البحث…</div> : query.trim().length < 2 ? <div className="people-picker-state">ابدأ بكتابة حرفين من الاسم.</div> : results.length ? results.map((person) => (
               <button type="button" key={person.id} onClick={() => choose(person)}>
                 <span className="people-picker-avatar">{person.full_name.charAt(0)}</span>
-                <span><strong>{person.full_name}</strong><small>{person.birth_year || 'سنة الميلاد غير محددة'}</small></span>
+                <span><span className="verified-name-line"><strong>{person.full_name}</strong>{person.is_verified && <VerifiedBadge compact />}</span><small>{person.birth_year || 'سنة الميلاد غير محددة'}</small></span>
               </button>
             )) : <div className="people-picker-state">لا توجد نتيجة مطابقة.</div>}
           </div>

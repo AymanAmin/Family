@@ -20,6 +20,8 @@ import './role-management.css'
 import './account-activity.css'
 import './admin-death.css'
 import './social-verification-events.css'
+import './relationship-manager.css'
+import './contributor-stats.css'
 import './edit-review-diff.css'
 
 const rootElement = document.getElementById('root')

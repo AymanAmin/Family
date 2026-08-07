@@ -14,6 +14,7 @@ const Phase3AdminQueue = lazy(() => import('./components/Phase3AdminQueue'))
 const DuplicatePersonCheck = lazy(() => import('./components/DuplicatePersonCheck'))
 const FamilyTreeScreen = lazy(() => import('./components/FamilyTreeScreen'))
 const AdminUserRoles = lazy(() => import('./components/AdminUserRoles'))
+const AdminContributorStats = lazy(() => import('./components/AdminContributorStats'))
 const MySubmissionActivity = lazy(() => import('./components/MySubmissionActivity'))
 const DirectRelationshipManager = lazy(() => import('./components/DirectRelationshipManager'))
 const RelationshipChangeQueue = lazy(() => import('./components/RelationshipChangeQueue'))
@@ -24,7 +25,7 @@ import './nasab-inspired.css'
 type AuthMode = 'signin' | 'signup' | 'forgot' | 'recovery'
 type View = 'home' | 'search' | 'tree' | 'add' | 'admin' | 'person' | 'family' | 'account'
 type AddMode = 'family' | 'person' | 'event' | 'relationship'
-type AdminTab = 'requests' | 'edits' | 'users'
+type AdminTab = 'requests' | 'edits' | 'activity' | 'users'
 type MessageTone = 'info' | 'success' | 'error'
 type PlatformStats = { approved_families: number; approved_people: number; approved_events: number; updated_at: string }
 type RecordStatus = 'pending' | 'approved' | 'rejected'
@@ -1146,6 +1147,7 @@ function App() {
             <div className="admin-console-tabs" role="tablist" aria-label="أقسام لوحة الإدارة">
               <button type="button" role="tab" aria-selected={adminTab === 'requests'} className={adminTab === 'requests' ? 'active' : ''} onClick={() => setAdminTab('requests')}>الطلبات <span>{pending.length}</span></button>
               <button type="button" role="tab" aria-selected={adminTab === 'edits'} className={adminTab === 'edits' ? 'active' : ''} onClick={() => setAdminTab('edits')}>التعديلات والانتماءات</button>
+              {profile?.is_primary_admin && <button type="button" role="tab" aria-selected={adminTab === 'activity'} className={adminTab === 'activity' ? 'active' : ''} onClick={() => setAdminTab('activity')}>النشاط والإحصائيات</button>}
               {profile?.is_primary_admin && <button type="button" role="tab" aria-selected={adminTab === 'users'} className={adminTab === 'users' ? 'active' : ''} onClick={() => setAdminTab('users')}>المستخدمون</button>}
             </div>
 
@@ -1160,6 +1162,7 @@ function App() {
                 <Suspense fallback={<LazyPanelFallback />}><Phase3AdminQueue active={adminTab === 'edits' && canModerate} isAdmin={isAdmin} onChanged={loadCommunityData} /></Suspense>
                 {isAdmin && <Suspense fallback={<LazyPanelFallback />}><RelationshipChangeQueue active={adminTab === 'edits'} onChanged={() => { setRelationshipRefresh((value) => value + 1); void loadCommunityData() }} /></Suspense>}
               </>}
+              {adminTab === 'activity' && profile?.is_primary_admin && <Suspense fallback={<LazyPanelFallback />}><AdminContributorStats active={adminTab === 'activity'} /></Suspense>}
               {adminTab === 'users' && profile?.is_primary_admin && <Suspense fallback={<LazyPanelFallback />}><AdminUserRoles active={adminTab === 'users'} currentUserId={session?.user.id} /></Suspense>}
             </div>
           </section>

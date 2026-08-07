@@ -39,6 +39,7 @@ type EditRequest = {
 
 type Props = {
   active: boolean
+  isAdmin?: boolean
   onChanged?: () => void | Promise<void>
 }
 
@@ -52,7 +53,7 @@ function personName(value: { full_name?: string } | { full_name?: string }[] | n
   return Array.isArray(value) ? value[0]?.full_name || '' : value.full_name || ''
 }
 
-export default function Phase3AdminQueue({ active, onChanged }: Props) {
+export default function Phase3AdminQueue({ active, isAdmin = false, onChanged }: Props) {
   const [rows, setRows] = useState<QueueItem[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -80,11 +81,13 @@ export default function Phase3AdminQueue({ active, onChanged }: Props) {
       return
     }
 
-    // Compatibility fallback until migration 016 is applied. Keep it intentionally capped.
-    if (offset > 0) {
+    // Old direct-table fallback is restricted to full admins only.
+    if (!isAdmin || offset > 0) {
+      setRows([])
       setHasMore(false)
       setLoading(false)
       setLoadingMore(false)
+      setMessage(feedResult.error.message.toLowerCase().includes('does not exist') ? 'شغّل migration رقم 017 لتفعيل نطاقات المراجعة الجديدة.' : 'تعذر تحميل طلبات التعديل والانتماء الآن.')
       return
     }
 
@@ -122,7 +125,7 @@ export default function Phase3AdminQueue({ active, onChanged }: Props) {
     setHasMore(false)
     setLoading(false)
     setLoadingMore(false)
-  }, [active])
+  }, [active, isAdmin])
 
   useEffect(() => {
     if (!active) return
@@ -134,17 +137,26 @@ export default function Phase3AdminQueue({ active, onChanged }: Props) {
     setBusyId(item.id)
     setMessage('')
 
-    const result = item.request_type === 'edit'
-      ? await supabase.rpc('review_content_edit_request', {
-          p_request_id: item.id,
-          p_status: status,
-          p_review_note: null,
-        })
-      : await supabase.from('person_family_memberships').update({
-          status,
-          approved_by: (await supabase.auth.getUser()).data.user?.id ?? null,
-          approved_at: status === 'approved' ? new Date().toISOString() : null,
-        }).eq('id', item.id)
+    let result = await supabase.rpc('review_secondary_moderation_request', {
+      p_request_type: item.request_type,
+      p_request_id: item.id,
+      p_status: status,
+    })
+
+    // Compatibility fallback is intentionally available to full admins only.
+    if (result.error?.message.toLowerCase().includes('does not exist') && isAdmin) {
+      result = item.request_type === 'edit'
+        ? await supabase.rpc('review_content_edit_request', {
+            p_request_id: item.id,
+            p_status: status,
+            p_review_note: null,
+          })
+        : await supabase.from('person_family_memberships').update({
+            status,
+            approved_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+            approved_at: status === 'approved' ? new Date().toISOString() : null,
+          }).eq('id', item.id)
+    }
 
     setBusyId('')
     if (result.error) {
@@ -160,7 +172,7 @@ export default function Phase3AdminQueue({ active, onChanged }: Props) {
 
   return (
     <section className="phase3-admin-queue">
-      <div className="section-title"><div><span className="eyebrow">مراجعات إضافية</span><h2>التعديلات والانتماءات العائلية</h2><p className="secondary-queue-note">يتم تحميل {PAGE_SIZE} طلبًا فقط في كل دفعة للحفاظ على سرعة لوحة الإدارة.</p></div></div>
+      <div className="section-title"><div><span className="eyebrow">مراجعات إضافية</span><h2>التعديلات والانتماءات العائلية</h2><p className="secondary-queue-note">يتم تحميل {PAGE_SIZE} طلبًا فقط في كل دفعة، وتُفلتر النتائج حسب صلاحية ونطاق المراجع.</p></div></div>
 
       {message && <div className="admin-users-message">{message}</div>}
 
@@ -175,7 +187,7 @@ export default function Phase3AdminQueue({ active, onChanged }: Props) {
             </article>
           ))}
         </div>
-      ) : <div className="empty-state compact"><strong>لا توجد مراجعات إضافية</strong><span>لا توجد تعديلات أو انتماءات عائلية معلقة حاليًا.</span></div>}
+      ) : <div className="empty-state compact"><strong>لا توجد مراجعات ضمن صلاحياتك</strong><span>لا توجد تعديلات أو انتماءات عائلية معلقة في نطاقك حاليًا.</span></div>}
 
       {hasMore && !loading && <button type="button" className="admin-load-more" disabled={loadingMore} onClick={() => void load(rows.length, true)}>{loadingMore ? 'جارٍ تحميل المزيد…' : 'عرض المزيد من المراجعات'}</button>}
     </section>

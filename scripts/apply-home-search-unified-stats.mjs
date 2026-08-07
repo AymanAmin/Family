@@ -29,7 +29,7 @@ if (!app.includes('home-search-hero')) {
 
               <article className="family-welcome-card compact-family-welcome">
                 <span className="eyebrow">صلة — البيت الرقمي للعائلة</span>
-                <h2>{session ? `مرحبًا ${userName}، أهلك أقرب إليك.` : 'عائلتك، تاريخها، وأخبارها في مكان واحد.'}</h2>
+                <h2>{session ? \`مرحبًا \${userName}، أهلك أقرب إليك.\` : 'عائلتك، تاريخها، وأخبارها في مكان واحد.'}</h2>
                 <p>استعرض الأسر والأفراد، وثّق صلات القرابة، وتابع المناسبات من واجهة واحدة مصممة لكل الأجيال.</p>
               </article>
             </section>

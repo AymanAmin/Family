@@ -25,6 +25,7 @@ const RelationshipChangeQueue = lazy(() => import('./components/RelationshipChan
 const FamilyPicker = lazy(() => import('./components/FamilyPicker'))
 import './details.css'
 import './nasab-inspired.css'
+import './event-card-themes.css'
 
 type AuthMode = 'signin' | 'signup' | 'forgot' | 'recovery'
 type View = 'home' | 'news' | 'search' | 'tree' | 'add' | 'admin' | 'person' | 'family' | 'account'
@@ -142,7 +143,7 @@ const eventLabels: Record<string, string> = {
   birth: 'مولود',
   naming: 'سماية',
   graduation: 'تخرج ونجاح',
-  general: 'مناسبة عامة',
+  general: 'خبر عائلي',
   other: 'أخرى',
 }
 
@@ -1073,7 +1074,7 @@ function App() {
               {approvedEvents.length ? (
                 <div className="cards-grid event-grid">
                   {approvedEvents.slice(0, 6).map((item) => (
-                    <article className="event-card" key={item.id}>
+                    <article className={`event-card event-type-${item.event_type}`} key={item.id}>
                       <div className="event-top"><span>{eventLabels[item.event_type] || item.event_type}</span><time>{formatDate(item.event_date)}</time></div>
                       <h3>{item.title}</h3>
                       <p>{item.description || 'لا توجد تفاصيل إضافية.'}</p>

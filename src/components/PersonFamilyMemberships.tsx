@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 
 type Family = { id: string; name: string }
@@ -17,7 +17,6 @@ type Membership = {
 type Props = {
   personId: string
   families: Family[]
-  memberships: Membership[]
   sessionUserId?: string | null
   onChanged?: () => void | Promise<void>
 }
@@ -31,11 +30,25 @@ const membershipLabels: Record<string, string> = {
   other: 'انتماء آخر',
 }
 
-export default function PersonFamilyMemberships({ personId, families, memberships, sessionUserId, onChanged }: Props) {
+export default function PersonFamilyMemberships({ personId, families, sessionUserId, onChanged }: Props) {
+  const [memberships, setMemberships] = useState<Membership[]>([])
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [form, setForm] = useState({ family_id: '', membership_type: 'marriage', is_primary: false, notes: '' })
+
+  const load = useCallback(async () => {
+    if (!supabase) return
+    const { data, error } = await supabase
+      .from('person_family_memberships')
+      .select('id,person_id,family_id,membership_type,is_primary,notes,status,created_by')
+      .eq('person_id', personId)
+      .order('is_primary', { ascending: false })
+      .order('created_at')
+    if (!error) setMemberships((data ?? []) as Membership[])
+  }, [personId])
+
+  useEffect(() => { void load() }, [load])
 
   const approved = useMemo(() => memberships.filter((item) => item.status === 'approved'), [memberships])
   const visible = useMemo(() => memberships.filter((item) => item.status === 'approved' || item.created_by === sessionUserId), [memberships, sessionUserId])
@@ -63,6 +76,7 @@ export default function PersonFamilyMemberships({ personId, families, membership
     }
     setMessage('تم إرسال الانتماء العائلي للمراجعة.')
     setForm({ family_id: '', membership_type: 'marriage', is_primary: false, notes: '' })
+    await load()
     await onChanged?.()
     window.setTimeout(() => setOpen(false), 800)
   }

@@ -1,0 +1,56 @@
+/* Keep long person names contained inside the profile hero without pushing other controls. */
+.detail-hero:has(.person-title-line) > div {
+  flex: 1 1 280px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.detail-hero:has(.person-title-line) .person-title-line {
+  width: 100%;
+  min-width: 0;
+  align-items: flex-start;
+}
+
+.detail-hero:has(.person-title-line) .person-title-line h1 {
+  flex: 1 1 220px;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  text-wrap: balance;
+  font-size: clamp(1.45rem, 4.4vw, 2.65rem);
+  line-height: 1.45;
+}
+
+.detail-hero:has(.person-title-line) p {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .detail-hero:has(.person-title-line) {
+    flex-wrap: wrap;
+  }
+
+  .detail-hero:has(.person-title-line) > div {
+    flex: 1 1 calc(100% - 80px);
+  }
+
+  .detail-hero:has(.person-title-line) .person-title-line h1 {
+    flex-basis: 100%;
+    font-size: clamp(1.22rem, 6.2vw, 1.55rem);
+    line-height: 1.55;
+  }
+
+  .detail-hero:has(.person-title-line) > :last-child {
+    margin-inline-start: auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .detail-hero:has(.person-title-line) .person-title-line h1 {
+    font-size: 1.18rem;
+  }
+}

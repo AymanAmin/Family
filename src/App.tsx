@@ -11,6 +11,7 @@ const FamilyMembersPanel = lazy(() => import('./components/FamilyMembersPanel'))
 const Phase3AdminQueue = lazy(() => import('./components/Phase3AdminQueue'))
 const DuplicatePersonCheck = lazy(() => import('./components/DuplicatePersonCheck'))
 const FamilyTreeScreen = lazy(() => import('./components/FamilyTreeScreen'))
+const AdminUserRoles = lazy(() => import('./components/AdminUserRoles'))
 import './details.css'
 import './nasab-inspired.css'
 
@@ -49,6 +50,7 @@ type Person = {
   gender: 'male' | 'female' | null
   birth_year: number | null
   is_deceased: boolean
+  death_date: string | null
   description: string | null
   status: RecordStatus
   family_id: string | null
@@ -224,7 +226,7 @@ function App() {
   const [fullName, setFullName] = useState('')
 
   const [familyForm, setFamilyForm] = useState({ name: '', origin_place: '', description: '' })
-  const [personForm, setPersonForm] = useState({ full_name: '', family_id: '', gender: '', birth_year: '', description: '' })
+  const [personForm, setPersonForm] = useState({ full_name: '', family_id: '', gender: '', birth_year: '', is_deceased: false, death_date: '', description: '' })
   const [eventForm, setEventForm] = useState({ event_type: 'general', title: '', family_id: '', event_date: '', location_name: '', description: '' })
   const [relationshipForm, setRelationshipForm] = useState({ source_person_id: '', relation_type: 'parent', target_person_id: '', notes: '' })
 
@@ -268,7 +270,7 @@ function App() {
     setDataLoading(true)
     const [familyResult, peopleResult, eventResult, statsResult] = await Promise.all([
       supabase.from('families').select('id,name,description,origin_place,status,created_by,created_at').order('created_at', { ascending: false }).limit(8),
-      supabase.from('people').select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)').order('created_at', { ascending: false }).limit(8),
+      supabase.from('people').select('id,full_name,gender,birth_year,is_deceased,death_date,description,status,family_id,created_by,created_at,families(name)').order('created_at', { ascending: false }).limit(8),
       supabase.from('events').select('id,event_type,title,description,event_date,location_name,status,family_id,created_by,created_at,families(name)').order('event_date', { ascending: false, nullsFirst: false }).limit(8),
       supabase.rpc('get_public_platform_stats'),
     ])
@@ -533,17 +535,21 @@ function App() {
     if (!supabase || !session || !requireAccount()) return
     if (familyForm.name.trim().length < 2) return showMessage('اكتب اسم العائلة.', 'error')
     setBusy(true)
+    const directApproval = isAdmin
+    const approvedAt = directApproval ? new Date().toISOString() : null
     const { error } = await supabase.from('families').insert({
       name: familyForm.name.trim(),
       origin_place: familyForm.origin_place.trim() || null,
       description: familyForm.description.trim() || null,
       created_by: session.user.id,
-      status: 'pending',
+      status: directApproval ? 'approved' : 'pending',
+      approved_by: directApproval ? session.user.id : null,
+      approved_at: approvedAt,
     })
     setBusy(false)
     if (error) return showMessage(friendlyError(error.message), 'error')
     setFamilyForm({ name: '', origin_place: '', description: '' })
-    showMessage('تم إرسال العائلة للمراجعة. لن تظهر للعامة قبل الاعتماد.', 'success')
+    showMessage(isAdmin ? 'تمت إضافة العائلة واعتمادها مباشرة.' : 'تم إرسال العائلة للمراجعة. لن تظهر للعامة قبل الاعتماد.', 'success')
     void loadCommunityData()
   }
 
@@ -551,15 +557,22 @@ function App() {
     event.preventDefault()
     if (!supabase || !session || !requireAccount()) return
     if (personForm.full_name.trim().length < 3) return showMessage('اكتب الاسم الكامل.', 'error')
+    if (personForm.is_deceased && !personForm.death_date) return showMessage('حدد تاريخ الوفاة.', 'error')
     setBusy(true)
+    const directApproval = isAdmin
+    const approvedAt = directApproval ? new Date().toISOString() : null
     const { data: newPerson, error } = await supabase.from('people').insert({
       full_name: personForm.full_name.trim(),
       family_id: personForm.family_id || null,
       gender: personForm.gender || null,
       birth_year: personForm.birth_year ? Number(personForm.birth_year) : null,
+      is_deceased: personForm.is_deceased,
+      death_date: personForm.is_deceased ? personForm.death_date : null,
       description: personForm.description.trim() || null,
       created_by: session.user.id,
-      status: 'pending',
+      status: directApproval ? 'approved' : 'pending',
+      approved_by: directApproval ? session.user.id : null,
+      approved_at: approvedAt,
     }).select('id').single()
 
     if (error) {
@@ -573,8 +586,10 @@ function App() {
         family_id: personForm.family_id,
         membership_type: 'birth',
         is_primary: true,
-        status: 'pending',
+        status: isAdmin ? 'approved' : 'pending',
         created_by: session.user.id,
+        approved_by: isAdmin ? session.user.id : null,
+        approved_at: isAdmin ? new Date().toISOString() : null,
       })
       if (membershipError && !membershipError.message.toLowerCase().includes('does not exist')) {
         setBusy(false)
@@ -583,8 +598,8 @@ function App() {
     }
 
     setBusy(false)
-    setPersonForm({ full_name: '', family_id: '', gender: '', birth_year: '', description: '' })
-    showMessage('تم إرسال الشخص وانتمائه العائلي للمراجعة.', 'success')
+    setPersonForm({ full_name: '', family_id: '', gender: '', birth_year: '', is_deceased: false, death_date: '', description: '' })
+    showMessage(isAdmin ? 'تمت إضافة الشخص واعتماده مباشرة.' : 'تم إرسال الشخص وانتمائه العائلي للمراجعة.', 'success')
     void loadCommunityData()
   }
 
@@ -593,6 +608,7 @@ function App() {
     if (!supabase || !session || !requireAccount()) return
     if (eventForm.title.trim().length < 3) return showMessage('اكتب عنوان المناسبة.', 'error')
     setBusy(true)
+    const directApproval = isAdmin
     const { error } = await supabase.from('events').insert({
       event_type: eventForm.event_type,
       title: eventForm.title.trim(),
@@ -601,12 +617,14 @@ function App() {
       location_name: eventForm.location_name.trim() || null,
       description: eventForm.description.trim() || null,
       created_by: session.user.id,
-      status: 'pending',
+      status: directApproval ? 'approved' : 'pending',
+      approved_by: directApproval ? session.user.id : null,
+      approved_at: directApproval ? new Date().toISOString() : null,
     })
     setBusy(false)
     if (error) return showMessage(friendlyError(error.message), 'error')
     setEventForm({ event_type: 'general', title: '', family_id: '', event_date: '', location_name: '', description: '' })
-    showMessage('تم إرسال المناسبة للمراجعة.', 'success')
+    showMessage(isAdmin ? 'تمت إضافة المناسبة واعتمادها مباشرة.' : 'تم إرسال المناسبة للمراجعة.', 'success')
     void loadCommunityData()
   }
 
@@ -665,7 +683,7 @@ function App() {
 
     const { data, error } = await supabase
       .from('people')
-      .select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)')
+      .select('id,full_name,gender,birth_year,is_deceased,death_date,description,status,family_id,created_by,created_at,families(name)')
       .eq('id', id)
       .maybeSingle()
 
@@ -680,19 +698,22 @@ function App() {
     if (relationshipForm.source_person_id === relationshipForm.target_person_id) return showMessage('لا يمكن ربط الشخص بنفسه.', 'error')
 
     setBusy(true)
+    const directApproval = isAdmin
     const { error } = await supabase.from('person_relationships').insert({
       source_person_id: relationshipForm.source_person_id,
       target_person_id: relationshipForm.target_person_id,
       relation_type: relationshipForm.relation_type,
       notes: relationshipForm.notes.trim() || null,
       created_by: session.user.id,
-      status: 'pending',
+      status: directApproval ? 'approved' : 'pending',
+      approved_by: directApproval ? session.user.id : null,
+      approved_at: directApproval ? new Date().toISOString() : null,
     })
     setBusy(false)
     if (error) return showMessage(friendlyError(error.message), 'error')
 
     setRelationshipForm({ source_person_id: '', relation_type: 'parent', target_person_id: '', notes: '' })
-    showMessage('تم إرسال صلة القرابة للمراجعة.', 'success')
+    showMessage(isAdmin ? 'تمت إضافة صلة القرابة واعتمادها مباشرة.' : 'تم إرسال صلة القرابة للمراجعة.', 'success')
     await loadPending()
   }
 
@@ -919,14 +940,14 @@ function App() {
             <div className="detail-hero">
               <span className="detail-avatar">{selectedPerson.full_name[0]}</span>
               <div><span className="eyebrow">ملف شخص</span><h1>{selectedPerson.full_name}</h1><p>{selectedPerson.description || 'لا توجد نبذة مضافة لهذا الشخص.'}</p></div>
-              <RecordEditButton entityType="people" recordId={selectedPerson.id} createdBy={selectedPerson.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} initialData={{ full_name: selectedPerson.full_name, gender: selectedPerson.gender, birth_year: selectedPerson.birth_year, is_deceased: selectedPerson.is_deceased, description: selectedPerson.description }} onSaved={loadCommunityData} />
+              <RecordEditButton entityType="people" recordId={selectedPerson.id} createdBy={selectedPerson.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} initialData={{ full_name: selectedPerson.full_name, gender: selectedPerson.gender, birth_year: selectedPerson.birth_year, is_deceased: selectedPerson.is_deceased, death_date: selectedPerson.death_date, description: selectedPerson.description }} onSaved={loadCommunityData} />
             </div>
             <div className="detail-facts">
               <article><span>العائلة الأساسية</span><strong>{familyName(selectedPerson.families) || 'غير محددة'}</strong></article>
               <article><span>سنة الميلاد</span><strong>{selectedPerson.birth_year || 'غير محددة'}</strong></article>
-              <article><span>الحالة</span><strong>{selectedPerson.is_deceased ? 'متوفى' : 'على قيد الحياة'}</strong></article>
+              <article className={selectedPerson.is_deceased ? 'deceased-fact' : 'alive-fact'}><span>الحالة</span><strong>{selectedPerson.is_deceased ? 'متوفى' : 'على قيد الحياة'}</strong>{selectedPerson.is_deceased && <small>تاريخ الوفاة: {formatDate(selectedPerson.death_date)}</small>}</article>
             </div>
-            <PersonFamilyMemberships personId={selectedPerson.id} families={approvedFamilies} sessionUserId={session?.user.id} onChanged={loadCommunityData} />
+            <PersonFamilyMemberships personId={selectedPerson.id} families={approvedFamilies} sessionUserId={session?.user.id} isAdmin={isAdmin} onChanged={loadCommunityData} />
             {session && !profile?.linked_person_id && (
               <div className="link-account-card">
                 <div><strong>هل هذا سجلك؟</strong><p>قدّم طلب ربط حسابك بهذا الشخص للوصول إلى ميزات الملف الشخصي لاحقًا.</p></div>
@@ -964,7 +985,7 @@ function App() {
 
         {schemaReady && view === 'add' && session && (
           <section className="page-section narrow">
-            <div className="page-heading"><span className="eyebrow">مساهمة جديدة</span><h1>أضف معلومة للمنصة</h1><p>تُحفظ الإضافة بحالة «بانتظار الاعتماد» ولا تظهر للعامة مباشرة.</p></div>
+            <div className="page-heading"><span className="eyebrow">مساهمة جديدة</span><h1>أضف معلومة للمنصة</h1><p>{isAdmin ? 'أنت مدير؛ ستُنشر إضافاتك مباشرة دون انتظار اعتماد إضافي.' : 'تُحفظ الإضافة بحالة «بانتظار الاعتماد» ولا تظهر للعامة مباشرة.'}</p></div>
             <div className="segmented-control">
               <button className={addMode === 'family' ? 'active' : ''} onClick={() => setAddMode('family')}>عائلة</button>
               <button className={addMode === 'person' ? 'active' : ''} onClick={() => setAddMode('person')}>شخص</button>
@@ -972,7 +993,7 @@ function App() {
               <button className={addMode === 'relationship' ? 'active' : ''} onClick={() => setAddMode('relationship')}>صلة قرابة</button>
             </div>
 
-            {addMode === 'family' && <form className="data-form" onSubmit={submitFamily}><label><span>اسم العائلة *</span><input value={familyForm.name} onChange={(e) => setFamilyForm({ ...familyForm, name: e.target.value })} required /></label><label><span>مكان الأصل</span><input value={familyForm.origin_place} onChange={(e) => setFamilyForm({ ...familyForm, origin_place: e.target.value })} /></label><label className="full"><span>نبذة عن العائلة</span><textarea value={familyForm.description} onChange={(e) => setFamilyForm({ ...familyForm, description: e.target.value })} rows={5} /></label><button className="primary full" disabled={busy}>إرسال للمراجعة</button></form>}
+            {addMode === 'family' && <form className="data-form" onSubmit={submitFamily}><label><span>اسم العائلة *</span><input value={familyForm.name} onChange={(e) => setFamilyForm({ ...familyForm, name: e.target.value })} required /></label><label><span>مكان الأصل</span><input value={familyForm.origin_place} onChange={(e) => setFamilyForm({ ...familyForm, origin_place: e.target.value })} /></label><label className="full"><span>نبذة عن العائلة</span><textarea value={familyForm.description} onChange={(e) => setFamilyForm({ ...familyForm, description: e.target.value })} rows={5} /></label><button className="primary full" disabled={busy}>{isAdmin ? 'إضافة واعتماد' : 'إرسال للمراجعة'}</button></form>}
 
             {addMode === 'person' && <form className="data-form person-create-form" onSubmit={submitPerson}>
               <label className="full"><span>الاسم الكامل *</span><input value={personForm.full_name} onChange={(e) => setPersonForm({ ...personForm, full_name: e.target.value })} autoComplete="off" enterKeyHint="next" required /></label>
@@ -982,14 +1003,16 @@ function App() {
               <label><span>العائلة</span><select value={personForm.family_id} onChange={(e) => setPersonForm({ ...personForm, family_id: e.target.value })}><option value="">غير محددة</option>{visibleFamilies.map((item) => <option key={item.id} value={item.id}>{item.name}{item.status === 'pending' ? ' (معلقة)' : ''}</option>)}</select></label>
               <label><span>الجنس</span><select value={personForm.gender} onChange={(e) => setPersonForm({ ...personForm, gender: e.target.value })}><option value="">غير محدد</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
               <label><span>سنة الميلاد</span><input type="number" min="1800" max="2100" value={personForm.birth_year} onChange={(e) => setPersonForm({ ...personForm, birth_year: e.target.value })} /></label>
+              <div className={`life-status-card full ${personForm.is_deceased ? 'deceased' : 'alive'}`}><div className="life-status-copy"><span className="life-status-icon">{personForm.is_deceased ? '✦' : '●'}</span><div><strong>{personForm.is_deceased ? 'متوفى' : 'على قيد الحياة'}</strong><small>{personForm.is_deceased ? 'حدد تاريخ الوفاة لإكمال السجل' : 'فعّل الخيار فقط إذا كان الشخص متوفى'}</small></div></div><label className="life-status-switch"><input type="checkbox" checked={personForm.is_deceased} onChange={(e) => setPersonForm({ ...personForm, is_deceased: e.target.checked, death_date: e.target.checked ? personForm.death_date : '' })} /><span /></label></div>
+              {personForm.is_deceased && <label className="full death-date-field"><span>تاريخ الوفاة *</span><input type="date" required value={personForm.death_date} onChange={(e) => setPersonForm({ ...personForm, death_date: e.target.value })} /></label>}
               <label className="full"><span>وصف أو نبذة</span><textarea value={personForm.description} onChange={(e) => setPersonForm({ ...personForm, description: e.target.value })} rows={4} /></label>
-              <button className="primary full" disabled={busy}>إرسال للمراجعة</button>
+              <button className="primary full" disabled={busy}>{isAdmin ? 'إضافة واعتماد' : 'إرسال للمراجعة'}</button>
             </form>}
 
             {addMode === 'event' && <form className="data-form" onSubmit={submitEvent}><label><span>نوع المناسبة *</span><select value={eventForm.event_type} onChange={(e) => setEventForm({ ...eventForm, event_type: e.target.value })}>{Object.entries(eventLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label><span>عنوان المناسبة *</span><input value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} required /></label><label><span>العائلة المرتبطة</span><select value={eventForm.family_id} onChange={(e) => setEventForm({ ...eventForm, family_id: e.target.value })}><option value="">مناسبة عامة</option>{visibleFamilies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label><span>التاريخ</span><input type="date" value={eventForm.event_date} onChange={(e) => setEventForm({ ...eventForm, event_date: e.target.value })} /></label><label className="full"><span>المكان</span><input value={eventForm.location_name} onChange={(e) => setEventForm({ ...eventForm, location_name: e.target.value })} /></label><label className="full"><span>التفاصيل</span><textarea value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} rows={5} /></label><button className="primary full" disabled={busy}>إرسال للمراجعة</button></form>}
 
 
-            {addMode === 'relationship' && <form className="data-form" onSubmit={submitRelationship}><PeoplePicker label="الشخص الأول" value={relationshipForm.source_person_id} onChange={(selectedId) => setRelationshipForm({ ...relationshipForm, source_person_id: selectedId })} excludeId={relationshipForm.target_person_id || undefined} required /><label><span>صلته بالشخص الثاني *</span><select value={relationshipForm.relation_type} onChange={(e) => setRelationshipForm({ ...relationshipForm, relation_type: e.target.value })}>{Object.entries(relationshipLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><PeoplePicker label="الشخص الثاني" value={relationshipForm.target_person_id} onChange={(selectedId) => setRelationshipForm({ ...relationshipForm, target_person_id: selectedId })} excludeId={relationshipForm.source_person_id || undefined} required /><label className="full"><span>ملاحظة أو مصدر المعلومة</span><textarea value={relationshipForm.notes} onChange={(e) => setRelationshipForm({ ...relationshipForm, notes: e.target.value })} rows={4} /></label><button className="primary full" disabled={busy}>إرسال صلة القرابة للمراجعة</button></form>}
+            {addMode === 'relationship' && <form className="data-form" onSubmit={submitRelationship}><PeoplePicker label="الشخص الأول" value={relationshipForm.source_person_id} onChange={(selectedId) => setRelationshipForm({ ...relationshipForm, source_person_id: selectedId })} excludeId={relationshipForm.target_person_id || undefined} required /><label><span>صلته بالشخص الثاني *</span><select value={relationshipForm.relation_type} onChange={(e) => setRelationshipForm({ ...relationshipForm, relation_type: e.target.value })}>{Object.entries(relationshipLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><PeoplePicker label="الشخص الثاني" value={relationshipForm.target_person_id} onChange={(selectedId) => setRelationshipForm({ ...relationshipForm, target_person_id: selectedId })} excludeId={relationshipForm.source_person_id || undefined} required /><label className="full"><span>ملاحظة أو مصدر المعلومة</span><textarea value={relationshipForm.notes} onChange={(e) => setRelationshipForm({ ...relationshipForm, notes: e.target.value })} rows={4} /></label><button className="primary full" disabled={busy}>{isAdmin ? 'إضافة واعتماد صلة القرابة' : 'إرسال صلة القرابة للمراجعة'}</button></form>}
           </section>
         )}
 
@@ -1001,6 +1024,7 @@ function App() {
         )}
 
         {schemaReady && view === 'admin' && isAdmin && <Suspense fallback={<LazyPanelFallback />}><Phase3AdminQueue active={isAdmin} onChanged={loadCommunityData} /></Suspense>}
+        {schemaReady && view === 'admin' && profile?.is_primary_admin && <Suspense fallback={<LazyPanelFallback />}><AdminUserRoles active={Boolean(profile?.is_primary_admin)} currentUserId={session?.user.id} /></Suspense>}
 
         {!session && view === 'home' && (
           <section className="auth-section" id="auth-panel">

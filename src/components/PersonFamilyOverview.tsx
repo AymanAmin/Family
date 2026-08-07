@@ -154,6 +154,13 @@ export default function PersonFamilyOverview({ personId, personName, personGende
     setExistingId('')
   }
 
+  function selectExistingPerson(selectedPersonId: string) {
+    setExistingId(selectedPersonId)
+    setMode('existing')
+    setAdvanced(false)
+    setMessage('تم اختيار الشخص الموجود في الدليل. يمكنك الآن إضافته مباشرة بهذه الصلة.')
+  }
+
   async function finish(result: string) {
     setBusy(false)
     setActiveSlot(null)
@@ -258,7 +265,7 @@ export default function PersonFamilyOverview({ personId, personName, personGende
         <form onSubmit={submit}>
           {mode === 'new' ? <>
             <label><span>الاسم الكامل *</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="اكتب الاسم فقط" required /></label>
-            <DuplicatePersonCheck name={name} onOpenPerson={(id) => { closeAdd(); onOpenPerson(id) }} />
+            <DuplicatePersonCheck name={name} onOpenPerson={selectExistingPerson} />
             <div className="context-auto-note"><b>{slotConfig[activeSlot].relationLabel}</b><span>سيتم تحديد الجنس والصلة تلقائيًا ولن تحتاج لإعادة اختيارهما.</span></div>
             <button className="context-advanced-toggle" type="button" onClick={() => setAdvanced((value) => !value)}>{advanced ? 'إخفاء الخيارات الإضافية' : 'خيارات إضافية · تغيير العائلة'}</button>
             {advanced && <FamilyPicker label="العائلة الأساسية" value={familyId} onChange={setFamilyId} emptyLabel="بدون عائلة الآن" />}

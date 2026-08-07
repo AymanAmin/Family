@@ -1,0 +1,80 @@
+/* Account activity — compact timeline cards for mobile. */
+.my-activity-panel {
+  display: grid;
+  gap: 13px;
+  margin-top: 15px;
+  padding: 17px;
+  border: 1px solid #dbe7e2;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 12px 34px rgb(7 56 45 / 6%);
+}
+.my-activity-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.my-activity-heading h2 { margin: 5px 0 4px; color: var(--green-950); font-family: 'Noto Kufi Arabic'; font-size: 1.05rem; }
+.my-activity-heading p { max-width: 580px; margin: 0; color: #70827a; font-size: .65rem; line-height: 1.65; }
+.my-role-pill { flex: 0 0 auto; padding: 6px 9px; border-radius: 999px; color: #536c62; background: #edf3f0; font-size: .56rem; font-weight: 900; }
+.my-role-pill.role-verified_member { color: #0b7156; background: #ddf2e8; }
+.my-role-pill.role-family_moderator { color: #2d5f8c; background: #e5eff9; }
+.my-role-pill.role-content_moderator { color: #765a17; background: #fff0c3; }
+.my-role-pill.role-admin, .my-role-pill.role-super_admin { color: #7a4236; background: #fae9e5; }
+
+.my-activity-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #edf4f1;
+}
+.my-activity-filters button { min-height: 36px; padding: 5px; border: 0; border-radius: 10px; color: #657970; background: transparent; font-size: .63rem; font-weight: 900; }
+.my-activity-filters button.active { color: var(--green-800); background: #fff; box-shadow: 0 4px 13px rgb(7 56 45 / 7%); }
+
+.my-activity-list { display: grid; gap: 7px; }
+.my-activity-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #e1ebe7;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #fff, #fbfdfc);
+}
+.my-activity-card::before { position: absolute; inset-block: 10px; inset-inline-start: 0; width: 3px; border-radius: 99px; background: #d8e4df; content: ''; }
+.my-activity-card.status-approved::before { background: #4aa37e; }
+.my-activity-card.status-pending::before { background: #d7a940; }
+.my-activity-card.status-rejected::before { background: #c77468; }
+.my-activity-type-mark { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 12px; color: var(--green-800); background: #e5f2ed; font-weight: 900; }
+.my-activity-copy { display: grid; min-width: 0; gap: 2px; }
+.my-activity-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #7c8b85; font-size: .49rem; }
+.my-activity-copy > strong { overflow: hidden; color: var(--green-950); font-size: .73rem; text-overflow: ellipsis; white-space: nowrap; }
+.my-activity-copy > p { overflow: hidden; margin: 0; color: #6f8179; font-size: .57rem; text-overflow: ellipsis; white-space: nowrap; }
+.my-review-note { margin-top: 3px; padding: 5px 7px; border-radius: 8px; color: #73544e; background: #faf0ed; font-size: .52rem; line-height: 1.45; }
+.my-activity-side { display: grid; justify-items: end; gap: 6px; }
+.my-activity-status { padding: 4px 7px; border-radius: 999px; font-size: .49rem; font-weight: 900; white-space: nowrap; }
+.my-activity-status.pending { color: #876419; background: #fff2c9; }
+.my-activity-status.approved { color: #0c7156; background: #dff3e9; }
+.my-activity-status.rejected { color: #954d42; background: #fae9e6; }
+.my-activity-side button { min-height: 28px; padding-inline: 8px; border: 0; border-radius: 9px; color: var(--green-800); background: #edf5f1; font-size: .52rem; font-weight: 900; }
+.my-activity-message { padding: 8px 10px; border-radius: 11px; color: #6e5b28; background: #fff7dc; font-size: .6rem; }
+.my-activity-skeleton { display: grid; gap: 7px; }
+.my-activity-skeleton i { height: 62px; border-radius: 14px; background: linear-gradient(90deg, #eef4f1, #f8fbf9, #eef4f1); background-size: 200% 100%; animation: activity-shimmer 1.3s linear infinite; }
+.my-activity-more { justify-self: center; min-height: 38px; padding-inline: 15px; border: 1px solid #cfe0d9; border-radius: 12px; color: var(--green-800); background: #eff7f3; font-size: .62rem; font-weight: 900; }
+@keyframes activity-shimmer { to { background-position: -200% 0; } }
+
+@media (max-width: 760px) {
+  .my-activity-panel { gap: 10px; margin-top: 11px; padding: 11px; border-radius: 18px; }
+  .my-activity-heading { display: grid; gap: 7px; }
+  .my-role-pill { justify-self: start; }
+  .my-activity-heading h2 { font-size: .92rem; }
+  .my-activity-heading p { font-size: .58rem; }
+  .my-activity-filters button { min-height: 34px; font-size: .57rem; }
+  .my-activity-card { grid-template-columns: 34px minmax(0, 1fr); gap: 8px; padding: 9px; }
+  .my-activity-type-mark { width: 34px; height: 34px; border-radius: 10px; }
+  .my-activity-side { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) auto; width: 100%; align-items: center; justify-items: start; padding-top: 4px; border-top: 1px solid #edf2f0; }
+  .my-activity-side button { justify-self: end; }
+  .my-activity-copy > strong { font-size: .68rem; }
+  .my-activity-copy > p { font-size: .54rem; }
+}

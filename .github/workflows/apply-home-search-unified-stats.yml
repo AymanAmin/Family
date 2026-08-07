@@ -29,3 +29,5 @@ jobs:
           git add src/App.tsx src/home-news-preview.css public/sw.js
           git commit -m "Move search to top and unify home stats"
           git push
+
+# Retry after patch-script syntax correction.

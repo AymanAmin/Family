@@ -8,7 +8,7 @@
   },
   "scripts": {
     "prepare:index": "node scripts/prepare-index.mjs",
-    "prepare:pwa": "node scripts/generate-pwa-icons.mjs",
+    "prepare:pwa": "node scripts/generate-pwa-icons.mjs && node scripts/generate-notification-badge.mjs",
     "check:migrations": "node scripts/check-migration-versions.mjs",
     "dev": "npm run prepare:pwa && npm run prepare:index && vite",
     "typecheck": "tsc --noEmit",

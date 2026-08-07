@@ -1,0 +1,107 @@
+.home-feed .nasab-event-list {
+  display: grid;
+  gap: 10px;
+}
+
+.home-feed .nasab-event-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 13px;
+  align-items: start;
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid rgb(61 111 139 / 14%);
+  border-radius: 19px;
+  background: linear-gradient(145deg, #fff, #fbfdfc);
+  box-shadow: 0 8px 25px rgb(35 74 120 / 5%);
+}
+
+.home-feed .nasab-event-item::before {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #234a78, #79c9be);
+  content: '';
+}
+
+.home-feed .nasab-event-date {
+  grid-column: 2;
+  grid-row: 1;
+  display: inline-flex;
+  align-items: center;
+  min-height: 31px;
+  padding-inline: 9px;
+  border-radius: 10px;
+  color: #35677f;
+  background: #eaf5f4;
+  font-size: .68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.home-feed .nasab-event-item > div {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.home-feed .nasab-event-item h3 {
+  margin: 0 0 5px;
+  color: #234a78;
+  font-family: 'Noto Kufi Arabic';
+  font-size: .94rem;
+  line-height: 1.6;
+}
+
+.home-feed .nasab-event-item p {
+  margin: 0;
+  color: #78868b;
+  font-size: .76rem;
+  line-height: 1.7;
+}
+
+.home-feed .event-mention-chips {
+  margin-top: 9px;
+}
+
+.home-section-heading .news-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-section-heading .news-heading-actions button:first-child {
+  color: #285f78;
+  background: #edf7f5;
+}
+
+@media (max-width: 720px) {
+  .home-feed .nasab-event-item {
+    grid-template-columns: 1fr;
+  }
+
+  .home-feed .nasab-event-date,
+  .home-feed .nasab-event-item > div {
+    grid-column: 1;
+  }
+
+  .home-feed .nasab-event-date {
+    grid-row: 1;
+    justify-self: start;
+  }
+
+  .home-feed .nasab-event-item > div {
+    grid-row: 2;
+  }
+
+  .home-section-heading {
+    align-items: flex-start;
+  }
+
+  .home-section-heading .news-heading-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

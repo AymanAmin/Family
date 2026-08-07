@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sila-region-v5'
+const CACHE_VERSION = 'sila-region-v6'
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 
 function appUrl(path = '') {
@@ -11,6 +11,7 @@ self.addEventListener('install', (event) => {
       .then((cache) => cache.addAll([
         appUrl('./'),
         appUrl('manifest.webmanifest'),
+        appUrl('brand/sila-mark.svg'),
         appUrl('icons/icon-192.png'),
         appUrl('icons/icon-512.png'),
         appUrl('icons/maskable-512.png'),

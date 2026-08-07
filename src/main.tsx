@@ -24,6 +24,32 @@ import './relationship-manager.css'
 import './contributor-stats.css'
 import './edit-review-diff.css'
 
+function disablePageZoom() {
+  document.documentElement.style.touchAction = 'pan-x pan-y'
+  document.body.style.touchAction = 'pan-x pan-y'
+
+  const preventGesture = (event: Event) => event.preventDefault()
+
+  document.addEventListener('gesturestart', preventGesture, { passive: false })
+  document.addEventListener('gesturechange', preventGesture, { passive: false })
+  document.addEventListener('gestureend', preventGesture, { passive: false })
+
+  document.addEventListener('touchmove', (event) => {
+    if (event.touches.length > 1) event.preventDefault()
+  }, { passive: false })
+
+  let lastTouchEnd = 0
+  document.addEventListener('touchend', (event) => {
+    const now = Date.now()
+    if (now - lastTouchEnd <= 300) event.preventDefault()
+    lastTouchEnd = now
+  }, { passive: false })
+
+  document.addEventListener('dblclick', preventGesture, { passive: false })
+}
+
+disablePageZoom()
+
 const rootElement = document.getElementById('root')
 
 if (!rootElement) {

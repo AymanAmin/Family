@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 
 const FamilyPicker = lazy(() => import('./FamilyPicker'))
@@ -34,11 +34,30 @@ export default function RecordEditButton({
   initialData,
   onSaved,
 }: Props) {
-  const canEdit = Boolean(isAdmin || (sessionUserId && createdBy === sessionUserId))
+  const directCanEdit = Boolean(isAdmin || (sessionUserId && createdBy === sessionUserId))
+  const [scopedCanEdit, setScopedCanEdit] = useState(false)
+  const canEdit = directCanEdit || scopedCanEdit
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [form, setForm] = useState<Record<string, string | number | boolean | null>>(() => normalize(initialData))
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (directCanEdit || entityType !== 'families' || !sessionUserId || !supabase) {
+      setScopedCanEdit(false)
+      return () => { cancelled = true }
+    }
+
+    void supabase
+      .rpc('can_request_content_edit', { p_entity_type: entityType, p_record_id: recordId })
+      .then(({ data, error }) => {
+        if (!cancelled) setScopedCanEdit(!error && data === true)
+      })
+
+    return () => { cancelled = true }
+  }, [directCanEdit, entityType, recordId, sessionUserId])
 
   const title = useMemo(() => {
     if (entityType === 'families') return 'تعديل بيانات العائلة'

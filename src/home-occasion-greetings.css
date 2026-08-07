@@ -1,0 +1,223 @@
+.home-occasion-greetings-host {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  direction: rtl;
+}
+
+.home-occasion-greetings {
+  position: relative;
+  overflow: hidden;
+  padding: 18px;
+  border: 1px solid rgb(210 174 113 / 38%);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 8% 12%, rgb(255 255 255 / 75%) 0 7%, transparent 8%),
+    radial-gradient(circle at 93% 90%, rgb(255 255 255 / 55%) 0 9%, transparent 10%),
+    linear-gradient(135deg, #fff8ef 0%, #fffdf9 45%, #eef9f5 100%);
+  box-shadow: 0 18px 45px rgb(34 77 67 / 9%);
+}
+
+.home-occasion-greetings::before,
+.home-occasion-greetings::after {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border: 1px solid rgb(219 170 92 / 18%);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+}
+
+.home-occasion-greetings::before {
+  top: -72px;
+  right: -35px;
+}
+
+.home-occasion-greetings::after {
+  bottom: -78px;
+  left: -30px;
+}
+
+.home-occasion-heading {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.home-occasion-heading-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.home-occasion-heading-copy small {
+  color: #7f746a;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.home-occasion-heading-copy strong {
+  color: #1d4f68;
+  font-size: 1.08rem;
+  line-height: 1.45;
+}
+
+.home-occasion-heading-icon {
+  display: grid;
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  place-items: center;
+  border: 1px solid rgb(212 172 102 / 28%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 78%);
+  box-shadow: 0 8px 24px rgb(97 68 21 / 8%);
+  font-size: 1.45rem;
+}
+
+.home-occasion-list {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
+  gap: 10px;
+}
+
+.home-occasion-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid rgb(111 155 144 / 19%);
+  border-radius: 20px;
+  background: rgb(255 255 255 / 82%);
+  box-shadow: 0 8px 22px rgb(31 75 65 / 6%);
+}
+
+.home-occasion-card.wedding {
+  border-color: rgb(218 167 98 / 26%);
+  background: linear-gradient(135deg, rgb(255 255 255 / 92%), rgb(255 247 237 / 93%));
+}
+
+.home-occasion-card.birth {
+  border-color: rgb(90 174 157 / 25%);
+  background: linear-gradient(135deg, rgb(255 255 255 / 92%), rgb(239 250 247 / 94%));
+}
+
+.home-occasion-symbol {
+  display: grid;
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 15px;
+  background: #f5efe6;
+  font-size: 1.4rem;
+}
+
+.home-occasion-card.birth .home-occasion-symbol {
+  background: #e6f6f1;
+}
+
+.home-occasion-card-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.home-occasion-relative {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 24px;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: #376b79;
+  background: #edf6f5;
+  font-size: .62rem;
+  font-weight: 900;
+}
+
+.home-occasion-card.today .home-occasion-relative {
+  color: #80591a;
+  background: #fff1cf;
+}
+
+.home-occasion-card-copy strong {
+  overflow-wrap: anywhere;
+  color: #183f59;
+  font-size: .9rem;
+  line-height: 1.62;
+}
+
+.home-occasion-card-copy p {
+  margin: 0;
+  color: #71807d;
+  font-size: .7rem;
+  line-height: 1.62;
+}
+
+.home-occasion-family {
+  color: #8b7559;
+  font-size: .62rem;
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .home-occasion-greetings {
+    padding: 13px;
+    border-radius: 21px;
+  }
+
+  .home-occasion-heading {
+    margin-bottom: 10px;
+  }
+
+  .home-occasion-heading-copy strong {
+    font-size: .92rem;
+  }
+
+  .home-occasion-heading-copy small {
+    font-size: .61rem;
+  }
+
+  .home-occasion-heading-icon {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    border-radius: 13px;
+    font-size: 1.2rem;
+  }
+
+  .home-occasion-list {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .home-occasion-card {
+    padding: 11px 12px;
+    border-radius: 17px;
+  }
+
+  .home-occasion-symbol {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    border-radius: 13px;
+    font-size: 1.15rem;
+  }
+
+  .home-occasion-card-copy strong {
+    font-size: .79rem;
+  }
+
+  .home-occasion-card-copy p {
+    font-size: .63rem;
+  }
+}

@@ -1,108 +1,173 @@
-/* Robust phone shell: independent bottom navigation + reliable vertical scrolling. */
+/* Robust phone shell: independent fixed header + app-like bottom navigation + reliable scrolling. */
 .mobile-bottom-nav { display: none; }
 
 @media (max-width: 760px) {
+  :root {
+    --phone-header-height: 58px;
+    --phone-nav-height: 70px;
+  }
+
   html,
   body {
+    width: 100% !important;
     height: auto !important;
     min-height: 100% !important;
+    max-height: none !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
-    overscroll-behavior: auto !important;
+    overscroll-behavior-x: none !important;
+    overscroll-behavior-y: auto !important;
     touch-action: pan-y pinch-zoom !important;
-    -webkit-overflow-scrolling: touch;
+    -webkit-overflow-scrolling: touch !important;
   }
 
   #root,
   .app-shell {
+    width: 100% !important;
     height: auto !important;
     min-height: 100dvh !important;
     max-height: none !important;
     overflow: visible !important;
-    overflow-y: visible !important;
   }
 
   main {
+    width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
     overflow: visible !important;
-    overflow-y: visible !important;
     touch-action: pan-y !important;
   }
 
+  /* Desktop/web navigation never appears inside the phone header. */
   .topbar .desktop-nav {
     display: none !important;
   }
 
+  /* A real app header: fixed, compact and independent from the bottom bar. */
   .topbar {
-    position: sticky !important;
+    position: fixed !important;
+    z-index: 800 !important;
     top: 0 !important;
-    inset: auto !important;
-    z-index: 40 !important;
-    min-height: 54px !important;
-    padding: calc(6px + env(safe-area-inset-top)) 12px 6px !important;
-    background: rgb(250 252 251 / 96%) !important;
-    box-shadow: 0 1px 0 rgb(12 77 61 / 8%) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
+    right: 0 !important;
+    left: 0 !important;
+    bottom: auto !important;
+    inset-block-start: 0 !important;
+    inset-block-end: auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    min-height: calc(var(--phone-header-height) + env(safe-area-inset-top)) !important;
+    padding: calc(6px + env(safe-area-inset-top)) 13px 6px !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgb(15 74 59 / 8%) !important;
+    background: rgb(252 253 252 / 97%) !important;
+    box-shadow: 0 4px 18px rgb(12 63 50 / 6%) !important;
+    backdrop-filter: blur(18px) saturate(145%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(145%) !important;
+    transform: translateZ(0) !important;
   }
 
+  .brand {
+    max-width: calc(100vw - 110px);
+    gap: 8px !important;
+  }
+
+  .brand-mark {
+    width: 37px !important;
+    height: 37px !important;
+    border-radius: 13px !important;
+    font-size: .78rem !important;
+  }
+
+  .brand strong {
+    font-size: .79rem !important;
+    line-height: 1.35 !important;
+  }
+
+  .brand small {
+    display: block !important;
+    max-width: 140px !important;
+    font-size: .56rem !important;
+  }
+
+  .account-area {
+    gap: 5px !important;
+  }
+
+  .account-copy {
+    display: none !important;
+  }
+
+  .account-profile-button,
+  .account-area .ghost-button {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+  }
+
+  /* Content clears the fixed header and fixed bottom bar. */
   .app-shell {
-    padding-top: 0 !important;
-    padding-bottom: calc(82px + env(safe-area-inset-bottom)) !important;
+    padding-top: calc(var(--phone-header-height) + env(safe-area-inset-top)) !important;
+    padding-bottom: calc(var(--phone-nav-height) + env(safe-area-inset-bottom) + 22px) !important;
   }
 
+  /* Independent native-like tab bar. */
   .mobile-bottom-nav {
     position: fixed !important;
-    z-index: 999 !important;
-    right: 10px !important;
-    left: 10px !important;
+    z-index: 1000 !important;
+    right: 9px !important;
+    left: 9px !important;
+    top: auto !important;
     bottom: calc(8px + env(safe-area-inset-bottom)) !important;
     display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    align-items: end;
-    min-height: 68px;
-    padding: 5px 6px 4px;
-    border: 1px solid rgb(15 96 75 / 10%);
-    border-radius: 22px;
-    background: rgb(255 255 255 / 96%);
-    box-shadow: 0 14px 38px rgb(7 56 45 / 20%);
-    backdrop-filter: blur(18px) saturate(145%);
-    -webkit-backdrop-filter: blur(18px) saturate(145%);
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(0, 1fr) !important;
+    align-items: end !important;
+    min-height: var(--phone-nav-height) !important;
+    margin: 0 !important;
+    padding: 6px 6px 4px !important;
+    border: 1px solid rgb(16 80 63 / 9%) !important;
+    border-radius: 23px !important;
+    background: rgb(255 255 255 / 97%) !important;
+    box-shadow: 0 14px 42px rgb(7 56 45 / 20%) !important;
+    backdrop-filter: blur(20px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+    transform: translateZ(0) !important;
   }
 
   .mobile-bottom-nav button {
-    position: relative;
-    display: flex;
-    min-width: 0;
-    min-height: 56px;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    padding: 4px 2px 3px;
-    border: 0;
-    border-radius: 15px;
-    color: #667a72;
-    background: transparent;
-    font-size: .62rem;
-    font-weight: 800;
-    line-height: 1.15;
+    position: relative !important;
+    display: flex !important;
+    min-width: 0 !important;
+    min-height: 57px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    padding: 4px 2px 3px !important;
+    border: 0 !important;
+    border-radius: 16px !important;
+    color: #6c7d76 !important;
+    background: transparent !important;
+    font-size: .61rem !important;
+    font-weight: 800 !important;
+    line-height: 1.1 !important;
   }
 
   .mobile-nav-icon {
-    display: grid;
-    width: 28px;
-    height: 28px;
-    place-items: center;
-    font-size: 1.18rem;
-    line-height: 1;
+    display: grid !important;
+    width: 28px !important;
+    height: 28px !important;
+    place-items: center !important;
+    font-size: 1.16rem !important;
+    line-height: 1 !important;
   }
 
   .mobile-bottom-nav button.active:not(.add-nav-action) {
-    color: var(--green-700);
-    background: #edf7f3;
+    color: var(--green-700) !important;
+    background: #eaf5f0 !important;
   }
 
   .mobile-bottom-nav button.active:not(.add-nav-action)::after {
@@ -110,56 +175,81 @@
     bottom: 2px;
     width: 18px;
     height: 3px;
-    border-radius: 999px;
+    border-radius: 99px;
     background: var(--green-600);
     content: '';
   }
 
+  /* Floating central add action, like a native family app. */
   .mobile-bottom-nav .add-nav-action {
-    min-height: 64px;
-    margin-top: -18px;
-    color: var(--green-700);
+    min-height: 65px !important;
+    margin-top: -20px !important;
+    color: var(--green-700) !important;
   }
 
   .mobile-bottom-nav .add-nav-action .mobile-nav-icon {
-    width: 46px;
-    height: 46px;
-    margin-bottom: 1px;
-    border: 4px solid #f5f8f6;
-    border-radius: 50%;
-    color: white;
-    background: linear-gradient(145deg, var(--green-600), var(--green-950));
-    box-shadow: 0 9px 22px rgb(7 56 45 / 26%);
-    font-size: 1.55rem;
-    font-weight: 400;
+    width: 47px !important;
+    height: 47px !important;
+    margin-bottom: 1px !important;
+    border: 4px solid #f5f8f6 !important;
+    border-radius: 50% !important;
+    color: white !important;
+    background: linear-gradient(145deg, var(--green-600), var(--green-950)) !important;
+    box-shadow: 0 9px 24px rgb(7 56 45 / 28%) !important;
+    font-size: 1.55rem !important;
+    font-weight: 400 !important;
   }
 
   .mobile-bottom-nav .add-nav-action.active .mobile-nav-icon {
-    box-shadow: 0 9px 25px rgb(7 56 45 / 30%), 0 0 0 4px rgb(21 116 91 / 12%);
+    box-shadow: 0 10px 26px rgb(7 56 45 / 31%), 0 0 0 4px rgb(21 116 91 / 12%) !important;
   }
 
+  /* Prevent old phone rules from locking scrolling. */
   .nasab-dashboard,
   .home-content-grid,
   .section-block,
   .page-section,
-  .auth-section {
+  .auth-section,
+  .detail-page,
+  .directory-columns {
+    height: auto !important;
+    max-height: none !important;
     max-width: 100% !important;
+    overflow-y: visible !important;
   }
 
   .family-welcome-card h2 {
     font-size: clamp(1.02rem, 4.9vw, 1.22rem) !important;
-    line-height: 1.7 !important;
+    line-height: 1.68 !important;
   }
 
   .family-welcome-card p {
     font-size: .76rem !important;
-    line-height: 1.85 !important;
+    line-height: 1.84 !important;
   }
 }
 
 @media (max-width: 380px) {
-  .mobile-bottom-nav { right: 6px !important; left: 6px !important; }
-  .mobile-bottom-nav button { font-size: .57rem; }
-  .mobile-nav-icon { width: 25px; height: 25px; }
-  .family-welcome-card { padding-inline: 14px !important; }
+  .mobile-bottom-nav {
+    right: 5px !important;
+    left: 5px !important;
+    padding-inline: 4px !important;
+  }
+
+  .mobile-bottom-nav button {
+    font-size: .56rem !important;
+  }
+
+  .mobile-nav-icon {
+    width: 25px !important;
+    height: 25px !important;
+  }
+
+  .brand small {
+    display: none !important;
+  }
+
+  .family-welcome-card {
+    padding-inline: 14px !important;
+  }
 }

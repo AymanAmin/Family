@@ -257,6 +257,7 @@ function App() {
 
   const [familyForm, setFamilyForm] = useState({ name: '', origin_place: '', description: '' })
   const [personForm, setPersonForm] = useState({ full_name: '', family_id: '', gender: '', birth_year: '', is_deceased: false, death_date: '', description: '' })
+  const [personRelationForm, setPersonRelationForm] = useState({ relation_type: '', related_person_id: '', notes: '' })
   const [eventForm, setEventForm] = useState({ event_type: 'general', title: '', family_id: '', event_date: '', location_name: '', description: '' })
   const [eventPeopleForm, setEventPeopleForm] = useState({ primary_person_id: '', secondary_person_id: '' })
   const [relationshipForm, setRelationshipForm] = useState({ source_person_id: '', relation_type: 'parent', target_person_id: '', notes: '' })
@@ -636,12 +637,59 @@ function App() {
     if (!supabase || !session || !requireAccount()) return
     if (personForm.full_name.trim().length < 3) return showMessage('اكتب الاسم الكامل.', 'error')
     if (personForm.is_deceased && !personForm.death_date) return showMessage('حدد تاريخ الوفاة.', 'error')
+
+    const relationType = personRelationForm.relation_type
+    const relatedPersonId = personRelationForm.related_person_id
+    if (relationType && !relatedPersonId) return showMessage('اختر الشخص المرتبط بصلة القرابة أو اختر «بدون صلة الآن».', 'error')
+
     setBusy(true)
     const directApproval = isAdmin
     const approvedAt = directApproval ? new Date().toISOString() : null
+
+    let inheritedPrimaryFamilyId = ''
+    let inheritedFamilyIds: string[] = []
+
+    if (relationType === 'child' && relatedPersonId) {
+      const [fatherResult, membershipsResult] = await Promise.all([
+        supabase
+          .from('people')
+          .select('id,gender,family_id')
+          .eq('id', relatedPersonId)
+          .eq('status', 'approved')
+          .maybeSingle(),
+        supabase
+          .from('person_family_memberships')
+          .select('family_id,is_primary')
+          .eq('person_id', relatedPersonId)
+          .eq('status', 'approved'),
+      ])
+
+      if (fatherResult.error) {
+        setBusy(false)
+        return showMessage(friendlyError(fatherResult.error.message), 'error')
+      }
+      if (!fatherResult.data) {
+        setBusy(false)
+        return showMessage('تعذر العثور على سجل الأب المختار.', 'error')
+      }
+      if (fatherResult.data.gender === 'female') {
+        setBusy(false)
+        return showMessage('عند اختيار «ابن أو ابنة» اختر سجل الأب حتى يتم توريث عوائل جهة الأب تلقائيًا.', 'error')
+      }
+
+      const fatherMemberships = membershipsResult.error ? [] : (membershipsResult.data ?? [])
+      const primaryMembership = fatherMemberships.find((item) => item.is_primary)
+      inheritedPrimaryFamilyId = fatherResult.data.family_id || primaryMembership?.family_id || fatherMemberships[0]?.family_id || ''
+      inheritedFamilyIds = Array.from(new Set([
+        ...(fatherResult.data.family_id ? [fatherResult.data.family_id] : []),
+        ...fatherMemberships.map((item) => item.family_id).filter(Boolean),
+      ]))
+    }
+
+    const effectiveFamilyId = personForm.family_id || inheritedPrimaryFamilyId || ''
     const { data: newPerson, error } = await supabase.from('people').insert({
       full_name: personForm.full_name.trim(),
-      family_id: personForm.family_id || null,
+      family_id: effectiveFamilyId || null,
       gender: personForm.gender || null,
       birth_year: personForm.birth_year ? Number(personForm.birth_year) : null,
       is_deceased: personForm.is_deceased,
@@ -658,27 +706,84 @@ function App() {
       return showMessage(friendlyError(error.message), 'error')
     }
 
-    if (newPerson?.id && personForm.family_id) {
-      const { error: membershipError } = await supabase.from('person_family_memberships').insert({
-        person_id: newPerson.id,
-        family_id: personForm.family_id,
-        membership_type: 'birth',
-        is_primary: true,
-        status: isAdmin ? 'approved' : 'pending',
-        created_by: session.user.id,
-        approved_by: isAdmin ? session.user.id : null,
-        approved_at: isAdmin ? new Date().toISOString() : null,
-      })
-      if (membershipError && !membershipError.message.toLowerCase().includes('does not exist')) {
-        setBusy(false)
-        return showMessage(friendlyError(membershipError.message), 'error')
+    if (newPerson?.id) {
+      const membershipRows: Array<Record<string, unknown>> = []
+      if (effectiveFamilyId) {
+        membershipRows.push({
+          person_id: newPerson.id,
+          family_id: effectiveFamilyId,
+          membership_type: 'birth',
+          is_primary: true,
+          status: directApproval ? 'approved' : 'pending',
+          created_by: session.user.id,
+          approved_by: directApproval ? session.user.id : null,
+          approved_at: approvedAt,
+        })
+      }
+
+      if (relationType === 'child' && relatedPersonId) {
+        inheritedFamilyIds
+          .filter((familyId) => familyId && familyId !== effectiveFamilyId)
+          .forEach((familyId) => membershipRows.push({
+            person_id: newPerson.id,
+            family_id: familyId,
+            membership_type: 'paternal',
+            is_primary: false,
+            notes: 'أضيفت تلقائيًا من عوائل الأب عند تسجيل ابن أو ابنة',
+            status: directApproval ? 'approved' : 'pending',
+            created_by: session.user.id,
+            approved_by: directApproval ? session.user.id : null,
+            approved_at: approvedAt,
+          }))
+      }
+
+      if (membershipRows.length) {
+        const { error: membershipError } = await supabase.from('person_family_memberships').insert(membershipRows)
+        if (membershipError && !membershipError.message.toLowerCase().includes('does not exist')) {
+          setBusy(false)
+          return showMessage(`تم إنشاء الشخص، لكن تعذر حفظ بعض الانتماءات العائلية: ${friendlyError(membershipError.message)}`, 'error')
+        }
+      }
+
+      if (relationType && relatedPersonId) {
+        const { error: relationshipError } = await supabase.from('person_relationships').insert({
+          source_person_id: newPerson.id,
+          target_person_id: relatedPersonId,
+          relation_type: relationType,
+          notes: personRelationForm.notes.trim() || null,
+          created_by: session.user.id,
+          status: directApproval ? 'approved' : 'pending',
+          approved_by: directApproval ? session.user.id : null,
+          approved_at: approvedAt,
+        })
+        if (relationshipError) {
+          setBusy(false)
+          return showMessage(`تم إنشاء الشخص، لكن تعذر حفظ صلة القرابة: ${friendlyError(relationshipError.message)}`, 'error')
+        }
       }
     }
 
     setBusy(false)
     setPersonForm({ full_name: '', family_id: '', gender: '', birth_year: '', is_deceased: false, death_date: '', description: '' })
-    showMessage(isAdmin ? 'تمت إضافة الشخص واعتماده مباشرة.' : 'تم إرسال الشخص وانتمائه العائلي للمراجعة.', 'success')
+    setPersonRelationForm({ relation_type: '', related_person_id: '', notes: '' })
+
+    if (relationType === 'child') {
+      showMessage(
+        isAdmin
+          ? 'تمت إضافة الشخص وصلة الابن/الابنة ونسخ عوائل الأب واعتمادها مباشرة.'
+          : 'تم إرسال الشخص وصلة الابن/الابنة وعوائل جهة الأب للمراجعة في خطوة واحدة.',
+        'success',
+      )
+    } else if (relationType) {
+      showMessage(
+        isAdmin ? 'تمت إضافة الشخص وصلة القرابة واعتمادهما مباشرة.' : 'تم إرسال الشخص وصلة القرابة للمراجعة في خطوة واحدة.',
+        'success',
+      )
+    } else {
+      showMessage(isAdmin ? 'تمت إضافة الشخص واعتماده مباشرة.' : 'تم إرسال الشخص للمراجعة.', 'success')
+    }
     void loadCommunityData()
+    void loadPending()
   }
 
   async function submitEvent(event: FormEvent<HTMLFormElement>) {
@@ -1031,6 +1136,12 @@ function App() {
             <FamilyTreeScreen
               initialPersonId={profile?.linked_person_id || selectedPerson?.id || null}
               onOpenPerson={(id) => void openPersonById(id)}
+              onAddPerson={(id) => {
+                if (!requireAccount()) return
+                setPersonRelationForm({ relation_type: id ? 'child' : '', related_person_id: id || '', notes: '' })
+                setAddMode('person')
+                setView('add')
+              }}
               onAddRelation={(id) => {
                 if (!requireAccount()) return
                 if (id) setRelationshipForm((current) => ({ ...current, source_person_id: id }))
@@ -1139,12 +1250,22 @@ function App() {
               <Suspense fallback={<div className="duplicate-person-hint"><span>⌕</span><p>يتم تجهيز فحص الأسماء المشابهة…</p></div>}>
                 <DuplicatePersonCheck name={personForm.full_name} onOpenPerson={(id) => void openPersonById(id)} />
               </Suspense>
+              <div className="person-relation-card full">
+                <div className="person-relation-heading">
+                  <div><strong>صلة القرابة مع شخص موجود</strong><small>اختياري — يمكنك إضافة الشخص وحده أو الشخص والصلة في نفس الطلب.</small></div>
+                  <span>{personRelationForm.relation_type ? 'مفعّلة' : 'اختيارية'}</span>
+                </div>
+                <label className="full"><span>نوع العلاقة</span><select value={personRelationForm.relation_type} onChange={(e) => setPersonRelationForm((current) => ({ ...current, relation_type: e.target.value }))}><option value="">بدون صلة الآن</option>{Object.entries(relationshipLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                {personRelationForm.relation_type && <PeoplePicker label={personRelationForm.relation_type === 'child' ? 'الأب الذي يُنسب إليه الشخص الجديد' : 'الشخص المرتبط'} value={personRelationForm.related_person_id} onChange={(selectedId) => setPersonRelationForm((current) => ({ ...current, related_person_id: selectedId }))} required />}
+                {personRelationForm.relation_type === 'child' && <div className="paternal-inheritance-note full"><strong>توريث عوائل جهة الأب تلقائيًا</strong><span>سيأخذ الابن أو الابنة العائلة الأساسية للأب إذا لم تحدد عائلة يدويًا، وتُضاف بقية عوائل الأب إليه كعلاقات عائلية من جهة الأب.</span></div>}
+                {personRelationForm.relation_type && <label className="full"><span>ملاحظة عن صلة القرابة</span><textarea value={personRelationForm.notes} onChange={(e) => setPersonRelationForm((current) => ({ ...current, notes: e.target.value }))} rows={3} /></label>}
+              </div>
               <Suspense fallback={<div className="picker-skeleton">جارٍ تجهيز بحث العائلات…</div>}>
                 <FamilyPicker
-                  label="العائلة"
+                  label={personRelationForm.relation_type === 'child' ? 'العائلة الأساسية (اختياري — تُؤخذ من الأب عند تركها فارغة)' : 'العائلة'}
                   value={personForm.family_id}
                   onChange={(familyId) => setPersonForm((current) => ({ ...current, family_id: familyId }))}
-                  emptyLabel="بدون عائلة محددة"
+                  emptyLabel={personRelationForm.relation_type === 'child' ? 'استخدام عائلة الأب تلقائيًا' : 'بدون عائلة محددة'}
                 />
               </Suspense>
               <label><span>الجنس</span><select value={personForm.gender} onChange={(e) => setPersonForm({ ...personForm, gender: e.target.value })}><option value="">غير محدد</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
@@ -1152,7 +1273,7 @@ function App() {
               <div className={`life-status-card full ${personForm.is_deceased ? 'deceased' : 'alive'}`}><div className="life-status-copy"><span className="life-status-icon">{personForm.is_deceased ? '✦' : '●'}</span><div><strong>{personForm.is_deceased ? 'متوفى' : 'على قيد الحياة'}</strong><small>{personForm.is_deceased ? 'حدد تاريخ الوفاة لإكمال السجل' : 'فعّل الخيار فقط إذا كان الشخص متوفى'}</small></div></div><label className="life-status-switch"><input type="checkbox" checked={personForm.is_deceased} onChange={(e) => setPersonForm({ ...personForm, is_deceased: e.target.checked, death_date: e.target.checked ? personForm.death_date : '' })} /><span /></label></div>
               {personForm.is_deceased && <label className="full death-date-field"><span>تاريخ الوفاة *</span><input type="date" required value={personForm.death_date} onChange={(e) => setPersonForm({ ...personForm, death_date: e.target.value })} /></label>}
               <label className="full"><span>وصف أو نبذة</span><textarea value={personForm.description} onChange={(e) => setPersonForm({ ...personForm, description: e.target.value })} rows={4} /></label>
-              <button className="primary full" disabled={busy}>{isAdmin ? 'إضافة واعتماد' : 'إرسال للمراجعة'}</button>
+              <button className="primary full" disabled={busy}>{busy ? 'جارٍ الحفظ…' : personRelationForm.relation_type ? (isAdmin ? 'إضافة الشخص والصلة واعتمادهما' : 'إرسال الشخص والصلة للمراجعة') : (isAdmin ? 'إضافة واعتماد' : 'إرسال للمراجعة')}</button>
             </form>}
 
             {addMode === 'event' && <form className="data-form" onSubmit={submitEvent}>

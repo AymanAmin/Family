@@ -1,0 +1,90 @@
+.person-relation-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(15, 95, 75, 0.18);
+  border-radius: 18px;
+  background: rgba(15, 95, 75, 0.045);
+}
+
+.person-relation-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.person-relation-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.person-relation-heading strong {
+  font-size: 1rem;
+}
+
+.person-relation-heading small,
+.paternal-inheritance-note span {
+  color: #66756f;
+  line-height: 1.65;
+}
+
+.person-relation-heading > span {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(15, 95, 75, 0.1);
+  color: #0f5f4b;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.paternal-inheritance-note {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(187, 145, 52, 0.09);
+  border: 1px solid rgba(187, 145, 52, 0.2);
+}
+
+.paternal-inheritance-note strong {
+  color: #725514;
+}
+
+.tree-focus-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tree-focus-actions .tree-add-person {
+  background: #0f5f4b;
+  color: #fff;
+}
+
+@media (max-width: 720px) {
+  .person-relation-card {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .person-relation-heading {
+    align-items: stretch;
+  }
+
+  .person-relation-heading > span {
+    align-self: flex-start;
+  }
+
+  .tree-focus-actions {
+    width: 100%;
+  }
+
+  .tree-focus-actions button {
+    flex: 1 1 120px;
+  }
+}

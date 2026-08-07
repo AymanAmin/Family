@@ -24,6 +24,7 @@ type PathRow = {
 type Props = {
   initialPersonId?: string | null
   onOpenPerson: (personId: string) => void
+  onAddPerson: (personId?: string) => void
   onAddRelation: (personId?: string) => void
 }
 
@@ -44,7 +45,7 @@ function relationLabel(type: string, gender: string | null) {
   return 'صلة'
 }
 
-export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddRelation }: Props) {
+export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddPerson, onAddRelation }: Props) {
   const [mode, setMode] = useState<Mode>('tree')
   const [focusId, setFocusId] = useState(initialPersonId ?? '')
   const [focus, setFocus] = useState<PersonSummary | null>(null)
@@ -147,7 +148,10 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddR
               <div className="tree-focus-summary">
                 <span className={`tree-focus-avatar ${focus.gender === 'female' ? 'female' : ''}`}>{focus.full_name.trim().charAt(0) || '؟'}</span>
                 <div><strong>{focus.full_name}</strong><small>{familyName(focus.families) || 'العائلة غير محددة'}{focus.birth_year ? ` · ${focus.birth_year}` : ''}</small></div>
-                <button type="button" onClick={() => onAddRelation(focus.id)}>＋ صلة</button>
+                <div className="tree-focus-actions">
+                  <button type="button" className="tree-add-person" onClick={() => onAddPerson(focus.id)}>＋ فرد</button>
+                  <button type="button" onClick={() => onAddRelation(focus.id)}>＋ صلة</button>
+                </div>
               </div>
             )}
           </section>

@@ -284,7 +284,7 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
                       ) : <p className="family-scope-empty">لم يتم تعيين عائلة لهذا المستخدم.</p>}
 
                       <div className="family-scope-add">
-                        <FamilyPicker label="اختر عائلة لإضافتها إلى نطاقه" value={scopeFamilyId} onChange={setScopeFamilyId} required />
+                        <FamilyPicker label="اختر عائلة لإضافتها إلى نطاقه" value={scopeFamilyId} onChange={setScopeFamilyId} required approvedOnly />
                         <button type="button" className="primary" disabled={!scopeFamilyId || busyUserId === user.user_id} onClick={() => void addFamilyScope(user)}>{busyUserId === user.user_id ? 'جارٍ الحفظ…' : 'تعيين مسؤول عائلة'}</button>
                       </div>
                     </div>

@@ -27,17 +27,33 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Verify TypeScript and production build
         run: npm run build
-      - name: Keep source changes only
-        run: git restore index.html 404.html assets brand icons manifest.webmanifest sw.js .nojekyll 2>/dev/null || true
-      - name: Commit integration
+      - name: Capture source patch
         shell: bash
         run: |
+          git diff -- src/App.tsx > /tmp/event-card-themes.patch
+          git restore index.html 404.html assets brand icons manifest.webmanifest sw.js .nojekyll 2>/dev/null || true
+      - name: Commit integration on latest main
+        shell: bash
+        run: |
+          if [ ! -s /tmp/event-card-themes.patch ]; then
+            echo "Event card themes are already integrated."
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/App.tsx
-          if ! git diff --cached --quiet; then
-            git commit -m "Apply event-specific in-app card themes"
+
+          for attempt in 1 2 3; do
             git fetch origin main
-            git rebase origin/main
-            git push origin HEAD:main
-          fi
+            git reset --hard origin/main
+            git apply /tmp/event-card-themes.patch
+            git add src/App.tsx
+            git commit -m "Apply event-specific in-app card themes"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Main changed during push; retrying ($attempt/3)."
+          done
+
+          echo "Could not publish App theme integration after retries."
+          exit 1

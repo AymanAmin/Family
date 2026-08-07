@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { getApplicationUrl, supabase, supabaseConfiguration } from './lib/supabase'
 import RecordEditButton from './components/RecordEditButton'
 import PersonFamilyMemberships from './components/PersonFamilyMemberships'
-import FamilyMembersPanel from './components/FamilyMembersPanel'
-import Phase3AdminQueue from './components/Phase3AdminQueue'
-import KinshipNetwork from './components/KinshipNetwork'
-import DirectoryScreen from './components/DirectoryScreen'
 import PeoplePicker from './components/PeoplePicker'
+
+const DirectoryScreen = lazy(() => import('./components/DirectoryScreen'))
+const KinshipNetwork = lazy(() => import('./components/KinshipNetwork'))
+const FamilyMembersPanel = lazy(() => import('./components/FamilyMembersPanel'))
+const Phase3AdminQueue = lazy(() => import('./components/Phase3AdminQueue'))
 import './details.css'
 import './nasab-inspired.css'
 
@@ -15,6 +16,7 @@ type AuthMode = 'signin' | 'signup' | 'forgot' | 'recovery'
 type View = 'home' | 'search' | 'add' | 'admin' | 'person' | 'family' | 'account'
 type AddMode = 'family' | 'person' | 'event' | 'relationship'
 type MessageTone = 'info' | 'success' | 'error'
+type PlatformStats = { approved_families: number; approved_people: number; approved_events: number; updated_at: string }
 type RecordStatus = 'pending' | 'approved' | 'rejected'
 
 type Profile = {
@@ -183,6 +185,10 @@ function GoogleIcon() {
   )
 }
 
+function LazyPanelFallback() {
+  return <div className="lazy-panel-skeleton" aria-label="جارٍ تحميل الجزء المطلوب" />
+}
+
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -200,6 +206,7 @@ function App() {
   const [families, setFamilies] = useState<Family[]>([])
   const [people, setPeople] = useState<Person[]>([])
   const [events, setEvents] = useState<CommunityEvent[]>([])
+  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null)
   const [pending, setPending] = useState<PendingRecord[]>([])
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null)
   const [selectedFamily, setSelectedFamily] = useState<Family | null>(null)
@@ -257,10 +264,11 @@ function App() {
     }
 
     setDataLoading(true)
-    const [familyResult, peopleResult, eventResult] = await Promise.all([
-      supabase.from('families').select('id,name,description,origin_place,status,created_by,created_at').order('created_at', { ascending: false }).limit(16),
-      supabase.from('people').select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)').order('created_at', { ascending: false }).limit(12),
-      supabase.from('events').select('id,event_type,title,description,event_date,location_name,status,family_id,created_by,created_at,families(name)').order('event_date', { ascending: false, nullsFirst: false }).limit(30),
+    const [familyResult, peopleResult, eventResult, statsResult] = await Promise.all([
+      supabase.from('families').select('id,name,description,origin_place,status,created_by,created_at').order('created_at', { ascending: false }).limit(8),
+      supabase.from('people').select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)').order('created_at', { ascending: false }).limit(8),
+      supabase.from('events').select('id,event_type,title,description,event_date,location_name,status,family_id,created_by,created_at,families(name)').order('event_date', { ascending: false, nullsFirst: false }).limit(8),
+      supabase.rpc('get_public_platform_stats'),
     ])
 
     const firstError = familyResult.error || peopleResult.error || eventResult.error
@@ -278,6 +286,12 @@ function App() {
     setFamilies((familyResult.data ?? []) as Family[])
     setPeople((peopleResult.data ?? []) as Person[])
     setEvents((eventResult.data ?? []) as CommunityEvent[])
+    if (!statsResult.error) {
+      const statsRow = Array.isArray(statsResult.data) ? statsResult.data[0] : null
+      setPlatformStats((statsRow as PlatformStats | undefined) ?? null)
+    } else {
+      setPlatformStats(null)
+    }
     setDataLoading(false)
   }, [])
 
@@ -780,8 +794,8 @@ function App() {
 
               <div className="app-services">
                 <button className="service-tile" type="button" onClick={() => requireAccount() && (setAddMode('relationship'), setView('add'))}><span className="service-icon">ش</span><span><strong>شجرة العائلة</strong><small>أضف صلات القرابة وابنِ النسب</small></span></button>
-                <button className="service-tile" type="button" onClick={() => setView('search')}><span className="service-icon">{approvedFamilies.length}</span><span><strong>العائلات</strong><small>الأسر المعتمدة في الدليل</small></span></button>
-                <button className="service-tile" type="button" onClick={() => setView('search')}><span className="service-icon">{approvedPeople.length}</span><span><strong>الأفراد</strong><small>ملفات الأشخاص الموثقة</small></span></button>
+                <button className="service-tile" type="button" onClick={() => setView('search')}><span className="service-icon">{platformStats?.approved_families ?? '—'}</span><span><strong>العائلات</strong><small>الأسر المعتمدة في الدليل</small></span></button>
+                <button className="service-tile" type="button" onClick={() => setView('search')}><span className="service-icon">{platformStats?.approved_people ?? '—'}</span><span><strong>الأفراد</strong><small>ملفات الأشخاص الموثقة</small></span></button>
                 <button className="service-tile" type="button" onClick={() => session ? setView('account') : document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' })}><span className="service-icon">{session ? userName[0] : 'د'}</span><span><strong>{session ? 'حسابي' : 'الدخول'}</strong><small>{session ? 'الربط والملف الشخصي' : 'ساهم في توثيق العائلة'}</small></span></button>
               </div>
             </section>
@@ -812,9 +826,9 @@ function App() {
                 </div>
               </div>
               <div className="real-stats">
-                <article><strong>{approvedFamilies.length}</strong><span>عائلة معتمدة</span></article>
-                <article><strong>{approvedPeople.length}</strong><span>شخص معتمد</span></article>
-                <article><strong>{approvedEvents.length}</strong><span>مناسبة منشورة</span></article>
+                <article><strong>{platformStats?.approved_families ?? '—'}</strong><span>عائلة معتمدة</span></article>
+                <article><strong>{platformStats?.approved_people ?? '—'}</strong><span>شخص معتمد</span></article>
+                <article><strong>{platformStats?.approved_events ?? '—'}</strong><span>مناسبة منشورة</span></article>
                 <article><strong>{isAdmin ? pending.length : '—'}</strong><span>{isAdmin ? 'بانتظار الاعتماد' : 'مراجعة إدارية'}</span></article>
               </div>
             </section>
@@ -854,11 +868,13 @@ function App() {
         )}
 
         {schemaReady && view === 'search' && (
-          <DirectoryScreen
-            initialTerm={searchTerm}
-            onOpenPerson={(item) => void openPerson(item as Person)}
-            onOpenFamily={(item) => openFamily(item as Family)}
-          />
+          <Suspense fallback={<LazyPanelFallback />}>
+            <DirectoryScreen
+              initialTerm={searchTerm}
+              onOpenPerson={(item) => void openPerson(item as Person)}
+              onOpenFamily={(item) => openFamily(item as Family)}
+            />
+          </Suspense>
         )}
 
         {schemaReady && view === 'family' && selectedFamily && (
@@ -871,10 +887,10 @@ function App() {
             </div>
             <div className="detail-facts">
               <article><span>مكان الأصل</span><strong>{selectedFamily.origin_place || 'غير محدد'}</strong></article>
-              <article><span>الأفراد الأساسيون</span><strong>{approvedPeople.filter((item) => item.family_id === selectedFamily.id).length}</strong></article>
+              <article><span>دليل الأفراد</span><strong>تحميل تدريجي</strong></article>
               <article><span>حالة السجل</span><strong>{selectedFamily.status === 'approved' ? 'معتمد' : 'بانتظار الاعتماد'}</strong></article>
             </div>
-            <FamilyMembersPanel familyId={selectedFamily.id} people={approvedPeople} onOpenPerson={(id) => void openPersonById(id)} />
+            <Suspense fallback={<LazyPanelFallback />}><FamilyMembersPanel familyId={selectedFamily.id} people={approvedPeople} onOpenPerson={(id) => void openPersonById(id)} /></Suspense>
           </section>
         )}
 
@@ -898,17 +914,19 @@ function App() {
                 <button className="primary" type="button" disabled={busy || ownLinkRequest?.status === 'pending'} onClick={() => void requestAccountLink(selectedPerson)}>{ownLinkRequest?.status === 'pending' ? 'الطلب قيد المراجعة' : 'هذا أنا — ربط الحساب'}</button>
               </div>
             )}
-            <KinshipNetwork
-              personId={selectedPerson.id}
-              personName={selectedPerson.full_name}
-              onOpenPerson={(id) => void openPersonById(id)}
-              onAddRelation={() => {
-                if (!requireAccount()) return
-                setRelationshipForm((current) => ({ ...current, source_person_id: selectedPerson.id }))
-                setAddMode('relationship')
-                setView('add')
-              }}
-            />
+            <Suspense fallback={<LazyPanelFallback />}>
+              <KinshipNetwork
+                personId={selectedPerson.id}
+                personName={selectedPerson.full_name}
+                onOpenPerson={(id) => void openPersonById(id)}
+                onAddRelation={() => {
+                  if (!requireAccount()) return
+                  setRelationshipForm((current) => ({ ...current, source_person_id: selectedPerson.id }))
+                  setAddMode('relationship')
+                  setView('add')
+                }}
+                />
+            </Suspense>
           </section>
         )}
 
@@ -953,7 +971,7 @@ function App() {
           </section>
         )}
 
-        {schemaReady && view === 'admin' && isAdmin && <Phase3AdminQueue active={isAdmin} onChanged={loadCommunityData} />}
+        {schemaReady && view === 'admin' && isAdmin && <Suspense fallback={<LazyPanelFallback />}><Phase3AdminQueue active={isAdmin} onChanged={loadCommunityData} /></Suspense>}
 
         {!session && view === 'home' && (
           <section className="auth-section" id="auth-panel">

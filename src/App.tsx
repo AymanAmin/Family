@@ -6,6 +6,8 @@ import PersonFamilyMemberships from './components/PersonFamilyMemberships'
 import FamilyMembersPanel from './components/FamilyMembersPanel'
 import Phase3AdminQueue from './components/Phase3AdminQueue'
 import KinshipNetwork from './components/KinshipNetwork'
+import DirectoryScreen from './components/DirectoryScreen'
+import PeoplePicker from './components/PeoplePicker'
 import './details.css'
 import './nasab-inspired.css'
 
@@ -205,9 +207,6 @@ function App() {
   const [ownLinkRequest, setOwnLinkRequest] = useState<AccountLinkRequest | null>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
-  const [searchFamilies, setSearchFamilies] = useState<Family[]>([])
-  const [searchPeople, setSearchPeople] = useState<Person[]>([])
-  const [searching, setSearching] = useState(false)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -258,8 +257,8 @@ function App() {
 
     setDataLoading(true)
     const [familyResult, peopleResult, eventResult] = await Promise.all([
-      supabase.from('families').select('id,name,description,origin_place,status,created_by,created_at').order('name').limit(100),
-      supabase.from('people').select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)').order('full_name').limit(100),
+      supabase.from('families').select('id,name,description,origin_place,status,created_by,created_at').order('created_at', { ascending: false }).limit(16),
+      supabase.from('people').select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)').order('created_at', { ascending: false }).limit(12),
       supabase.from('events').select('id,event_type,title,description,event_date,location_name,status,family_id,created_by,created_at,families(name)').order('event_date', { ascending: false, nullsFirst: false }).limit(30),
     ])
 
@@ -456,20 +455,8 @@ function App() {
 
   async function runSearch(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault()
-    if (!supabase || !schemaReady) return
-    const term = searchTerm.trim()
-    if (!term) return showMessage('اكتب اسم شخص أو عائلة.', 'info')
-
-    setSearching(true)
+    if (!schemaReady) return
     setView('search')
-    const [familyResult, peopleResult] = await Promise.all([
-      supabase.from('families').select('id,name,description,origin_place,status,created_by,created_at').ilike('name', `%${term}%`).order('name').limit(50),
-      supabase.from('people').select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)').ilike('full_name', `%${term}%`).order('full_name').limit(50),
-    ])
-    setSearching(false)
-    if (familyResult.error || peopleResult.error) return showMessage(friendlyError((familyResult.error || peopleResult.error)!.message), 'error')
-    setSearchFamilies((familyResult.data ?? []) as Family[])
-    setSearchPeople((peopleResult.data ?? []) as Person[])
   }
 
   function requireAccount(): boolean {
@@ -588,6 +575,24 @@ function App() {
     setRelationsLoading(false)
     if (error) return showMessage(friendlyError(error.message), 'error')
     setRelationships((data ?? []) as PersonRelationship[])
+  }
+
+  async function openPersonById(id: string) {
+    const cached = people.find((item) => item.id === id)
+    if (cached) {
+      await openPerson(cached)
+      return
+    }
+    if (!supabase) return
+
+    const { data, error } = await supabase
+      .from('people')
+      .select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) return showMessage(friendlyError(error.message), 'error')
+    if (data) await openPerson(data as Person)
   }
 
   async function submitRelationship(event: FormEvent<HTMLFormElement>) {
@@ -787,27 +792,12 @@ function App() {
         )}
 
         {schemaReady && view === 'search' && (
-          <section className="page-section">
-            <div className="page-heading"><span className="eyebrow">دليل المنطقة</span><h1>البحث عن الأشخاص والعائلات</h1><p>البحث يشمل السجلات المعتمدة، ويعرض للمستخدم طلباته المعلقة أيضًا.</p></div>
-            <form className="search-bar wide" onSubmit={runSearch}>
-              <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="اكتب الاسم" autoFocus />
-              <button className="primary" type="submit" disabled={searching}>{searching ? 'جارٍ البحث…' : 'بحث'}</button>
-            </form>
-
-            {!searchTerm.trim() ? (
-              <div className="directory-columns">
-                <section><h2>العائلات</h2>{approvedFamilies.length ? approvedFamilies.map((item) => <button className="list-row interactive-row" type="button" key={item.id} onClick={() => openFamily(item)}><span className="avatar-letter">{item.name[0]}</span><div><strong>{item.name}</strong><small>{item.origin_place || 'المنطقة'}</small></div><span>‹</span></button>) : <div className="empty-state compact">لا توجد بيانات</div>}</section>
-                <section><h2>الأشخاص</h2>{approvedPeople.length ? approvedPeople.map((item) => <button className="list-row interactive-row" type="button" key={item.id} onClick={() => void openPerson(item)}><span className="avatar-letter">{item.full_name[0]}</span><div><strong>{item.full_name}</strong><small>{familyName(item.families) || 'دون عائلة محددة'}{item.is_deceased ? ' · متوفى' : ''}</small></div><span>‹</span></button>) : <div className="empty-state compact">لا توجد بيانات</div>}</section>
-              </div>
-            ) : (
-              <div className="directory-columns">
-                <section><h2>العائلات ({searchFamilies.length})</h2>{searchFamilies.length ? searchFamilies.map((item) => <button className="list-row interactive-row" type="button" key={item.id} onClick={() => openFamily(item)}><span className="avatar-letter">{item.name[0]}</span><div><strong>{item.name}</strong><small>{item.origin_place || 'المنطقة'} · {item.status === 'pending' ? 'بانتظار الاعتماد' : 'معتمدة'}</small></div><span>‹</span></button>) : <div className="empty-state compact">لا توجد عائلة بهذا الاسم</div>}</section>
-                <section><h2>الأشخاص ({searchPeople.length})</h2>{searchPeople.length ? searchPeople.map((item) => <button className="list-row interactive-row" type="button" key={item.id} onClick={() => void openPerson(item)}><span className="avatar-letter">{item.full_name[0]}</span><div><strong>{item.full_name}</strong><small>{familyName(item.families) || 'دون عائلة'} · {item.status === 'pending' ? 'بانتظار الاعتماد' : 'معتمد'}</small></div><span>‹</span></button>) : <div className="empty-state compact">لا يوجد شخص بهذا الاسم</div>}</section>
-              </div>
-            )}
-          </section>
+          <DirectoryScreen
+            initialTerm={searchTerm}
+            onOpenPerson={(item) => void openPerson(item as Person)}
+            onOpenFamily={(item) => openFamily(item as Family)}
+          />
         )}
-
 
         {schemaReady && view === 'family' && selectedFamily && (
           <section className="page-section detail-page">
@@ -822,7 +812,7 @@ function App() {
               <article><span>الأفراد الأساسيون</span><strong>{approvedPeople.filter((item) => item.family_id === selectedFamily.id).length}</strong></article>
               <article><span>حالة السجل</span><strong>{selectedFamily.status === 'approved' ? 'معتمد' : 'بانتظار الاعتماد'}</strong></article>
             </div>
-            <FamilyMembersPanel familyId={selectedFamily.id} people={approvedPeople} onOpenPerson={(id) => { const person = people.find((item) => item.id === id); if (person) void openPerson(person) }} />
+            <FamilyMembersPanel familyId={selectedFamily.id} people={approvedPeople} onOpenPerson={(id) => void openPersonById(id)} />
           </section>
         )}
 
@@ -849,10 +839,7 @@ function App() {
             <KinshipNetwork
               personId={selectedPerson.id}
               personName={selectedPerson.full_name}
-              onOpenPerson={(id) => {
-                const person = people.find((item) => item.id === id)
-                if (person) void openPerson(person)
-              }}
+              onOpenPerson={(id) => void openPersonById(id)}
               onAddRelation={() => {
                 if (!requireAccount()) return
                 setRelationshipForm((current) => ({ ...current, source_person_id: selectedPerson.id }))
@@ -893,7 +880,7 @@ function App() {
             {addMode === 'event' && <form className="data-form" onSubmit={submitEvent}><label><span>نوع المناسبة *</span><select value={eventForm.event_type} onChange={(e) => setEventForm({ ...eventForm, event_type: e.target.value })}>{Object.entries(eventLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label><span>عنوان المناسبة *</span><input value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} required /></label><label><span>العائلة المرتبطة</span><select value={eventForm.family_id} onChange={(e) => setEventForm({ ...eventForm, family_id: e.target.value })}><option value="">مناسبة عامة</option>{visibleFamilies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label><span>التاريخ</span><input type="date" value={eventForm.event_date} onChange={(e) => setEventForm({ ...eventForm, event_date: e.target.value })} /></label><label className="full"><span>المكان</span><input value={eventForm.location_name} onChange={(e) => setEventForm({ ...eventForm, location_name: e.target.value })} /></label><label className="full"><span>التفاصيل</span><textarea value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} rows={5} /></label><button className="primary full" disabled={busy}>إرسال للمراجعة</button></form>}
 
 
-            {addMode === 'relationship' && <form className="data-form" onSubmit={submitRelationship}><label><span>الشخص الأول *</span><select value={relationshipForm.source_person_id} onChange={(e) => setRelationshipForm({ ...relationshipForm, source_person_id: e.target.value })} required><option value="">اختر الشخص</option>{approvedPeople.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}</select></label><label><span>صلته بالشخص الثاني *</span><select value={relationshipForm.relation_type} onChange={(e) => setRelationshipForm({ ...relationshipForm, relation_type: e.target.value })}>{Object.entries(relationshipLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label><span>الشخص الثاني *</span><select value={relationshipForm.target_person_id} onChange={(e) => setRelationshipForm({ ...relationshipForm, target_person_id: e.target.value })} required><option value="">اختر الشخص</option>{approvedPeople.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}</select></label><label className="full"><span>ملاحظة أو مصدر المعلومة</span><textarea value={relationshipForm.notes} onChange={(e) => setRelationshipForm({ ...relationshipForm, notes: e.target.value })} rows={4} /></label><button className="primary full" disabled={busy}>إرسال صلة القرابة للمراجعة</button></form>}
+            {addMode === 'relationship' && <form className="data-form" onSubmit={submitRelationship}><PeoplePicker label="الشخص الأول" value={relationshipForm.source_person_id} onChange={(selectedId) => setRelationshipForm({ ...relationshipForm, source_person_id: selectedId })} excludeId={relationshipForm.target_person_id || undefined} required /><label><span>صلته بالشخص الثاني *</span><select value={relationshipForm.relation_type} onChange={(e) => setRelationshipForm({ ...relationshipForm, relation_type: e.target.value })}>{Object.entries(relationshipLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><PeoplePicker label="الشخص الثاني" value={relationshipForm.target_person_id} onChange={(selectedId) => setRelationshipForm({ ...relationshipForm, target_person_id: selectedId })} excludeId={relationshipForm.source_person_id || undefined} required /><label className="full"><span>ملاحظة أو مصدر المعلومة</span><textarea value={relationshipForm.notes} onChange={(e) => setRelationshipForm({ ...relationshipForm, notes: e.target.value })} rows={4} /></label><button className="primary full" disabled={busy}>إرسال صلة القرابة للمراجعة</button></form>}
           </section>
         )}
 

@@ -54,6 +54,11 @@ export default function DirectRelationshipManager({ personId, sessionUserId, isA
   const [form, setForm] = useState({ relation_type: 'parent', notes: '' })
 
   const load = useCallback(async () => {
+    if (!isAdmin) {
+      setRows([])
+      setLoading(false)
+      return
+    }
     if (!supabase) return
     setLoading(true)
     const { data, error } = await supabase
@@ -64,12 +69,12 @@ export default function DirectRelationshipManager({ personId, sessionUserId, isA
       .order('created_at')
     if (!error) setRows((data ?? []) as Relationship[])
     setLoading(false)
-  }, [personId])
+  }, [personId, isAdmin])
 
   useEffect(() => { void load() }, [load])
 
-  function canManage(item: Relationship) {
-    return Boolean(sessionUserId && (isAdmin || item.created_by === sessionUserId))
+  function canManage() {
+    return Boolean(sessionUserId && isAdmin)
   }
 
   function startEdit(item: Relationship) {
@@ -80,7 +85,7 @@ export default function DirectRelationshipManager({ personId, sessionUserId, isA
   }
 
   async function submitChange(item: Relationship, action: 'edit' | 'delete') {
-    if (!supabase || !sessionUserId || !canManage(item)) return
+    if (!supabase || !sessionUserId || !isAdmin || !canManage()) return
     setBusyId(item.id)
     setMessage('')
     const { data, error } = await supabase.rpc('request_relationship_change', {
@@ -102,6 +107,7 @@ export default function DirectRelationshipManager({ personId, sessionUserId, isA
     await onChanged?.()
   }
 
+  if (!isAdmin) return null
   if (loading) return <section className="direct-relations-panel"><div className="picker-skeleton compact">جارٍ تحميل العلاقات المسجلة…</div></section>
   if (!rows.length) return null
 
@@ -116,7 +122,6 @@ export default function DirectRelationshipManager({ personId, sessionUserId, isA
           const other = item.source_person_id === personId ? target : source
           const contextualRelationType = relationTypeFromCurrentPerson(item, personId)
           const contextualLabel = labels[contextualRelationType] || contextualRelationType
-          const editable = canManage(item)
           return (
             <article className="direct-relation-card" key={item.id}>
               <button className="direct-relation-person" type="button" onClick={() => other?.id && onOpenPerson?.(other.id)}>
@@ -124,15 +129,15 @@ export default function DirectRelationshipManager({ personId, sessionUserId, isA
                 <div><strong>{other?.full_name || 'شخص'}</strong><small>{contextualLabel}{item.status === 'pending' ? ' · معلقة' : ''}</small></div>
               </button>
               {item.notes && <p>{item.notes}</p>}
-              {editable && <div className="direct-relation-actions"><button type="button" onClick={() => startEdit(item)}>تعديل</button><button className="danger" type="button" onClick={() => { setEditingId(''); setConfirmDeleteId(item.id) }}>حذف</button></div>}
+              <div className="direct-relation-actions"><button type="button" onClick={() => startEdit(item)}>تعديل</button><button className="danger" type="button" onClick={() => { setEditingId(''); setConfirmDeleteId(item.id) }}>حذف</button></div>
 
               {editingId === item.id && <div className="direct-relation-edit">
                 <label><span>نوع الصلة</span><select value={form.relation_type} onChange={(e) => setForm((current) => ({ ...current, relation_type: e.target.value }))}>{Object.entries(labels).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label>
                 <label><span>ملاحظة</span><textarea rows={2} value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></label>
-                <div><button className="primary" type="button" disabled={busyId === item.id} onClick={() => void submitChange(item,'edit')}>{busyId === item.id ? '…' : isAdmin || item.status === 'pending' ? 'حفظ' : 'إرسال للمراجعة'}</button><button type="button" onClick={() => setEditingId('')}>إلغاء</button></div>
+                <div><button className="primary" type="button" disabled={busyId === item.id} onClick={() => void submitChange(item,'edit')}>{busyId === item.id ? '…' : 'حفظ'}</button><button type="button" onClick={() => setEditingId('')}>إلغاء</button></div>
               </div>}
 
-              {confirmDeleteId === item.id && <div className="direct-relation-delete-confirm"><span>{item.status === 'approved' && !isAdmin ? `سيُرسل طلب حذف صلة «${contextualLabel}» مع ${other?.full_name || 'هذا الشخص'} للإدارة، ولن تختفي قبل الاعتماد.` : `هل تريد حذف صلة «${contextualLabel}» مع ${other?.full_name || 'هذا الشخص'}؟`}</span><div><button className="danger" type="button" disabled={busyId === item.id} onClick={() => void submitChange(item,'delete')}>{busyId === item.id ? '…' : 'تأكيد الحذف'}</button><button type="button" onClick={() => setConfirmDeleteId('')}>إلغاء</button></div></div>}
+              {confirmDeleteId === item.id && <div className="direct-relation-delete-confirm"><span>{`هل تريد حذف صلة «${contextualLabel}» مع ${other?.full_name || 'هذا الشخص'}؟`}</span><div><button className="danger" type="button" disabled={busyId === item.id} onClick={() => void submitChange(item,'delete')}>{busyId === item.id ? '…' : 'تأكيد الحذف'}</button><button type="button" onClick={() => setConfirmDeleteId('')}>إلغاء</button></div></div>}
             </article>
           )
         })}

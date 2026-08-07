@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Apply phase three source changes
-        run: node scripts/apply-phase3.mjs
+        run: node scripts/apply-phase3-v2.mjs
       - name: Commit generated changes
         run: |
           if git diff --quiet -- src/App.tsx src/main.tsx supabase/SETUP.sql; then

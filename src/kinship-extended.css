@@ -1,0 +1,117 @@
+.kin-extended-panel {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #dce9e3;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(19 107 85 / 9%), transparent 36%),
+    linear-gradient(180deg, #fbfefd, #f4faf7);
+}
+
+.kin-extended-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.kin-extended-heading span {
+  display: block;
+  margin-bottom: 3px;
+  color: #a27323;
+  font-size: .72rem;
+  font-weight: 900;
+}
+
+.kin-extended-heading h3 {
+  margin: 0;
+  color: var(--green-950);
+  font-family: 'Noto Kufi Arabic';
+  font-size: 1.05rem;
+}
+
+.kin-extended-heading small {
+  color: var(--muted);
+  font-size: .7rem;
+}
+
+.kin-extended-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.kin-extended-grid .kin-group {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #e2ece7;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 88%);
+}
+
+.kin-extended-grid .kin-group-title {
+  margin-bottom: 8px;
+}
+
+.kin-extended-grid .kin-nodes {
+  display: grid;
+  gap: 7px;
+}
+
+.kin-extended-grid .kin-node {
+  width: 100%;
+  min-width: 0;
+  padding: 9px;
+  border-radius: 13px;
+}
+
+.kin-extended-grid .kin-copy strong {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.extended-note {
+  margin-top: 12px;
+  border-color: #ead7a6;
+  background: #fffaf0;
+}
+
+@media (max-width: 760px) {
+  .kin-extended-panel {
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .kin-extended-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 10px;
+  }
+
+  .kin-extended-heading h3 {
+    font-size: .95rem;
+  }
+
+  .kin-extended-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .kin-extended-grid .kin-group {
+    padding: 9px;
+    border-radius: 14px;
+  }
+
+  .kin-extended-grid .kin-group-title {
+    font-size: .75rem;
+  }
+
+  .kin-extended-grid .kin-node {
+    min-height: 58px;
+  }
+}

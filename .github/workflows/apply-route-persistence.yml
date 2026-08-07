@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/apply-route-persistence.yml'
+      - 'scripts/apply-route-persistence.mjs'
 
 permissions:
   contents: write

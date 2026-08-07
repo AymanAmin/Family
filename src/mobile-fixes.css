@@ -1,0 +1,329 @@
+/* Final mobile layout corrections. Loaded last so it wins over earlier responsive layers. */
+
+@media (max-width: 760px) {
+  :root {
+    --mobile-bar-height: 58px;
+    --mobile-nav-height: 68px;
+    --mobile-gutter: 13px;
+  }
+
+  html,
+  body,
+  #root,
+  .app-shell {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    font-size: 14px;
+  }
+
+  /*
+   * Important: backdrop-filter on the fixed header can become the containing
+   * block for its fixed child nav in some mobile browsers, causing the bottom
+   * nav to appear inside the header. Keep the header opaque on phones so the
+   * nav is anchored to the viewport instead.
+   */
+  .topbar {
+    min-height: calc(var(--mobile-bar-height) + env(safe-area-inset-top));
+    padding:
+      calc(6px + env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      6px
+      max(12px, env(safe-area-inset-left));
+    background: #fafcfb !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    transform: none !important;
+    perspective: none !important;
+    contain: none !important;
+    will-change: auto !important;
+  }
+
+  .brand {
+    gap: 8px;
+  }
+
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    font-size: .78rem;
+  }
+
+  .brand strong {
+    font-size: .78rem;
+  }
+
+  .brand small {
+    max-width: 132px;
+    font-size: .56rem;
+  }
+
+  .account-profile-button,
+  .account-area .ghost-button {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+  }
+
+  /* Force the application menu to the bottom of the viewport. */
+  .topbar nav {
+    position: fixed !important;
+    top: auto !important;
+    inset-block-start: auto !important;
+    bottom: max(7px, env(safe-area-inset-bottom)) !important;
+    inset-block-end: max(7px, env(safe-area-inset-bottom)) !important;
+    inset-inline: 8px !important;
+    width: auto !important;
+    height: var(--mobile-nav-height) !important;
+    min-height: var(--mobile-nav-height) !important;
+    margin: 0 !important;
+    padding: 5px 6px 4px !important;
+    border-radius: 21px !important;
+    background: rgb(255 255 255 / 97%) !important;
+    box-shadow: 0 12px 34px rgb(7 56 45 / 20%) !important;
+    transform: none !important;
+  }
+
+  .topbar nav button {
+    min-height: 54px !important;
+    gap: 1px;
+    padding: 4px 2px 2px !important;
+    border-radius: 15px !important;
+    font-size: .60rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .topbar nav button::before {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 1.08rem !important;
+  }
+
+  .topbar nav button:nth-child(3) {
+    min-height: 62px !important;
+    margin-top: -18px !important;
+  }
+
+  .topbar nav button:nth-child(3)::before {
+    width: 45px !important;
+    height: 45px !important;
+    border-width: 4px !important;
+    font-size: 1.5rem !important;
+  }
+
+  .app-shell {
+    padding-top: calc(var(--mobile-bar-height) + env(safe-area-inset-top));
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 18px);
+  }
+
+  main {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden !important;
+  }
+
+  /* Dashboard card: compact, readable, no oversized typography. */
+  .nasab-dashboard {
+    width: 100%;
+    gap: 11px !important;
+    padding: 12px var(--mobile-gutter) 18px !important;
+  }
+
+  .family-welcome-card {
+    width: 100%;
+    min-height: 0 !important;
+    padding: 18px 16px 20px !important;
+    border-radius: 22px !important;
+  }
+
+  .family-welcome-card::after {
+    right: -90px;
+    bottom: -115px;
+    width: 240px;
+    height: 240px;
+    border-width: 34px;
+  }
+
+  .family-welcome-card .eyebrow {
+    font-size: .62rem !important;
+    line-height: 1.6;
+  }
+
+  .family-welcome-card h2 {
+    max-width: 100%;
+    margin: 8px 0 7px !important;
+    font-size: clamp(1.08rem, 5.2vw, 1.28rem) !important;
+    line-height: 1.65 !important;
+    letter-spacing: -.015em;
+  }
+
+  .family-welcome-card p {
+    max-width: 100%;
+    font-size: .77rem !important;
+    line-height: 1.85 !important;
+  }
+
+  .family-welcome-actions {
+    gap: 7px !important;
+    margin-top: 15px !important;
+  }
+
+  .family-welcome-actions button {
+    min-height: 42px !important;
+    padding-inline: 8px !important;
+    border-radius: 12px !important;
+    font-size: .70rem !important;
+  }
+
+  /* Four compact service shortcuts fit the phone width without horizontal clipping. */
+  .app-services {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    width: 100%;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .service-tile {
+    min-width: 0 !important;
+    min-height: 98px !important;
+    gap: 7px !important;
+    align-content: center !important;
+    justify-items: center !important;
+    padding: 9px 5px !important;
+    border-radius: 16px !important;
+    text-align: center !important;
+  }
+
+  .service-icon {
+    width: 37px !important;
+    height: 37px !important;
+    border-radius: 12px !important;
+    font-size: 1rem !important;
+  }
+
+  .service-tile strong {
+    display: block;
+    max-width: 100%;
+    font-size: .64rem !important;
+    line-height: 1.45 !important;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .service-tile small {
+    display: none !important;
+  }
+
+  .home-content-grid {
+    gap: 10px !important;
+    padding: 0 var(--mobile-gutter) 22px !important;
+  }
+
+  .home-feed,
+  .family-tree-preview {
+    padding: 14px !important;
+    border-radius: 19px !important;
+  }
+
+  .home-section-heading {
+    gap: 8px !important;
+    margin-bottom: 13px !important;
+  }
+
+  .home-section-heading h2 {
+    font-size: .98rem !important;
+    line-height: 1.5;
+  }
+
+  .home-section-heading button {
+    flex: 0 0 auto;
+    font-size: .68rem !important;
+  }
+
+  .nasab-event-item {
+    gap: 9px !important;
+    padding: 10px !important;
+    border-radius: 14px !important;
+  }
+
+  .nasab-event-date {
+    width: 48px !important;
+    min-height: 50px !important;
+    padding: 5px !important;
+    border-radius: 12px !important;
+    font-size: .60rem !important;
+  }
+
+  .nasab-event-item h3 {
+    font-size: .82rem !important;
+  }
+
+  .nasab-event-item p {
+    font-size: .68rem !important;
+  }
+
+  .tree-orbit {
+    min-height: 210px !important;
+  }
+
+  .section-block,
+  .section-block.soft,
+  .page-section {
+    padding-inline: var(--mobile-gutter) !important;
+  }
+
+  .section-title h2,
+  .auth-intro h2 {
+    font-size: 1.08rem !important;
+    line-height: 1.55;
+  }
+
+  .page-heading h1 {
+    font-size: 1.30rem !important;
+    line-height: 1.6 !important;
+  }
+
+  .page-heading p,
+  .hero-copy > p {
+    font-size: .78rem !important;
+  }
+
+  .data-card h3,
+  .event-card h3,
+  .directory-columns h2 {
+    font-size: .88rem !important;
+  }
+
+  .data-card p,
+  .event-card p,
+  .list-row small {
+    font-size: .70rem !important;
+  }
+
+  .global-message {
+    max-width: calc(100% - 24px);
+    font-size: .75rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-services {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .service-tile {
+    min-height: 86px !important;
+  }
+
+  .family-welcome-card h2 {
+    font-size: 1.04rem !important;
+  }
+}

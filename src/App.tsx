@@ -109,6 +109,16 @@ type PendingRecord = {
   created_at: string
 }
 
+type PendingFeedRow = {
+  id: string
+  table_name: PendingRecord['table']
+  title: string
+  subtitle: string
+  created_at: string
+}
+
+const PENDING_PAGE_SIZE = 15
+
 const eventLabels: Record<string, string> = {
   death: 'وفاة وعزاء',
   wedding: 'زواج',
@@ -215,6 +225,8 @@ function App() {
   const [events, setEvents] = useState<CommunityEvent[]>([])
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null)
   const [pending, setPending] = useState<PendingRecord[]>([])
+  const [pendingHasMore, setPendingHasMore] = useState(false)
+  const [pendingLoadingMore, setPendingLoadingMore] = useState(false)
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null)
   const [selectedFamily, setSelectedFamily] = useState<Family | null>(null)
   const [relationships, setRelationships] = useState<PersonRelationship[]>([])
@@ -302,39 +314,65 @@ function App() {
     setDataLoading(false)
   }, [])
 
-  const loadPending = useCallback(async () => {
+  const loadPending = useCallback(async (offset = 0, append = false) => {
     if (!supabase || !isAdmin) {
       setPending([])
+      setPendingHasMore(false)
+      setPendingLoadingMore(false)
+      return
+    }
+
+    if (append) setPendingLoadingMore(true)
+
+    const feedResult = await supabase.rpc('list_pending_moderation_feed', {
+      p_limit: PENDING_PAGE_SIZE + 1,
+      p_offset: offset,
+    })
+
+    if (!feedResult.error) {
+      const received = (feedResult.data ?? []) as PendingFeedRow[]
+      const page = received.slice(0, PENDING_PAGE_SIZE).map((item): PendingRecord => ({
+        id: item.id,
+        title: item.title,
+        subtitle: item.subtitle,
+        table: item.table_name,
+        created_at: item.created_at,
+      }))
+      setPendingHasMore(received.length > PENDING_PAGE_SIZE)
+      setPending((current) => append ? [...current, ...page] : page)
+      setPendingLoadingMore(false)
+      return
+    }
+
+    // Compatibility fallback until migration 015 is applied. It is deliberately capped.
+    if (offset > 0) {
+      setPendingHasMore(false)
+      setPendingLoadingMore(false)
       return
     }
 
     const [familyResult, peopleResult, eventResult, relationshipResult, linkResult] = await Promise.all([
-      supabase.from('families').select('id,name,origin_place,created_at').eq('status', 'pending').order('created_at'),
-      supabase.from('people').select('id,full_name,created_at,families(name)').eq('status', 'pending').order('created_at'),
-      supabase.from('events').select('id,title,event_type,created_at').eq('status', 'pending').order('created_at'),
-      supabase.from('person_relationships').select('id,relation_type,created_at,source:people!person_relationships_source_person_id_fkey(full_name),target:people!person_relationships_target_person_id_fkey(full_name)').eq('status', 'pending').order('created_at'),
-      supabase.from('account_link_requests').select('id,created_at,people(full_name)').eq('status', 'pending').order('created_at'),
+      supabase.from('families').select('id,name,origin_place,created_at').eq('status', 'pending').order('created_at').limit(4),
+      supabase.from('people').select('id,full_name,created_at,families(name)').eq('status', 'pending').order('created_at').limit(4),
+      supabase.from('events').select('id,title,event_type,created_at').eq('status', 'pending').order('created_at').limit(4),
+      supabase.from('person_relationships').select('id,relation_type,created_at,source:people!person_relationships_source_person_id_fkey(full_name),target:people!person_relationships_target_person_id_fkey(full_name)').eq('status', 'pending').order('created_at').limit(4),
+      supabase.from('account_link_requests').select('id,created_at,people(full_name)').eq('status', 'pending').order('created_at').limit(4),
     ])
 
     const rows: PendingRecord[] = []
-    for (const item of familyResult.data ?? []) {
-      rows.push({ id: item.id, title: item.name, subtitle: item.origin_place || 'عائلة جديدة', table: 'families', created_at: item.created_at })
-    }
-    for (const item of peopleResult.data ?? []) {
-      rows.push({ id: item.id, title: item.full_name, subtitle: familyName(item.families as RelatedFamily) || 'شخص جديد', table: 'people', created_at: item.created_at })
-    }
-    for (const item of eventResult.data ?? []) {
-      rows.push({ id: item.id, title: item.title, subtitle: eventLabels[item.event_type] || item.event_type, table: 'events', created_at: item.created_at })
-    }
+    for (const item of familyResult.data ?? []) rows.push({ id: item.id, title: item.name, subtitle: item.origin_place || 'عائلة جديدة', table: 'families', created_at: item.created_at })
+    for (const item of peopleResult.data ?? []) rows.push({ id: item.id, title: item.full_name, subtitle: familyName(item.families as RelatedFamily) || 'شخص جديد', table: 'people', created_at: item.created_at })
+    for (const item of eventResult.data ?? []) rows.push({ id: item.id, title: item.title, subtitle: eventLabels[item.event_type] || item.event_type, table: 'events', created_at: item.created_at })
     for (const item of relationshipResult.data ?? []) {
       const source = personName(item.source as RelatedPerson) || 'شخص أول'
       const target = personName(item.target as RelatedPerson) || 'شخص ثانٍ'
       rows.push({ id: item.id, title: `${source} — ${target}`, subtitle: relationshipLabels[item.relation_type] || item.relation_type, table: 'person_relationships', created_at: item.created_at })
     }
-    for (const item of linkResult.data ?? []) {
-      rows.push({ id: item.id, title: personName(item.people as RelatedPerson) || 'طلب ربط حساب', subtitle: 'طلب إثبات أن الحساب يعود لهذا الشخص', table: 'account_link_requests', created_at: item.created_at })
-    }
-    setPending(rows.sort((a, b) => a.created_at.localeCompare(b.created_at)))
+    for (const item of linkResult.data ?? []) rows.push({ id: item.id, title: personName(item.people as RelatedPerson) || 'طلب ربط حساب', subtitle: 'طلب إثبات أن الحساب يعود لهذا الشخص', table: 'account_link_requests', created_at: item.created_at })
+
+    setPending(rows.sort((a, b) => a.created_at.localeCompare(b.created_at)).slice(0, PENDING_PAGE_SIZE))
+    setPendingHasMore(false)
+    setPendingLoadingMore(false)
   }, [isAdmin])
 
   useEffect(() => {
@@ -375,7 +413,7 @@ function App() {
 
   useEffect(() => {
     void loadPending()
-  }, [loadPending, families, people, events])
+  }, [loadPending])
 
   useEffect(() => {
     if (!supabase || !session) {
@@ -1037,7 +1075,7 @@ function App() {
           <section className="page-section admin-console">
             <div className="admin-console-hero">
               <div><span className="eyebrow">لوحة الإدارة</span><h1>إدارة المحتوى والمستخدمين</h1><p>كل قسم يُحمّل بياناته عند فتحه فقط لتبقى اللوحة سريعة على الجوال.</p></div>
-              <span className="admin-console-count"><b>{pending.length}</b><small>طلب أساسي</small></span>
+              <span className="admin-console-count"><b>{pending.length}</b><small>طلب محمّل</small></span>
             </div>
 
             <div className="admin-console-tabs" role="tablist" aria-label="أقسام لوحة الإدارة">
@@ -1047,7 +1085,12 @@ function App() {
             </div>
 
             <div className="admin-console-panel">
-              {adminTab === 'requests' && (pending.length ? <div className="review-list">{pending.map((record) => <article className="review-row" key={`${record.table}-${record.id}`}><div><span className="status pending">معلق</span><h3>{record.title}</h3><p>{record.subtitle} · {formatDate(record.created_at)}</p></div><div className="review-actions"><button className="approve" onClick={() => moderate(record, 'approved')} disabled={busy}>اعتماد</button><button className="reject" onClick={() => moderate(record, 'rejected')} disabled={busy}>رفض</button></div></article>)}</div> : <div className="empty-state"><strong>لا توجد طلبات معلقة</strong><span>جميع الطلبات الأساسية تمت مراجعتها.</span></div>)}
+              {adminTab === 'requests' && (
+                <>
+                  {pending.length ? <div className="review-list">{pending.map((record) => <article className="review-row" key={`${record.table}-${record.id}`}><div><span className="status pending">معلق</span><h3>{record.title}</h3><p>{record.subtitle} · {formatDate(record.created_at)}</p></div><div className="review-actions"><button className="approve" onClick={() => moderate(record, 'approved')} disabled={busy}>اعتماد</button><button className="reject" onClick={() => moderate(record, 'rejected')} disabled={busy}>رفض</button></div></article>)}</div> : <div className="empty-state"><strong>لا توجد طلبات معلقة</strong><span>جميع الطلبات الأساسية تمت مراجعتها.</span></div>}
+                  {pendingHasMore && <button className="admin-load-more" type="button" disabled={pendingLoadingMore} onClick={() => void loadPending(pending.length, true)}>{pendingLoadingMore ? 'جارٍ تحميل المزيد…' : 'عرض المزيد من الطلبات'}</button>}
+                </>
+              )}
               {adminTab === 'edits' && <Suspense fallback={<LazyPanelFallback />}><Phase3AdminQueue active={adminTab === 'edits'} onChanged={loadCommunityData} /></Suspense>}
               {adminTab === 'users' && profile?.is_primary_admin && <Suspense fallback={<LazyPanelFallback />}><AdminUserRoles active={adminTab === 'users'} currentUserId={session?.user.id} /></Suspense>}
             </div>

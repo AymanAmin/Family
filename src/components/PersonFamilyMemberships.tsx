@@ -18,6 +18,7 @@ type Membership = {
 
 type Props = {
   personId: string
+  recordCreatedBy?: string | null
   sessionUserId?: string | null
   isAdmin?: boolean
   onChanged?: () => void | Promise<void>
@@ -38,10 +39,11 @@ function familyName(value: RelatedFamily): string {
   return value.name ?? ''
 }
 
-export default function PersonFamilyMemberships({ personId, sessionUserId, isAdmin = false, onChanged }: Props) {
+export default function PersonFamilyMemberships({ personId, recordCreatedBy, sessionUserId, isAdmin = false, onChanged }: Props) {
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [primaryBusyId, setPrimaryBusyId] = useState('')
   const [message, setMessage] = useState('')
   const [form, setForm] = useState({ family_id: '', membership_type: 'marriage', is_primary: false, notes: '' })
 
@@ -61,6 +63,7 @@ export default function PersonFamilyMemberships({ personId, sessionUserId, isAdm
   const approved = useMemo(() => memberships.filter((item) => item.status === 'approved'), [memberships])
   const visible = useMemo(() => memberships.filter((item) => item.status === 'approved' || item.created_by === sessionUserId), [memberships, sessionUserId])
   const hasPrimary = approved.some((item) => item.is_primary)
+  const canChangePrimary = Boolean(sessionUserId && (isAdmin || recordCreatedBy === sessionUserId))
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -93,6 +96,27 @@ export default function PersonFamilyMemberships({ personId, sessionUserId, isAdm
     window.setTimeout(() => setOpen(false), 800)
   }
 
+  async function makePrimary(item: Membership) {
+    if (!supabase || !canChangePrimary || item.is_primary) return
+    setPrimaryBusyId(item.id)
+    setMessage('')
+    const { data, error } = await supabase.rpc('request_primary_family_change', {
+      p_person_id: personId,
+      p_family_id: item.family_id,
+    })
+    setPrimaryBusyId('')
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+    const direct = data === 'approved'
+    setMessage(direct ? 'تم تغيير العائلة الأساسية مباشرة.' : 'تم إرسال طلب تغيير العائلة الأساسية للمراجعة.')
+    if (direct) {
+      await load()
+      await onChanged?.()
+    }
+  }
+
   return (
     <section className="detail-section family-memberships-section">
       <div className="section-title">
@@ -105,32 +129,31 @@ export default function PersonFamilyMemberships({ personId, sessionUserId, isAdm
           {visible.map((item) => {
             const name = familyName(item.families) || 'عائلة'
             return (
-              <article className="membership-card" key={item.id}>
+              <article className={`membership-card ${item.is_primary ? 'primary-membership' : ''}`} key={item.id}>
                 <span className="membership-family-avatar">{name[0]}</span>
-                <div>
-                  <strong>{name}</strong>
-                  <small>{membershipLabels[item.membership_type] || item.membership_type}{item.is_primary ? ' · العائلة الأساسية' : ''}</small>
+                <div className="membership-card-copy">
+                  <span className="membership-title-line"><strong>{name}</strong>{item.is_primary && <span className="primary-family-badge">الأساسية</span>}</span>
+                  <small>{membershipLabels[item.membership_type] || item.membership_type}</small>
                   {item.notes && <p>{item.notes}</p>}
                 </div>
-                {item.status === 'pending' && <span className="membership-status pending">بانتظار الاعتماد</span>}
+                <div className="membership-card-actions">
+                  {item.status === 'pending' && <span className="membership-status pending">بانتظار الاعتماد</span>}
+                  {item.status === 'approved' && !item.is_primary && approved.length > 1 && canChangePrimary && <button type="button" className="make-primary-family" disabled={primaryBusyId === item.id} onClick={() => void makePrimary(item)}>{primaryBusyId === item.id ? 'جارٍ الحفظ…' : 'جعلها الأساسية'}</button>}
+                </div>
               </article>
             )
           })}
         </div>
       ) : <div className="empty-state compact">لا توجد انتماءات عائلية معتمدة لهذا الشخص بعد.</div>}
 
+      {message && <div className="record-edit-message membership-inline-message">{message}</div>}
+
       {open && sessionUserId && (
         <form className="membership-form" onSubmit={submit}>
-          <FamilyPicker
-            label="العائلة أو الفرع"
-            value={form.family_id}
-            onChange={(familyId) => setForm((current) => ({ ...current, family_id: familyId }))}
-            required
-          />
+          <FamilyPicker label="العائلة أو الفرع" value={form.family_id} onChange={(familyId) => setForm((current) => ({ ...current, family_id: familyId }))} required />
           <label><span>نوع الانتماء</span><select value={form.membership_type} onChange={(e) => setForm((current) => ({ ...current, membership_type: e.target.value }))}>{Object.entries(membershipLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
           {!hasPrimary && <label className="edit-check"><input type="checkbox" checked={form.is_primary} onChange={(e) => setForm((current) => ({ ...current, is_primary: e.target.checked }))} /><span>اعتبارها العائلة الأساسية</span></label>}
           <label><span>ملاحظة توضيحية</span><textarea rows={3} value={form.notes} placeholder="مثال: زوجة أحد أفراد العائلة" onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></label>
-          {message && <div className="record-edit-message">{message}</div>}
           <button className="primary" type="submit" disabled={busy}>{busy ? 'جارٍ الإرسال…' : isAdmin ? 'إضافة واعتماد' : 'إرسال للمراجعة'}</button>
         </form>
       )}

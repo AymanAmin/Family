@@ -1,2 +1,2 @@
-2026-08-07T18:20Z
-Mobile edit portal, family membership management, and event-card themes release trigger.
+2026-08-07T18:30Z
+Mobile edit portal, family membership management, and event-card themes source bundle staged.

@@ -1,0 +1,203 @@
+/* Sila identity derived from the approved family-heart logo. Loaded last on purpose. */
+:root {
+  --brand-navy-950: #203f68;
+  --brand-navy-900: #244a78;
+  --brand-navy-800: #2c5a82;
+  --brand-blue-700: #3d7897;
+  --brand-teal-600: #66b9b1;
+  --brand-teal-500: #7bc9bd;
+  --brand-teal-100: #dff2ee;
+  --brand-teal-50: #f0f8f6;
+  --brand-orange: #ef7a50;
+  --brand-amber: #f5aa5c;
+  --brand-cream: #f8f5ee;
+  --brand-paper: #fffdf9;
+
+  /* Keep old token names working across the whole app while moving the identity. */
+  --green-950: var(--brand-navy-950);
+  --green-800: var(--brand-navy-900);
+  --green-700: var(--brand-navy-800);
+  --green-600: var(--brand-blue-700);
+  --green-100: var(--brand-teal-100);
+  --green-50: var(--brand-teal-50);
+  --ink: #26445f;
+  --muted: #6b7e87;
+  --surface: #fffdfb;
+  --border: #dce7e7;
+  --sand: #f7ecdf;
+  --success: #338a7f;
+  --warning: #b96e34;
+  --shadow: 0 14px 38px rgb(35 74 120 / 9%);
+  --shadow-lg: 0 28px 80px rgb(35 74 120 / 14%);
+
+  --heritage-green: var(--brand-navy-950);
+  --heritage-green-2: var(--brand-navy-800);
+  --heritage-mint: var(--brand-teal-100);
+  --heritage-cream: var(--brand-cream);
+  --heritage-gold: var(--brand-orange);
+  --heritage-gold-soft: #f8e3cf;
+}
+
+html { background: var(--brand-cream); }
+body {
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 9% 3%, rgb(121 201 189 / 20%), transparent 24rem),
+    radial-gradient(circle at 92% 18%, rgb(245 170 92 / 10%), transparent 20rem),
+    linear-gradient(180deg, #fffdf9 0%, #f7faf8 52%, var(--brand-cream) 100%);
+}
+
+:focus-visible { outline-color: var(--brand-orange); }
+
+.topbar {
+  border-bottom-color: rgb(44 90 130 / 12%);
+  background: rgb(255 253 249 / 92%);
+}
+
+.brand { gap: 11px; }
+.brand-mark {
+  width: 52px;
+  height: 52px;
+  padding: 3px;
+  border-radius: 18px;
+  color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.brand-mark img,
+.brand-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.brand strong { color: var(--brand-navy-950); }
+.brand small { color: #7b8588; }
+
+.topbar nav button:hover,
+.topbar nav button.active {
+  color: var(--brand-navy-900);
+  background: rgb(102 185 177 / 12%);
+}
+
+.primary,
+.approve,
+.add-nav-action .mobile-nav-icon,
+.person-profile-action.primary-action,
+.push-settings-enable {
+  border-color: var(--brand-navy-900) !important;
+  color: white !important;
+  background: linear-gradient(135deg, var(--brand-navy-900), var(--brand-blue-700)) !important;
+  box-shadow: 0 10px 24px rgb(35 74 120 / 18%);
+}
+.primary:hover,
+.person-profile-action.primary-action:hover,
+.push-settings-enable:hover {
+  background: linear-gradient(135deg, var(--brand-navy-950), #326d8f) !important;
+}
+.secondary,
+.ghost-button,
+.text-link { color: var(--brand-navy-800); }
+
+.family-welcome-card {
+  background:
+    radial-gradient(circle at 14% 18%, rgb(255 255 255 / 13%), transparent 12rem),
+    radial-gradient(circle at 88% 18%, rgb(121 201 189 / 24%), transparent 18rem),
+    linear-gradient(135deg, var(--brand-navy-900), #316f8d 58%, #5aaca8) !important;
+  box-shadow: 0 28px 68px rgb(35 74 120 / 22%);
+}
+.family-welcome-card .eyebrow,
+.family-welcome-card p { color: #e7f2f2; }
+.family-welcome-actions .light-action { color: var(--brand-navy-950); }
+.family-welcome-actions .outline-action { border-color: rgb(255 255 255 / 48%); }
+
+.service-tile {
+  border-color: #e0e8e7;
+  background: var(--brand-paper);
+  box-shadow: 0 10px 30px rgb(35 74 120 / 7%);
+}
+.service-tile:hover { border-color: #badbd5; box-shadow: 0 16px 38px rgb(35 74 120 / 11%); }
+.service-icon {
+  color: var(--brand-navy-900);
+  background: var(--brand-teal-100);
+}
+.service-tile:nth-child(2) .service-icon,
+.service-tile:nth-child(4) .service-icon {
+  color: #975b2c;
+  background: #f8e4cf;
+}
+.service-tile strong,
+.home-section-heading h2,
+.section-title h2,
+.detail-page h1 { color: var(--brand-navy-950); }
+
+.tree-root {
+  background: linear-gradient(145deg, var(--brand-navy-900), var(--brand-teal-600));
+  box-shadow: 0 12px 30px rgb(35 74 120 / 20%);
+}
+.tree-node {
+  color: var(--brand-navy-900);
+  background: #f8e4cf;
+  box-shadow: 0 7px 18px rgb(35 74 120 / 12%);
+}
+.tree-orbit {
+  background:
+    radial-gradient(circle, rgb(44 90 130 / 7%) 1px, transparent 1px),
+    #fdfdfb;
+  background-size: 18px 18px;
+}
+
+.card-symbol,
+.avatar-letter,
+.detail-avatar,
+.account-profile-button {
+  color: var(--brand-navy-900);
+  background: linear-gradient(145deg, #e7f4f1, #d6ece8);
+}
+.detail-avatar.detail-avatar--icon {
+  color: white;
+  background: linear-gradient(145deg, var(--brand-navy-900), var(--brand-teal-600));
+  box-shadow: 0 12px 28px rgb(35 74 120 / 18%);
+}
+.detail-avatar.detail-avatar--female {
+  background: linear-gradient(145deg, #456f96, #82c9c1);
+}
+.detail-avatar.detail-avatar--family-icon {
+  background: linear-gradient(145deg, var(--brand-navy-900), #4b93a4 60%, var(--brand-teal-500));
+}
+
+.status.pending { color: #9a642b; background: #fff0dc; }
+.status.approved { color: #26776e; background: #e3f5f1; }
+
+.data-form input:focus,
+.data-form select:focus,
+.data-form textarea:focus,
+.auth-form input:focus {
+  border-color: var(--brand-teal-600);
+  box-shadow: 0 0 0 4px rgb(102 185 177 / 14%);
+}
+
+.mobile-bottom-nav {
+  border-color: rgb(44 90 130 / 10%);
+  background: rgb(255 253 249 / 94%);
+  box-shadow: 0 -12px 36px rgb(35 74 120 / 10%);
+}
+.mobile-bottom-nav button { color: #6c7c82; }
+.mobile-bottom-nav button.active { color: var(--brand-navy-900); }
+.mobile-bottom-nav button.active:not(.add-nav-action) {
+  background: rgb(102 185 177 / 13%);
+}
+.mobile-nav-icon svg { display: block; width: 24px; height: 24px; }
+.add-nav-action .mobile-nav-icon svg { width: 31px; height: 31px; }
+
+.push-fab {
+  border-color: white !important;
+  background: linear-gradient(145deg, var(--brand-navy-900), var(--brand-teal-600)) !important;
+  box-shadow: 0 12px 30px rgb(35 74 120 / 24%) !important;
+}
+.push-fab::after { background: var(--brand-orange) !important; }
+
+@media (max-width: 760px) {
+  .brand-mark { width: 47px; height: 47px; }
+  .topbar { background: rgb(255 253 249 / 96%); }
+}

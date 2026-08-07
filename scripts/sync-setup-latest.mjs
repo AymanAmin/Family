@@ -1,0 +1,27 @@
+import fs from 'node:fs'
+
+const setupPath = 'supabase/SETUP.sql'
+const migrations = [
+  'supabase/migrations/202608070009_extended_parent_sibling_kinship.sql',
+  'supabase/migrations/202608070010_public_scale_performance.sql',
+  'supabase/migrations/202608070011_smart_duplicate_person_search.sql',
+]
+
+let setup = fs.readFileSync(setupPath, 'utf8').trimEnd()
+let changed = false
+
+for (const migration of migrations) {
+  const fileName = migration.split('/').pop()
+  const marker = `-- INCLUDED MIGRATION: ${fileName}`
+  if (setup.includes(marker)) continue
+  const sql = fs.readFileSync(migration, 'utf8').trim()
+  setup += `\n\n${marker}\n${sql}\n`
+  changed = true
+}
+
+if (changed) {
+  fs.writeFileSync(setupPath, `${setup.trimEnd()}\n`)
+  console.log('SETUP.sql updated with latest migrations')
+} else {
+  console.log('SETUP.sql already current')
+}

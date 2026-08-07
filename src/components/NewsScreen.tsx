@@ -30,8 +30,6 @@ type Props = {
   onBack: () => void
   onAdd: () => void
   onOpenPerson: (personId: string) => void | Promise<void>
-  isAdmin: boolean
-  sessionUserId: string | null | undefined
 }
 
 const PAGE_SIZE = 8
@@ -79,12 +77,30 @@ function formatDate(value: string | null): string {
   return new Intl.DateTimeFormat('ar-SA', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(value))
 }
 
-export default function NewsScreen({ onBack, onAdd, onOpenPerson, isAdmin, sessionUserId }: Props) {
+export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
   const [items, setItems] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState('')
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null)
+
+  const loadAdminAccess = useCallback(async (userId: string | null | undefined) => {
+    setSessionUserId(userId ?? null)
+    if (!supabase || !userId) {
+      setIsAdmin(false)
+      return
+    }
+
+    const { data, error: profileError } = await supabase
+      .from('profiles')
+      .select('role,account_status')
+      .eq('id', userId)
+      .maybeSingle()
+
+    setIsAdmin(!profileError && data?.account_status === 'active' && ['admin', 'super_admin'].includes(data.role))
+  }, [])
 
   const loadPage = useCallback(async (offset: number, append: boolean) => {
     if (!supabase) {
@@ -144,6 +160,24 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson, isAdmin, sessi
   useEffect(() => {
     void loadPage(0, false)
   }, [loadPage])
+
+  useEffect(() => {
+    if (!supabase) return
+
+    let mounted = true
+    void supabase.auth.getSession().then(({ data }) => {
+      if (mounted) void loadAdminAccess(data.session?.user.id)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) void loadAdminAccess(session?.user.id)
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [loadAdminAccess])
 
   return (
     <section className="news-page page-section">

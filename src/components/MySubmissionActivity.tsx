@@ -29,6 +29,7 @@ const typeLabels: Record<string, string> = {
   person: 'شخص',
   event: 'مناسبة',
   relationship: 'صلة قرابة',
+  relationship_change: 'تغيير صلة قرابة',
   membership: 'انتماء عائلي',
   edit: 'تعديل',
   account_link: 'ربط الحساب',
@@ -69,7 +70,7 @@ export default function MySubmissionActivity({ active, role, onOpenPerson, onOpe
     if (error) {
       setRows([])
       setHasMore(false)
-      setMessage(error.message.toLowerCase().includes('does not exist') ? 'شغّل migration رقم 019 لتفعيل سجل طلباتك.' : 'تعذر تحميل سجل طلباتك الآن.')
+      setMessage(error.message.toLowerCase().includes('does not exist') ? 'شغّل أحدث migrations لتفعيل سجل طلباتك.' : 'تعذر تحميل سجل طلباتك الآن.')
       return
     }
 

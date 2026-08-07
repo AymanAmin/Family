@@ -20,6 +20,8 @@ const migrations = [
   'supabase/migrations/202608070024_relationship_changes_in_my_activity.sql',
   'supabase/migrations/202608070025_link_integrity_repair_and_unique_guard.sql',
   'supabase/migrations/202608070026_admin_contributor_stats_and_link_integrity.sql',
+  'supabase/migrations/202608070027_relationship_delete_integrity.sql',
+  'supabase/migrations/202608070028_person_relationship_resync.sql',
 ]
 
 const current = fs.readFileSync(setupPath, 'utf8')

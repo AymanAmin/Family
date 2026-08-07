@@ -21,6 +21,13 @@ function enhanceBrandMark(): void {
   mark.dataset.silaBrand = '1'
 }
 
+function enhanceBrandName(): void {
+  document.querySelectorAll<HTMLElement>('.brand strong').forEach((title) => {
+    if (title.textContent !== 'صلة القرابة') title.textContent = 'صلة القرابة'
+  })
+  if (document.title !== 'صلة القرابة') document.title = 'صلة القرابة'
+}
+
 function enhanceMobileNavigation(): void {
   const nav = document.querySelector<HTMLElement>('.mobile-bottom-nav')
   if (!nav) return
@@ -44,6 +51,7 @@ function enhanceMobileNavigation(): void {
 
 function applyBrandIdentity(): void {
   enhanceBrandMark()
+  enhanceBrandName()
   enhanceMobileNavigation()
 }
 

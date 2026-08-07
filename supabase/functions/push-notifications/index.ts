@@ -18,9 +18,12 @@ const secretKey = secretKeys
   ? JSON.parse(secretKeys).default
   : Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 
-const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY') || ''
-const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY') || ''
-const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@example.com'
+const envVapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY') || ''
+const envVapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY') || ''
+const envVapidSubject = Deno.env.get('VAPID_SUBJECT') || ''
+
+type AdminClient = ReturnType<typeof createClient>
+type VapidConfig = { publicKey: string; privateKey: string; subject: string }
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: corsHeaders })
@@ -37,7 +40,32 @@ function notificationPayload(title: string, body: string, url = '/Family/#/accou
   })
 }
 
-async function sendToUser(admin: ReturnType<typeof createClient>, userId: string, payload: string) {
+async function loadVapidConfig(admin: AdminClient): Promise<VapidConfig | null> {
+  if (envVapidPublicKey && envVapidPrivateKey) {
+    return {
+      publicKey: envVapidPublicKey,
+      privateKey: envVapidPrivateKey,
+      subject: envVapidSubject || 'mailto:admin@family.local',
+    }
+  }
+
+  const { data, error } = await admin.rpc('get_web_push_server_config')
+  if (error) {
+    console.error('Unable to read Web Push server config', error)
+    return null
+  }
+
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row?.public_key || !row?.private_key) return null
+
+  return {
+    publicKey: String(row.public_key),
+    privateKey: String(row.private_key),
+    subject: String(row.subject || 'mailto:admin@family.local'),
+  }
+}
+
+async function sendToUser(admin: AdminClient, userId: string, payload: string) {
   const { data: subscriptions, error } = await admin
     .from('push_subscriptions')
     .select('id,endpoint,p256dh,auth_key')
@@ -97,13 +125,14 @@ Deno.serve(async (req: Request) => {
   }
   const action = requestBody.action || ''
 
+  const vapid = await loadVapidConfig(admin)
+  if (!vapid) return json({ error: 'Push configuration is not ready' }, 503)
+
   if (action === 'public-key') {
-    if (!vapidPublicKey) return json({ error: 'VAPID_PUBLIC_KEY is not configured' }, 503)
-    return json({ publicKey: vapidPublicKey })
+    return json({ publicKey: vapid.publicKey })
   }
 
-  if (!vapidPublicKey || !vapidPrivateKey) return json({ error: 'Push secrets are not configured' }, 503)
-  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
+  webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey)
 
   if (action === 'self-test') {
     const result = await sendToUser(

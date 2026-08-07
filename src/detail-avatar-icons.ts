@@ -1,6 +1,7 @@
 import { supabase } from './lib/supabase'
 
 type PersonGender = 'male' | 'female' | null
+type DetailRoute = { kind: 'person' | 'family'; id: string } | null
 
 const genderCache = new Map<string, PersonGender>()
 let scheduled = false
@@ -36,7 +37,7 @@ const familyIcon = `
   <path d="M5.5 52c1-8.8 4.8-13.2 11.5-13.2 3 0 5.4.8 7.2 2.5M58.5 52c-1-8.8-4.8-13.2-11.5-13.2-3 0-5.4.8-7.2 2.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" />
 </svg>`
 
-function routeInfo() {
+function routeInfo(): DetailRoute {
   const match = window.location.hash.match(/^#\/(person|family)\/([^/?#]+)/)
   if (!match) return null
   return { kind: match[1] as 'person' | 'family', id: decodeURIComponent(match[2]) }
@@ -52,12 +53,12 @@ async function getPersonGender(personId: string): Promise<PersonGender> {
     .eq('id', personId)
     .maybeSingle()
 
-  const gender = data?.gender === 'male' || data?.gender === 'female' ? data.gender : null
+  const gender: PersonGender = data?.gender === 'male' || data?.gender === 'female' ? data.gender : null
   genderCache.set(personId, gender)
   return gender
 }
 
-async function enhanceDetailAvatar() {
+async function enhanceDetailAvatar(): Promise<void> {
   scheduled = false
   const route = routeInfo()
   if (!route) return
@@ -91,17 +92,21 @@ async function enhanceDetailAvatar() {
   lastRouteKey = routeKey
 }
 
-function scheduleEnhance() {
+function scheduleEnhance(): void {
   if (scheduled) return
   scheduled = true
-  window.setTimeout(() => void enhanceDetailAvatar(), 0)
+  window.setTimeout((): void => {
+    void enhanceDetailAvatar()
+  }, 0)
 }
 
-window.addEventListener('hashchange', () => {
+window.addEventListener('hashchange', (): void => {
   lastRouteKey = ''
   scheduleEnhance()
 })
 
-const observer = new MutationObserver(scheduleEnhance)
+const observer = new MutationObserver((): void => {
+  scheduleEnhance()
+})
 observer.observe(document.documentElement, { childList: true, subtree: true })
 scheduleEnhance()

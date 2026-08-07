@@ -333,7 +333,7 @@ as $$
 declare
   v_query text := public.normalize_arabic_name(p_query);
   v_limit integer := greatest(1,least(coalesce(p_limit,9),30));
-  v_offset integer := greatest(0,coalesce(p_offset,0));
+  v_offset integer:=greatest(0,coalesce(p_offset,0));
 begin
   return query
   select f.id,f.name,f.description,f.origin_place,f.status,f.created_by,f.created_at
@@ -424,7 +424,7 @@ begin
         or (e.entity_type='people' and private.person_in_family_moderator_scope(auth.uid(),e.record_id))
         or (e.entity_type='events' and exists(select 1 from public.events ev where ev.id=e.record_id and private.has_family_moderator_scope(auth.uid(),ev.family_id)))
         or (e.entity_type='person_relationships' and exists(select 1 from public.person_relationships r where r.id=e.record_id and private.person_in_family_moderator_scope(auth.uid(),r.source_person_id) and private.person_in_family_moderator_scope(auth.uid(),r.target_person_id)))
-      ))
+      )))
     union all
     select m.id,'membership'::text,(coalesce(p.full_name,'شخص')||' ← '||coalesce(f.name,'عائلة'))::text,
       (case m.membership_type when 'birth' then 'بالنسب / عائلة الأصل' when 'marriage' then 'بالزواج' when 'paternal' then 'من جهة الأب' when 'maternal' then 'من جهة الأم' when 'guardian' then 'وصاية أو كفالة' else 'انتماء آخر' end||case when m.is_primary then ' · عائلة أساسية' else '' end||case when nullif(m.notes,'') is not null then ' · '||m.notes else '' end)::text,m.created_at

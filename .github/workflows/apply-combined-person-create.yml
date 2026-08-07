@@ -1,0 +1,42 @@
+name: Apply combined person create flow
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply-combined-person-create.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply combined person create flow
+        run: python3 scripts/apply-combined-person-create.py
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify TypeScript and build
+        run: npm run build
+      - name: Keep source changes only
+        run: git restore index.html 404.html assets 2>/dev/null || true
+      - name: Commit integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/components/FamilyTreeScreen.tsx src/main.tsx src/person-create-combined.css
+          if ! git diff --cached --quiet; then
+            git commit -m "Combine person and relationship submission"
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi

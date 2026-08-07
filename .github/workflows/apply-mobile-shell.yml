@@ -1,0 +1,31 @@
+name: Apply mobile shell structure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-mobile-shell.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply mobile shell patch
+        run: node scripts/fix-mobile-shell.mjs
+
+      - name: Commit generated App shell
+        run: |
+          if git diff --quiet -- src/App.tsx; then
+            echo "No App.tsx changes required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx
+          git commit -m "Separate mobile bottom navigation from header"
+          git push

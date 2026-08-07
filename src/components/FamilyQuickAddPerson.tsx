@@ -33,6 +33,12 @@ export default function FamilyQuickAddPerson({ familyId, familyName, sessionUser
     setMessage('')
   }
 
+  function selectExistingPerson(personId: string) {
+    setExistingId(personId)
+    setMode('existing')
+    setMessage('تم اختيار الشخص الموجود في الدليل. يمكنك الآن ربطه بهذه العائلة.')
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!supabase) return
@@ -78,7 +84,7 @@ export default function FamilyQuickAddPerson({ familyId, familyName, sessionUser
         <form onSubmit={submit}>
           {mode === 'new' ? <>
             <label><span>الاسم الكامل *</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="اكتب الاسم فقط" required /></label>
-            <DuplicatePersonCheck name={name} onOpenPerson={(id) => { reset(false); onOpenPerson(id) }} />
+            <DuplicatePersonCheck name={name} onOpenPerson={selectExistingPerson} />
             <label><span>الجنس <small>اختياري</small></span><select value={gender} onChange={(event) => setGender(event.target.value)}><option value="">يُستكمل لاحقًا</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
             <div className="context-auto-note"><b>{familyName}</b><span>تم تحديد العائلة تلقائيًا من الصفحة الحالية.</span></div>
           </> : <PeoplePicker label="اختر الشخص من الدليل" value={existingId} onChange={setExistingId} required />}

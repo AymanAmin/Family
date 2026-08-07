@@ -94,23 +94,27 @@ export default function FamilyPicker({ label, value, onChange, required = false,
   }
 
   function choose(family: FamilyOption) {
+    requestRef.current += 1
     setSelected(family)
     onChange(family.id)
     setQuery('')
     setResults([])
     setOpen(false)
+    setLoading(false)
   }
 
   function clear() {
+    requestRef.current += 1
     setSelected(null)
     onChange('')
     setQuery('')
     setResults([])
     setOpen(false)
+    setLoading(false)
   }
 
   return (
-    <label className="family-picker-label">
+    <div className="family-picker-label">
       <span>{label}{required ? ' *' : ''}</span>
       <div className={`family-picker ${open ? 'open' : ''}`}>
         {selected ? (
@@ -127,6 +131,7 @@ export default function FamilyPicker({ label, value, onChange, required = false,
               onFocus={() => { setOpen(true); if (!results.length) void runSearch(query, true) }}
               placeholder={approvedOnly ? 'ابحث في العائلات المعتمدة' : 'اكتب اسم العائلة للبحث'}
               autoComplete="off"
+              aria-label={label}
               required={required && !value}
             />
             {!required && <button className="family-picker-empty" type="button" onClick={clear}>{emptyLabel}</button>}
@@ -136,7 +141,15 @@ export default function FamilyPicker({ label, value, onChange, required = false,
         {open && !selected && (
           <div className="family-picker-menu">
             {loading ? <div className="family-picker-state">جارٍ البحث…</div> : results.length ? results.map((family) => (
-              <button type="button" key={family.id} onClick={() => choose(family)}>
+              <button
+                type="button"
+                key={family.id}
+                onPointerDown={(event) => {
+                  event.preventDefault()
+                  choose(family)
+                }}
+                onClick={() => choose(family)}
+              >
                 <span className="family-picker-mark">{family.name.trim().charAt(0) || 'ع'}</span>
                 <span><strong>{family.name}</strong><small>{family.origin_place || (family.status === 'pending' ? 'بانتظار الاعتماد' : 'عائلة معتمدة')}</small></span>
                 {family.status === 'pending' && <i>معلقة</i>}
@@ -145,6 +158,6 @@ export default function FamilyPicker({ label, value, onChange, required = false,
           </div>
         )}
       </div>
-    </label>
+    </div>
   )
 }

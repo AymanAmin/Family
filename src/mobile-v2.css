@@ -1,0 +1,911 @@
+/* Phase 4: compact mobile app scale + visual kinship network. */
+
+.kinship-section {
+  overflow: hidden;
+}
+
+.kinship-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.kinship-heading h2 {
+  margin: 5px 0 5px;
+  color: var(--green-950);
+  font-size: 1.35rem;
+}
+
+.kinship-heading p {
+  max-width: 650px;
+  margin: 0;
+  color: var(--muted);
+  font-size: .84rem;
+  line-height: 1.75;
+}
+
+.kinship-heading-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.smart-badge {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  padding: 6px 11px;
+  border: 1px solid #b8dccc;
+  border-radius: 999px;
+  color: var(--green-700);
+  background: #edf8f3;
+  font-size: .7rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.kinship-map {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid #dceae4;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 50% 46%, rgb(23 119 90 / 8%), transparent 25%),
+    linear-gradient(180deg, #fbfdfc, #f4f9f6);
+}
+
+.kinship-map::before {
+  position: absolute;
+  z-index: 0;
+  top: 54px;
+  bottom: 54px;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, #a8cec0 16%, #a8cec0 84%, transparent);
+  content: '';
+}
+
+.kin-group,
+.kin-self {
+  position: relative;
+  z-index: 1;
+}
+
+.kin-group-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: #688078;
+  font-size: .68rem;
+  font-weight: 900;
+}
+
+.kin-group-title b {
+  display: grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--green-700);
+  background: #e7f3ee;
+  font-size: .62rem;
+}
+
+.kin-nodes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.kin-node {
+  position: relative;
+  display: grid;
+  min-width: 148px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid #d8e8e1;
+  border-radius: 16px;
+  color: inherit;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 7px 20px rgb(7 56 45 / 7%);
+  text-align: right;
+}
+
+.kin-node:hover {
+  border-color: #9fcbbb;
+  transform: translateY(-1px);
+}
+
+.kin-avatar {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 13px;
+  color: var(--green-800);
+  background: #e4f2ec;
+  font-weight: 900;
+}
+
+.kin-copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.kin-copy strong {
+  overflow: hidden;
+  color: var(--green-950);
+  font-size: .78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kin-copy small {
+  color: var(--muted);
+  font-size: .64rem;
+}
+
+.kin-auto {
+  position: absolute;
+  top: -6px;
+  left: 8px;
+  padding: 2px 6px;
+  border: 1px solid #d3b872;
+  border-radius: 999px;
+  color: #7a5912;
+  background: #fff8df;
+  font-size: .52rem;
+  font-weight: 900;
+}
+
+.kin-detail {
+  grid-column: 1 / -1;
+  color: #71837c;
+  font-size: .58rem;
+  line-height: 1.45;
+}
+
+.kin-top,
+.kin-bottom {
+  width: min(100%, 650px);
+  margin-inline: auto;
+  padding: 8px 10px;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 48%);
+}
+
+.kin-middle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.kin-middle > .kin-group {
+  min-width: 0;
+  padding: 10px;
+  border: 1px dashed #c6ddd4;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 43%);
+}
+
+.kin-middle > .kin-group:empty {
+  display: none;
+}
+
+.kin-self {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 12px 7px;
+  text-align: center;
+}
+
+.kin-self-ring {
+  display: grid;
+  width: 88px;
+  height: 88px;
+  place-items: center;
+  border: 7px solid #e3f2ec;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--green-600), var(--green-950));
+  box-shadow: 0 12px 32px rgb(7 56 45 / 18%);
+}
+
+.kin-self-ring b {
+  color: white;
+  font-size: 1.55rem;
+}
+
+.kin-self strong {
+  max-width: 150px;
+  color: var(--green-950);
+  font-size: .84rem;
+  line-height: 1.45;
+}
+
+.kin-self small {
+  color: var(--muted);
+  font-size: .62rem;
+}
+
+.kin-extended {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #dfeae5;
+}
+
+.kin-extended > .kin-group {
+  padding: 10px;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 58%);
+}
+
+.kinship-update-note {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  color: #79601e;
+  background: #fff8e4;
+  font-size: .68rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --phone-header-height: 54px;
+    --phone-nav-height: 66px;
+    --mobile-gutter: 13px;
+    --mobile-card-radius: 18px;
+  }
+
+  body {
+    font-size: 14px;
+  }
+
+  .app-shell {
+    padding-top: calc(var(--phone-header-height) + env(safe-area-inset-top)) !important;
+    padding-bottom: calc(var(--phone-nav-height) + env(safe-area-inset-bottom) + 16px) !important;
+  }
+
+  .topbar {
+    min-height: calc(var(--phone-header-height) + env(safe-area-inset-top)) !important;
+    padding: calc(5px + env(safe-area-inset-top)) 11px 5px !important;
+  }
+
+  .brand-mark,
+  .account-profile-button,
+  .account-area .ghost-button {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+  }
+
+  .brand-mark {
+    border-radius: 12px !important;
+  }
+
+  .brand strong {
+    font-size: .76rem !important;
+  }
+
+  .brand small {
+    font-size: .52rem !important;
+  }
+
+  .mobile-bottom-nav {
+    right: 7px !important;
+    left: 7px !important;
+    bottom: calc(6px + env(safe-area-inset-bottom)) !important;
+    min-height: var(--phone-nav-height) !important;
+    padding: 4px 5px 3px !important;
+    border-radius: 20px !important;
+  }
+
+  .mobile-bottom-nav button {
+    min-height: 52px !important;
+    gap: 1px !important;
+    font-size: .57rem !important;
+  }
+
+  .mobile-nav-icon {
+    width: 25px !important;
+    height: 25px !important;
+    font-size: 1.05rem !important;
+  }
+
+  .mobile-bottom-nav .add-nav-action {
+    min-height: 59px !important;
+    margin-top: -16px !important;
+  }
+
+  .mobile-bottom-nav .add-nav-action .mobile-nav-icon {
+    width: 43px !important;
+    height: 43px !important;
+    border-width: 4px !important;
+    font-size: 1.42rem !important;
+  }
+
+  main,
+  .page-section,
+  .section-block,
+  .detail-page,
+  .account-page {
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .page-section,
+  .section-block {
+    padding: 12px var(--mobile-gutter) 18px !important;
+  }
+
+  .page-heading {
+    margin: 10px 1px 14px !important;
+  }
+
+  .page-heading h1,
+  .hero-copy h1 {
+    margin: 7px 0 7px !important;
+    font-size: clamp(1.28rem, 6vw, 1.5rem) !important;
+    line-height: 1.48 !important;
+    letter-spacing: -.015em !important;
+  }
+
+  .page-heading p,
+  .hero-copy > p {
+    margin: 0 !important;
+    font-size: .78rem !important;
+    line-height: 1.72 !important;
+  }
+
+  .eyebrow {
+    font-size: .63rem !important;
+  }
+
+  .eyebrow::after,
+  .eyebrow::before {
+    max-width: 30px !important;
+  }
+
+  .section-title {
+    margin-bottom: 10px !important;
+  }
+
+  .section-title h2,
+  .auth-intro h2,
+  .home-section-heading h2 {
+    font-size: 1rem !important;
+    line-height: 1.45 !important;
+  }
+
+  .section-title .text-link,
+  .home-section-heading button,
+  .text-link {
+    min-height: 34px !important;
+    padding: 5px 8px !important;
+    font-size: .67rem !important;
+  }
+
+  .search-bar,
+  .search-bar.wide {
+    gap: 4px !important;
+    margin: 10px 0 14px !important;
+    padding: 4px !important;
+    border-radius: 15px !important;
+  }
+
+  .search-bar input {
+    height: 43px !important;
+    min-height: 43px !important;
+    font-size: 14px !important;
+  }
+
+  .search-bar .primary {
+    min-width: 66px !important;
+    min-height: 43px !important;
+    border-radius: 12px !important;
+    font-size: .76rem !important;
+  }
+
+  .directory-columns {
+    gap: 10px !important;
+  }
+
+  .directory-columns section {
+    padding: 13px !important;
+    border-radius: 18px !important;
+  }
+
+  .directory-columns section > h2 {
+    margin: 0 0 8px !important;
+    font-size: .95rem !important;
+  }
+
+  .list-row {
+    min-height: 57px !important;
+    padding: 8px 0 !important;
+  }
+
+  .list-row strong {
+    font-size: .82rem !important;
+    line-height: 1.45 !important;
+  }
+
+  .list-row small {
+    font-size: .64rem !important;
+  }
+
+  .avatar-letter {
+    width: 39px !important;
+    height: 39px !important;
+    border-radius: 13px !important;
+    font-size: .82rem !important;
+  }
+
+  .segmented-control {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 3px !important;
+    margin: 0 0 11px !important;
+    padding: 4px !important;
+    border-radius: 15px !important;
+  }
+
+  .segmented-control button {
+    min-width: 0 !important;
+    min-height: 40px !important;
+    padding: 5px 3px !important;
+    border-radius: 11px !important;
+    font-size: .68rem !important;
+    white-space: nowrap !important;
+  }
+
+  .data-form,
+  .auth-card {
+    gap: 11px !important;
+    padding: 14px !important;
+    border-radius: 18px !important;
+  }
+
+  .data-form label,
+  .auth-form label {
+    gap: 5px !important;
+  }
+
+  .data-form label > span,
+  .auth-form label > span {
+    font-size: .72rem !important;
+  }
+
+  .data-form input,
+  .data-form select,
+  .data-form textarea,
+  .auth-form input {
+    min-height: 45px !important;
+    padding: 9px 11px !important;
+    border-radius: 12px !important;
+    font-size: 14px !important;
+  }
+
+  .data-form textarea {
+    min-height: 88px !important;
+  }
+
+  .data-form .primary.full {
+    position: static !important;
+    min-height: 46px !important;
+    margin-top: 2px !important;
+    border-radius: 13px !important;
+  }
+
+  .review-list {
+    gap: 10px !important;
+  }
+
+  .review-row {
+    gap: 12px !important;
+    padding: 14px !important;
+    border-radius: 18px !important;
+  }
+
+  .review-row h3 {
+    margin: 8px 0 3px !important;
+    font-size: .95rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .review-row p {
+    margin: 0 !important;
+    font-size: .68rem !important;
+    line-height: 1.55 !important;
+  }
+
+  .review-actions button {
+    min-height: 42px !important;
+    font-size: .75rem !important;
+  }
+
+  .status {
+    padding: 4px 7px !important;
+    font-size: .61rem !important;
+  }
+
+  .detail-page {
+    padding-top: 9px !important;
+  }
+
+  .back-button {
+    min-height: 35px !important;
+    margin: 0 0 10px !important;
+    padding: 5px 10px !important;
+    border-radius: 11px !important;
+    font-size: .7rem !important;
+  }
+
+  .detail-hero {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin-bottom: 10px !important;
+    padding: 13px !important;
+    border-radius: 19px !important;
+  }
+
+  .detail-hero > .record-edit-wrap,
+  .detail-hero > .record-edit-button,
+  .detail-hero > button:last-child {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .detail-avatar {
+    width: 54px !important;
+    height: 54px !important;
+    border-radius: 18px !important;
+    font-size: 1.15rem !important;
+  }
+
+  .detail-hero h1 {
+    margin: 3px 0 4px !important;
+    font-size: 1.22rem !important;
+    line-height: 1.45 !important;
+  }
+
+  .detail-hero p {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 0 !important;
+    font-size: .7rem !important;
+    line-height: 1.65 !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .detail-facts {
+    display: grid !important;
+    grid-template-columns: 1.35fr .82fr .9fr !important;
+    gap: 0 !important;
+    margin-bottom: 10px !important;
+    overflow: hidden !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 17px !important;
+    background: white !important;
+    box-shadow: 0 7px 22px rgb(7 56 45 / 6%) !important;
+  }
+
+  .detail-facts article {
+    align-content: center !important;
+    gap: 3px !important;
+    min-width: 0 !important;
+    min-height: 68px !important;
+    padding: 9px 8px !important;
+    border: 0 !important;
+    border-inline-start: 1px solid #edf1ef !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .detail-facts article:first-child {
+    border-inline-start: 0 !important;
+  }
+
+  .detail-facts span {
+    font-size: .58rem !important;
+  }
+
+  .detail-facts strong {
+    overflow-wrap: anywhere;
+    font-size: .74rem !important;
+    line-height: 1.45 !important;
+  }
+
+  .detail-section {
+    margin-top: 10px !important;
+    padding: 13px !important;
+    border-radius: 18px !important;
+  }
+
+  .link-account-card,
+  .account-status-card {
+    gap: 10px !important;
+    margin: 10px 0 !important;
+    padding: 13px !important;
+    border-radius: 17px !important;
+  }
+
+  .link-account-card strong,
+  .account-status-card h2 {
+    font-size: .86rem !important;
+  }
+
+  .link-account-card p,
+  .account-status-card p {
+    font-size: .68rem !important;
+    line-height: 1.6 !important;
+  }
+
+  .family-memberships-section,
+  .membership-form {
+    font-size: .8rem !important;
+  }
+
+  .membership-card {
+    padding: 9px !important;
+    border-radius: 14px !important;
+  }
+
+  .membership-family-avatar {
+    width: 37px !important;
+    height: 37px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Kinship map becomes a compact three-zone relationship radar. */
+  .kinship-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .kinship-heading h2 {
+    margin: 3px 0 !important;
+    font-size: .98rem !important;
+  }
+
+  .kinship-heading p {
+    font-size: .64rem !important;
+    line-height: 1.55 !important;
+  }
+
+  .kinship-heading-actions {
+    display: grid;
+    justify-items: end;
+    gap: 4px;
+  }
+
+  .smart-badge {
+    min-height: 26px;
+    padding: 4px 7px;
+    font-size: .55rem;
+  }
+
+  .kinship-map {
+    gap: 9px;
+    padding: 10px 7px;
+    border-radius: 17px;
+  }
+
+  .kinship-map::before {
+    top: 38px;
+    bottom: 38px;
+  }
+
+  .kin-top,
+  .kin-bottom {
+    width: 100%;
+    padding: 6px 4px;
+    border-radius: 13px;
+  }
+
+  .kin-top .kin-nodes,
+  .kin-bottom .kin-nodes {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 2px 1px 5px;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .kin-top .kin-node,
+  .kin-bottom .kin-node {
+    min-width: 128px;
+    scroll-snap-align: start;
+  }
+
+  .kin-middle {
+    grid-template-columns: minmax(0, 1fr) 88px minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .kin-middle > .kin-group {
+    padding: 6px 4px;
+    border-radius: 13px;
+  }
+
+  .kin-middle > .kin-group .kin-nodes {
+    display: grid;
+    gap: 5px;
+  }
+
+  .kin-middle > .kin-group .kin-node {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 5px;
+    padding: 6px;
+    border-radius: 11px;
+  }
+
+  .kin-middle > .kin-group .kin-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    font-size: .65rem;
+  }
+
+  .kin-middle > .kin-group .kin-copy strong {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: .6rem;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .kin-middle > .kin-group .kin-copy small {
+    font-size: .52rem;
+  }
+
+  .kin-middle > .kin-group .kin-detail {
+    display: none;
+  }
+
+  .kin-group-title {
+    gap: 3px;
+    margin-bottom: 5px;
+    font-size: .54rem;
+  }
+
+  .kin-group-title b {
+    min-width: 17px;
+    height: 17px;
+    font-size: .5rem;
+  }
+
+  .kin-node {
+    min-width: 125px;
+    gap: 6px;
+    padding: 7px;
+    border-radius: 12px;
+  }
+
+  .kin-avatar {
+    width: 31px;
+    height: 31px;
+    border-radius: 10px;
+    font-size: .7rem;
+  }
+
+  .kin-copy strong {
+    font-size: .66rem;
+  }
+
+  .kin-copy small {
+    font-size: .54rem;
+  }
+
+  .kin-auto {
+    top: -5px;
+    left: 4px;
+    padding: 1px 4px;
+    font-size: .44rem;
+  }
+
+  .kin-detail {
+    font-size: .5rem;
+  }
+
+  .kin-self {
+    gap: 4px;
+    padding: 7px 2px;
+  }
+
+  .kin-self-ring {
+    width: 62px;
+    height: 62px;
+    border-width: 5px;
+  }
+
+  .kin-self-ring b {
+    font-size: 1.05rem;
+  }
+
+  .kin-self strong {
+    max-width: 86px;
+    font-size: .64rem;
+    line-height: 1.35;
+  }
+
+  .kin-self small {
+    font-size: .5rem;
+  }
+
+  .kin-extended {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding-top: 7px;
+  }
+
+  .kin-extended > .kin-group {
+    padding: 7px;
+    border-radius: 12px;
+  }
+
+  .kinship-update-note {
+    margin-top: 7px;
+    padding: 7px 8px;
+    font-size: .57rem;
+  }
+
+  .empty-state {
+    min-height: 92px !important;
+    padding: 14px !important;
+    border-radius: 17px !important;
+    font-size: .74rem !important;
+  }
+
+  .empty-state.compact {
+    min-height: 66px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .brand small { display: none !important; }
+
+  .page-heading h1,
+  .hero-copy h1 {
+    font-size: 1.22rem !important;
+  }
+
+  .segmented-control button {
+    font-size: .61rem !important;
+  }
+
+  .kin-middle {
+    grid-template-columns: minmax(0, 1fr) 76px minmax(0, 1fr);
+  }
+
+  .kin-self-ring {
+    width: 54px;
+    height: 54px;
+  }
+}

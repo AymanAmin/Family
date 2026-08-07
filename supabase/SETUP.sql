@@ -4820,125 +4820,37 @@ notify pgrst, 'reload schema';
 commit;
 
 -- INCLUDED MIGRATION: 202608070025_link_integrity_repair_and_unique_guard.sql
--- PHASE 21: LINK INTEGRITY REPAIR + UNIQUE GUARD
--- Safely resolves existing duplicate profile->person links without deleting accounts,
--- preserves an audit trail, and then enforces one linked account per person.
+-- PHASE 21: LINK INTEGRITY REVIEW + EXPLICIT REPAIR
+-- Existing duplicate profile->person links are reported, never detached automatically.
+-- New approvals cannot create another duplicate link.
 
 begin;
 
 create schema if not exists private;
 
--- Keep this hotfix runnable even when phase 16 previously rolled back at the unique-index step.
 alter table public.people add column if not exists is_verified boolean not null default false;
 alter table public.people add column if not exists verified_at timestamptz;
 
-create table if not exists private.linked_person_conflicts (
+-- The old unique index caused migrations to fail on legacy duplicate data.
+-- Keep a normal lookup index; approval RPCs enforce uniqueness for new links.
+drop index if exists public.profiles_one_linked_person_idx;
+create index if not exists profiles_linked_person_idx
+  on public.profiles(linked_person_id)
+  where linked_person_id is not null;
+
+create table if not exists private.linked_person_conflict_audit (
   id bigint generated always as identity primary key,
   person_id uuid not null,
   kept_user_id uuid not null,
   detached_user_id uuid not null,
   detached_role text null,
-  detected_at timestamptz not null default now(),
-  reason text not null default 'duplicate linked_person_id repaired before unique constraint'
+  resolved_by uuid not null,
+  resolved_at timestamptz not null default now(),
+  reason text not null default 'duplicate linked_person_id resolved manually by primary administrator'
 );
+revoke all on table private.linked_person_conflict_audit from public, anon, authenticated;
 
-revoke all on table private.linked_person_conflicts from public, anon, authenticated;
-
-drop index if exists public.profiles_one_linked_person_idx;
-
--- Rank every duplicated link deterministically.
--- Priority: active account -> approved link request -> earliest approval -> oldest profile.
-with ranked as (
-  select
-    p.id as user_id,
-    p.linked_person_id as person_id,
-    p.role,
-    row_number() over (
-      partition by p.linked_person_id
-      order by
-        (p.account_status = 'active') desc,
-        (approved_link.reviewed_at is not null) desc,
-        approved_link.reviewed_at asc nulls last,
-        p.created_at asc,
-        p.id
-    ) as rn,
-    first_value(p.id) over (
-      partition by p.linked_person_id
-      order by
-        (p.account_status = 'active') desc,
-        (approved_link.reviewed_at is not null) desc,
-        approved_link.reviewed_at asc nulls last,
-        p.created_at asc,
-        p.id
-    ) as kept_user_id
-  from public.profiles p
-  left join lateral (
-    select min(r.reviewed_at) reviewed_at
-    from public.account_link_requests r
-    where r.user_id = p.id
-      and r.person_id = p.linked_person_id
-      and r.status = 'approved'
-  ) approved_link on true
-  where p.linked_person_id is not null
-), duplicates as (
-  select * from ranked where rn > 1
-)
-insert into private.linked_person_conflicts(person_id, kept_user_id, detached_user_id, detached_role)
-select d.person_id, d.kept_user_id, d.user_id, d.role
-from duplicates d
-where not exists (
-  select 1
-  from private.linked_person_conflicts c
-  where c.person_id = d.person_id
-    and c.kept_user_id = d.kept_user_id
-    and c.detached_user_id = d.user_id
-);
-
--- Mark historical approved duplicate link requests as rejected so the detached account
--- can submit a correct link later. The conflict table keeps the repair audit trail.
-update public.account_link_requests r
-set status = 'rejected',
-    reviewed_at = coalesce(r.reviewed_at, now()),
-    updated_at = now()
-where r.status = 'approved'
-  and exists (
-    select 1
-    from private.linked_person_conflicts c
-    where c.detached_user_id = r.user_id
-      and c.person_id = r.person_id
-  );
-
--- Detach only the duplicated link. No auth user, profile, or person is deleted.
-update public.profiles p
-set linked_person_id = null,
-    role = case when p.role = 'verified_member' then 'member' else p.role end,
-    updated_at = now()
-where exists (
-  select 1
-  from private.linked_person_conflicts c
-  where c.detached_user_id = p.id
-    and c.person_id = p.linked_person_id
-);
-
--- Keep app metadata aligned when the role helper from phase 13 is available.
-do $$
-declare
-  row_item record;
-begin
-  if to_regprocedure('private.sync_app_role(uuid,text)') is not null then
-    for row_item in
-      select p.id, p.role
-      from public.profiles p
-      where exists (
-        select 1 from private.linked_person_conflicts c where c.detached_user_id = p.id
-      )
-    loop
-      perform private.sync_app_role(row_item.id, row_item.role);
-    end loop;
-  end if;
-end $$;
-
--- Recalculate the public blue verification mark after repairing duplicates.
+-- Recalculate public blue verification from the links that actually exist.
 update public.people person
 set is_verified = exists (
       select 1 from public.profiles p
@@ -4954,12 +4866,132 @@ set is_verified = exists (
       else null
     end;
 
--- One person can now be linked to only one account.
-create unique index if not exists profiles_one_linked_person_idx
-  on public.profiles(linked_person_id)
-  where linked_person_id is not null;
+-- Primary admin can inspect conflicts without exposing account details publicly.
+create or replace function public.list_duplicate_person_links(
+  p_limit integer default 20,
+  p_offset integer default 0
+)
+returns table (
+  person_id uuid,
+  person_name text,
+  linked_accounts bigint,
+  user_id uuid,
+  display_name text,
+  email text,
+  role text,
+  account_status text,
+  profile_updated_at timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_limit integer := greatest(1, least(coalesce(p_limit,20),100));
+  v_offset integer := greatest(0, coalesce(p_offset,0));
+begin
+  if not private.is_primary_admin(auth.uid()) then
+    raise exception 'Only the primary administrator can inspect duplicate account links';
+  end if;
 
--- Latest account-link approval endpoint with a clear collision message.
+  return query
+  with duplicated as (
+    select p.linked_person_id, count(*)::bigint account_count
+    from public.profiles p
+    where p.linked_person_id is not null
+      and p.account_status = 'active'
+    group by p.linked_person_id
+    having count(*) > 1
+  ), rows as (
+    select
+      d.linked_person_id person_id,
+      coalesce(pe.full_name,'شخص')::text person_name,
+      d.account_count,
+      pr.id user_id,
+      coalesce(nullif(pr.display_name,''),nullif(pr.email,''),'مستخدم مسجل')::text display_name,
+      pr.email::text,
+      coalesce(pr.role,'member')::text role,
+      pr.account_status::text,
+      pr.updated_at profile_updated_at
+    from duplicated d
+    join public.profiles pr on pr.linked_person_id=d.linked_person_id and pr.account_status='active'
+    left join public.people pe on pe.id=d.linked_person_id
+  )
+  select r.person_id,r.person_name,r.account_count,r.user_id,r.display_name,r.email,r.role,r.account_status,r.profile_updated_at
+  from rows r
+  order by r.person_name,r.person_id,r.profile_updated_at,r.user_id
+  limit v_limit offset v_offset;
+end;
+$$;
+revoke all on function public.list_duplicate_person_links(integer,integer) from public, anon;
+grant execute on function public.list_duplicate_person_links(integer,integer) to authenticated;
+
+-- Resolution is explicit: the primary admin chooses which account remains linked.
+create or replace function public.resolve_duplicate_person_link(
+  p_person_id uuid,
+  p_keep_user_id uuid
+)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  row_item record;
+  v_detached integer := 0;
+begin
+  if not private.is_primary_admin(auth.uid()) then
+    raise exception 'Only the primary administrator can resolve duplicate account links';
+  end if;
+
+  if not exists (
+    select 1 from public.profiles p
+    where p.id=p_keep_user_id
+      and p.linked_person_id=p_person_id
+      and p.account_status='active'
+  ) then
+    raise exception 'The account selected to keep is not actively linked to this person';
+  end if;
+
+  for row_item in
+    select p.id,p.role
+    from public.profiles p
+    where p.linked_person_id=p_person_id
+      and p.id<>p_keep_user_id
+    for update
+  loop
+    insert into private.linked_person_conflict_audit(person_id,kept_user_id,detached_user_id,detached_role,resolved_by)
+    values (p_person_id,p_keep_user_id,row_item.id,row_item.role,auth.uid());
+
+    update public.profiles
+    set linked_person_id=null,
+        role=case when role='verified_member' then 'member' else role end,
+        updated_at=now()
+    where id=row_item.id;
+
+    update public.account_link_requests
+    set status='rejected',reviewed_by=auth.uid(),reviewed_at=now(),updated_at=now()
+    where user_id=row_item.id and person_id=p_person_id and status='approved';
+
+    if to_regprocedure('private.sync_app_role(uuid,text)') is not null then
+      perform private.sync_app_role(row_item.id,(select p.role from public.profiles p where p.id=row_item.id));
+    end if;
+
+    v_detached := v_detached + 1;
+  end loop;
+
+  update public.people
+  set is_verified=true,verified_at=coalesce(verified_at,now())
+  where id=p_person_id;
+
+  return v_detached;
+end;
+$$;
+revoke all on function public.resolve_duplicate_person_link(uuid,uuid) from public, anon;
+grant execute on function public.resolve_duplicate_person_link(uuid,uuid) to authenticated;
+
+-- Latest account-link approval endpoint: reject a collision before changing data.
 create or replace function public.review_account_link_request(
   p_request_id uuid,
   p_status text
@@ -4975,33 +5007,26 @@ declare
   v_role text;
   v_existing_user_id uuid;
 begin
-  if p_status not in ('approved', 'rejected') then
-    raise exception 'Invalid review status';
-  end if;
+  if p_status not in ('approved','rejected') then raise exception 'Invalid review status'; end if;
+  if coalesce(private.active_role(auth.uid()),'') not in ('admin','super_admin') then raise exception 'Not authorized'; end if;
 
-  if coalesce(private.active_role(auth.uid()), '') not in ('admin', 'super_admin') then
-    raise exception 'Not authorized';
-  end if;
-
-  select r.user_id, r.person_id
-  into v_user_id, v_person_id
+  select r.user_id,r.person_id into v_user_id,v_person_id
   from public.account_link_requests r
-  where r.id = p_request_id and r.status = 'pending'
+  where r.id=p_request_id and r.status='pending'
   for update;
 
-  if v_user_id is null then
-    raise exception 'Request not found or already reviewed';
-  end if;
+  if v_user_id is null then raise exception 'Request not found or already reviewed'; end if;
 
-  if p_status = 'approved' then
-    if not exists (select 1 from public.people p where p.id = v_person_id and p.status = 'approved') then
+  if p_status='approved' then
+    if not exists(select 1 from public.people p where p.id=v_person_id and p.status='approved') then
       raise exception 'The person record must be approved before linking an account';
     end if;
 
     select p.id into v_existing_user_id
     from public.profiles p
-    where p.linked_person_id = v_person_id
-      and p.id <> v_user_id
+    where p.linked_person_id=v_person_id
+      and p.account_status='active'
+      and p.id<>v_user_id
     limit 1;
 
     if v_existing_user_id is not null then
@@ -5010,35 +5035,276 @@ begin
   end if;
 
   update public.account_link_requests
-  set status = p_status,
-      reviewed_by = auth.uid(),
-      reviewed_at = now(),
-      updated_at = now()
-  where id = p_request_id;
+  set status=p_status,reviewed_by=auth.uid(),reviewed_at=now(),updated_at=now()
+  where id=p_request_id;
 
-  if p_status = 'approved' then
+  if p_status='approved' then
     update public.profiles
-    set linked_person_id = v_person_id,
-        role = case when role = 'member' then 'verified_member' else role end,
-        updated_at = now()
-    where id = v_user_id
+    set linked_person_id=v_person_id,
+        role=case when role='member' then 'verified_member' else role end,
+        updated_at=now()
+    where id=v_user_id
     returning role into v_role;
 
     update public.people
-    set is_verified = true,
-        verified_at = coalesce(verified_at, now())
-    where id = v_person_id;
+    set is_verified=true,verified_at=coalesce(verified_at,now())
+    where id=v_person_id;
 
     if to_regprocedure('private.sync_app_role(uuid,text)') is not null then
-      perform private.sync_app_role(v_user_id, v_role);
+      perform private.sync_app_role(v_user_id,v_role);
     end if;
   end if;
 end;
 $$;
+revoke all on function public.review_account_link_request(uuid,text) from public, anon;
+grant execute on function public.review_account_link_request(uuid,text) to authenticated;
 
-revoke all on function public.review_account_link_request(uuid, text) from public, anon;
-grant execute on function public.review_account_link_request(uuid, text) to authenticated;
+notify pgrst,'reload schema';
 
-notify pgrst, 'reload schema';
+commit;
+-- INCLUDED MIGRATION: 202608070023_relationship_edit_delete_requests.sql
+-- PHASE 17: RELATIONSHIP EDIT / DELETE WORKFLOW
+-- Admins apply directly; owners edit/delete their own pending relation directly,
+-- while changes to approved relationships require an admin review request.
+-- Change requests keep an immutable relationship snapshot so approved deletions remain auditable.
+
+begin;
+
+create table if not exists public.relationship_change_requests (
+  id uuid primary key default gen_random_uuid(),
+  relationship_id uuid null,
+  source_person_id uuid null references public.people(id) on delete set null,
+  target_person_id uuid null references public.people(id) on delete set null,
+  source_name text null,
+  target_name text null,
+  original_relation_type text null,
+  requested_by uuid not null references auth.users(id) on delete cascade,
+  action text not null check (action in ('edit','delete')),
+  proposed_relation_type text null check (proposed_relation_type is null or proposed_relation_type in ('parent','child','spouse','sibling','guardian','other')),
+  proposed_notes text null,
+  status text not null default 'pending' check (status in ('pending','approved','rejected')),
+  reviewed_by uuid null references auth.users(id) on delete set null,
+  reviewed_at timestamptz null,
+  review_note text null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Upgrade safely if an older draft of phase 17 was executed already.
+alter table public.relationship_change_requests add column if not exists source_person_id uuid null references public.people(id) on delete set null;
+alter table public.relationship_change_requests add column if not exists target_person_id uuid null references public.people(id) on delete set null;
+alter table public.relationship_change_requests add column if not exists source_name text null;
+alter table public.relationship_change_requests add column if not exists target_name text null;
+alter table public.relationship_change_requests add column if not exists original_relation_type text null;
+alter table public.relationship_change_requests alter column relationship_id drop not null;
+alter table public.relationship_change_requests drop constraint if exists relationship_change_requests_relationship_id_fkey;
+alter table public.relationship_change_requests
+  add constraint relationship_change_requests_relationship_id_fkey
+  foreign key (relationship_id) references public.person_relationships(id) on delete set null;
+
+update public.relationship_change_requests q
+set source_person_id = coalesce(q.source_person_id, r.source_person_id),
+    target_person_id = coalesce(q.target_person_id, r.target_person_id),
+    source_name = coalesce(q.source_name, s.full_name),
+    target_name = coalesce(q.target_name, t.full_name),
+    original_relation_type = coalesce(q.original_relation_type, r.relation_type)
+from public.person_relationships r
+left join public.people s on s.id=r.source_person_id
+left join public.people t on t.id=r.target_person_id
+where q.relationship_id=r.id
+  and (q.source_person_id is null or q.target_person_id is null or q.source_name is null or q.target_name is null or q.original_relation_type is null);
+
+create unique index if not exists relationship_change_one_pending_idx
+  on public.relationship_change_requests (relationship_id)
+  where status='pending' and relationship_id is not null;
+create index if not exists relationship_change_pending_created_idx
+  on public.relationship_change_requests (created_at,id) where status='pending';
+create index if not exists relationship_change_owner_idx
+  on public.relationship_change_requests (requested_by,created_at desc);
+
+alter table public.relationship_change_requests enable row level security;
+revoke all on table public.relationship_change_requests from anon,authenticated;
+grant select on table public.relationship_change_requests to authenticated;
+
+drop policy if exists "Relationship change visibility" on public.relationship_change_requests;
+create policy "Relationship change visibility"
+on public.relationship_change_requests for select to authenticated
+using (
+  requested_by=(select auth.uid())
+  or coalesce(private.active_role((select auth.uid())), '') in ('admin','super_admin')
+);
+
+create or replace function public.request_relationship_change(
+  p_relationship_id uuid,
+  p_action text,
+  p_relation_type text default null,
+  p_notes text default null
+)
+returns text
+language plpgsql
+security definer
+set search_path=''
+as $$
+declare
+  v_user_id uuid:=auth.uid();
+  v_role text:=private.active_role(auth.uid());
+  v_relation public.person_relationships%rowtype;
+  v_source_name text;
+  v_target_name text;
+begin
+  if v_user_id is null then raise exception 'Authentication required'; end if;
+  if p_action not in ('edit','delete') then raise exception 'Invalid action'; end if;
+  if p_action='edit' and p_relation_type not in ('parent','child','spouse','sibling','guardian','other') then
+    raise exception 'Invalid relationship type';
+  end if;
+
+  select * into v_relation
+  from public.person_relationships
+  where id=p_relationship_id
+  for update;
+
+  if v_relation.id is null then raise exception 'Relationship not found'; end if;
+  if coalesce(v_role,'') not in ('admin','super_admin') and v_relation.created_by<>v_user_id then
+    raise exception 'Only the relationship owner or an administrator can change it';
+  end if;
+
+  if coalesce(v_role,'') in ('admin','super_admin') then
+    if p_action='delete' then
+      delete from public.person_relationships where id=p_relationship_id;
+    else
+      update public.person_relationships
+      set relation_type=p_relation_type,
+          notes=nullif(trim(coalesce(p_notes,'')),'')
+      where id=p_relationship_id;
+    end if;
+    return 'applied';
+  end if;
+
+  if v_relation.status='pending' then
+    if p_action='delete' then
+      delete from public.person_relationships where id=p_relationship_id;
+    else
+      update public.person_relationships
+      set relation_type=p_relation_type,
+          notes=nullif(trim(coalesce(p_notes,'')),'')
+      where id=p_relationship_id;
+    end if;
+    return 'applied';
+  end if;
+
+  if v_relation.status<>'approved' then raise exception 'Rejected relationship cannot be changed'; end if;
+
+  select s.full_name,t.full_name into v_source_name,v_target_name
+  from public.people s, public.people t
+  where s.id=v_relation.source_person_id and t.id=v_relation.target_person_id;
+
+  insert into public.relationship_change_requests(
+    relationship_id,source_person_id,target_person_id,source_name,target_name,original_relation_type,
+    requested_by,action,proposed_relation_type,proposed_notes
+  )
+  values (
+    p_relationship_id,v_relation.source_person_id,v_relation.target_person_id,v_source_name,v_target_name,v_relation.relation_type,
+    v_user_id,p_action,
+    case when p_action='edit' then p_relation_type else null end,
+    case when p_action='edit' then nullif(trim(coalesce(p_notes,'')),'') else null end
+  );
+
+  return 'pending';
+end;
+$$;
+
+revoke all on function public.request_relationship_change(uuid,text,text,text) from public,anon;
+grant execute on function public.request_relationship_change(uuid,text,text,text) to authenticated;
+
+create or replace function public.list_pending_relationship_changes(
+  p_limit integer default 13,
+  p_offset integer default 0
+)
+returns table(
+  id uuid,
+  relationship_id uuid,
+  action text,
+  title text,
+  subtitle text,
+  created_at timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path=''
+as $$
+declare
+  v_limit integer:=greatest(1,least(coalesce(p_limit,13),40));
+  v_offset integer:=greatest(0,coalesce(p_offset,0));
+begin
+  if coalesce(private.active_role(auth.uid()),'') not in ('admin','super_admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  return query
+  select q.id,q.relationship_id,q.action,
+    (coalesce(q.source_name,'شخص')||' — '||coalesce(q.target_name,'شخص'))::text,
+    (case when q.action='delete' then 'طلب حذف صلة قرابة' else 'تعديل إلى: '||
+      case q.proposed_relation_type when 'parent' then 'والد/والدة' when 'child' then 'ابن/ابنة' when 'spouse' then 'زوج/زوجة' when 'sibling' then 'أخ/أخت' when 'guardian' then 'ولي/وصي' else 'صلة أخرى' end end)::text,
+    q.created_at
+  from public.relationship_change_requests q
+  where q.status='pending'
+  order by q.created_at,q.id
+  limit v_limit offset v_offset;
+end;
+$$;
+
+revoke all on function public.list_pending_relationship_changes(integer,integer) from public,anon;
+grant execute on function public.list_pending_relationship_changes(integer,integer) to authenticated;
+
+create or replace function public.review_relationship_change(
+  p_request_id uuid,
+  p_status text,
+  p_review_note text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path=''
+as $$
+declare
+  v_request public.relationship_change_requests%rowtype;
+begin
+  if coalesce(private.active_role(auth.uid()),'') not in ('admin','super_admin') then raise exception 'Not authorized'; end if;
+  if p_status not in ('approved','rejected') then raise exception 'Invalid review status'; end if;
+
+  select * into v_request
+  from public.relationship_change_requests
+  where id=p_request_id and status='pending'
+  for update;
+
+  if v_request.id is null then raise exception 'Request not found or already reviewed'; end if;
+
+  if p_status='approved' then
+    if v_request.relationship_id is null then raise exception 'The original relationship no longer exists'; end if;
+    if v_request.action='delete' then
+      delete from public.person_relationships where id=v_request.relationship_id;
+    else
+      update public.person_relationships
+      set relation_type=v_request.proposed_relation_type,
+          notes=v_request.proposed_notes
+      where id=v_request.relationship_id;
+    end if;
+  end if;
+
+  update public.relationship_change_requests
+  set status=p_status,
+      reviewed_by=auth.uid(),
+      reviewed_at=now(),
+      review_note=nullif(trim(coalesce(p_review_note,'')),''),
+      updated_at=now()
+  where id=p_request_id;
+end;
+$$;
+
+revoke all on function public.review_relationship_change(uuid,text,text) from public,anon;
+grant execute on function public.review_relationship_change(uuid,text,text) to authenticated;
+
+notify pgrst,'reload schema';
 
 commit;

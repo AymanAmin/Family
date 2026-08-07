@@ -1,0 +1,189 @@
+name: Apply person profile combined add flow
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-person-profile-add-flow.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Add combined person action to profile
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          app = Path('src/App.tsx')
+          text = app.read_text(encoding='utf-8')
+          marker = '              <RecordEditButton entityType="people"'
+          if marker not in text:
+              raise SystemExit('Could not find person profile edit marker')
+
+          action_marker = 'className="person-detail-quick-actions"'
+          if action_marker not in text:
+              start = text.index(marker)
+              insertion = text.index('            <div className="detail-facts">', start)
+              block = '''            {session && <div className="person-detail-quick-actions" aria-label="إجراءات إضافة مرتبطة بهذا الشخص">
+              <button className="person-profile-action primary-action" type="button" onClick={() => {
+                if (!requireAccount()) return
+                setPersonRelationForm({ relation_type: 'child', related_person_id: selectedPerson.id, notes: '' })
+                setAddMode('person')
+                setView('add')
+              }}>
+                <span className="person-profile-action-icon" aria-hidden="true">＋</span>
+                <span><strong>إضافة فرد مرتبط</strong><small>أضف الشخص وحدد صلته في نفس الخطوة</small></span>
+              </button>
+              <button className="person-profile-action secondary-action" type="button" onClick={() => {
+                if (!requireAccount()) return
+                setRelationshipForm((current) => ({ ...current, source_person_id: selectedPerson.id }))
+                setAddMode('relationship')
+                setView('add')
+              }}>
+                <span className="person-profile-action-icon" aria-hidden="true">⌘</span>
+                <span><strong>إضافة صلة فقط</strong><small>اربط هذا الشخص بشخص موجود</small></span>
+              </button>
+            </div>}
+'''
+              text = text[:insertion] + block + text[insertion:]
+              app.write_text(text, encoding='utf-8')
+
+          css = Path('src/person-profile-actions.css')
+          css.write_text('''/* Quick actions shown on an individual person profile. */
+.person-detail-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: -10px 0 24px;
+  padding: 10px;
+  border: 1px solid #d9e8e2;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #f8fcfa, #edf7f3);
+  box-shadow: 0 9px 24px rgb(7 56 45 / 5%);
+}
+
+.person-profile-action {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 62px;
+  padding: 10px 12px;
+  border-radius: 15px;
+  text-align: right;
+  cursor: pointer;
+}
+
+.person-profile-action > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.person-profile-action strong {
+  font-size: .76rem;
+  font-weight: 900;
+}
+
+.person-profile-action small {
+  overflow: hidden;
+  font-size: .57rem;
+  line-height: 1.55;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.person-profile-action-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 13px;
+  font-size: 1.08rem;
+  font-weight: 900;
+}
+
+.person-profile-action.primary-action {
+  border: 1px solid #166f58;
+  color: white;
+  background: linear-gradient(145deg, var(--green-600), var(--green-800));
+  box-shadow: 0 8px 20px rgb(12 88 67 / 16%);
+}
+
+.person-profile-action.primary-action .person-profile-action-icon {
+  background: rgb(255 255 255 / 14%);
+}
+
+.person-profile-action.primary-action small {
+  color: rgb(255 255 255 / 74%);
+}
+
+.person-profile-action.secondary-action {
+  border: 1px solid #c9dfd6;
+  color: var(--green-900);
+  background: white;
+}
+
+.person-profile-action.secondary-action .person-profile-action-icon {
+  color: var(--green-700);
+  background: #e7f3ee;
+}
+
+.person-profile-action.secondary-action small {
+  color: #71827b;
+}
+
+@media (max-width: 560px) {
+  .person-detail-quick-actions {
+    grid-template-columns: 1fr;
+    margin-top: -12px;
+    padding: 8px;
+    border-radius: 18px;
+  }
+
+  .person-profile-action {
+    min-height: 58px;
+  }
+}
+''', encoding='utf-8')
+
+          main = Path('src/main.tsx')
+          main_text = main.read_text(encoding='utf-8')
+          import_line = "import './person-profile-actions.css'"
+          if import_line not in main_text:
+              anchor = "import './person-create-combined.css'"
+              if anchor not in main_text:
+                  raise SystemExit('Could not find main stylesheet import anchor')
+              main_text = main_text.replace(anchor, anchor + '\n' + import_line, 1)
+              main.write_text(main_text, encoding='utf-8')
+          PY
+
+      - name: Verify build
+        run: |
+          npm install
+          npm run build
+
+      - name: Commit changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/main.tsx src/person-profile-actions.css
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Add combined person creation from profile"
+          git push origin main

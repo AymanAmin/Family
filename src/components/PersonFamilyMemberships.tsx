@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import FamilyPicker from './FamilyPicker'
 
-type Family = { id: string; name: string }
+type RelatedFamily = { name?: string } | { name?: string }[] | null
 
 type Membership = {
   id: string
@@ -12,11 +13,11 @@ type Membership = {
   notes: string | null
   status: 'pending' | 'approved' | 'rejected'
   created_by?: string
+  families?: RelatedFamily
 }
 
 type Props = {
   personId: string
-  families: Family[]
   sessionUserId?: string | null
   isAdmin?: boolean
   onChanged?: () => void | Promise<void>
@@ -31,7 +32,13 @@ const membershipLabels: Record<string, string> = {
   other: 'انتماء آخر',
 }
 
-export default function PersonFamilyMemberships({ personId, families, sessionUserId, isAdmin = false, onChanged }: Props) {
+function familyName(value: RelatedFamily): string {
+  if (!value) return ''
+  if (Array.isArray(value)) return value[0]?.name ?? ''
+  return value.name ?? ''
+}
+
+export default function PersonFamilyMemberships({ personId, sessionUserId, isAdmin = false, onChanged }: Props) {
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -42,7 +49,7 @@ export default function PersonFamilyMemberships({ personId, families, sessionUse
     if (!supabase) return
     const { data, error } = await supabase
       .from('person_family_memberships')
-      .select('id,person_id,family_id,membership_type,is_primary,notes,status,created_by')
+      .select('id,person_id,family_id,membership_type,is_primary,notes,status,created_by,families(name)')
       .eq('person_id', personId)
       .order('is_primary', { ascending: false })
       .order('created_at')
@@ -54,7 +61,6 @@ export default function PersonFamilyMemberships({ personId, families, sessionUse
   const approved = useMemo(() => memberships.filter((item) => item.status === 'approved'), [memberships])
   const visible = useMemo(() => memberships.filter((item) => item.status === 'approved' || item.created_by === sessionUserId), [memberships, sessionUserId])
   const hasPrimary = approved.some((item) => item.is_primary)
-  const familyById = useMemo(() => new Map(families.map((family) => [family.id, family.name])), [families])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -96,23 +102,31 @@ export default function PersonFamilyMemberships({ personId, families, sessionUse
 
       {visible.length ? (
         <div className="membership-list">
-          {visible.map((item) => (
-            <article className="membership-card" key={item.id}>
-              <span className="membership-family-avatar">{(familyById.get(item.family_id) || 'ع')[0]}</span>
-              <div>
-                <strong>{familyById.get(item.family_id) || 'عائلة'}</strong>
-                <small>{membershipLabels[item.membership_type] || item.membership_type}{item.is_primary ? ' · العائلة الأساسية' : ''}</small>
-                {item.notes && <p>{item.notes}</p>}
-              </div>
-              {item.status === 'pending' && <span className="membership-status pending">بانتظار الاعتماد</span>}
-            </article>
-          ))}
+          {visible.map((item) => {
+            const name = familyName(item.families) || 'عائلة'
+            return (
+              <article className="membership-card" key={item.id}>
+                <span className="membership-family-avatar">{name[0]}</span>
+                <div>
+                  <strong>{name}</strong>
+                  <small>{membershipLabels[item.membership_type] || item.membership_type}{item.is_primary ? ' · العائلة الأساسية' : ''}</small>
+                  {item.notes && <p>{item.notes}</p>}
+                </div>
+                {item.status === 'pending' && <span className="membership-status pending">بانتظار الاعتماد</span>}
+              </article>
+            )
+          })}
         </div>
       ) : <div className="empty-state compact">لا توجد انتماءات عائلية معتمدة لهذا الشخص بعد.</div>}
 
       {open && sessionUserId && (
         <form className="membership-form" onSubmit={submit}>
-          <label><span>العائلة أو الفرع</span><select required value={form.family_id} onChange={(e) => setForm((current) => ({ ...current, family_id: e.target.value }))}><option value="">اختر العائلة</option>{families.map((family) => <option key={family.id} value={family.id}>{family.name}</option>)}</select></label>
+          <FamilyPicker
+            label="العائلة أو الفرع"
+            value={form.family_id}
+            onChange={(familyId) => setForm((current) => ({ ...current, family_id: familyId }))}
+            required
+          />
           <label><span>نوع الانتماء</span><select value={form.membership_type} onChange={(e) => setForm((current) => ({ ...current, membership_type: e.target.value }))}>{Object.entries(membershipLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
           {!hasPrimary && <label className="edit-check"><input type="checkbox" checked={form.is_primary} onChange={(e) => setForm((current) => ({ ...current, is_primary: e.target.checked }))} /><span>اعتبارها العائلة الأساسية</span></label>}
           <label><span>ملاحظة توضيحية</span><textarea rows={3} value={form.notes} placeholder="مثال: زوجة أحد أفراد العائلة" onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></label>

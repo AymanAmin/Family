@@ -39,6 +39,7 @@ import './push-notifications.css'
 import './brand-identity.css'
 import './home-news-preview.css'
 import './family-context-ux.css'
+import './home-stats-rtl-fix.css'
 
 function disablePageZoom() {
   document.documentElement.style.touchAction = 'pan-x pan-y'

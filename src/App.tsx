@@ -8,6 +8,7 @@ import EventPeopleFields, { eventParticipantPayload, eventParticipantsRequired }
 import { PersonVerifiedBadge } from './components/VerifiedBadge'
 
 const DirectoryScreen = lazy(() => import('./components/DirectoryScreen'))
+const NewsScreen = lazy(() => import('./components/NewsScreen'))
 const KinshipNetwork = lazy(() => import('./components/KinshipNetwork'))
 const FamilyMembersPanel = lazy(() => import('./components/FamilyMembersPanel'))
 const Phase3AdminQueue = lazy(() => import('./components/Phase3AdminQueue'))
@@ -23,7 +24,7 @@ import './details.css'
 import './nasab-inspired.css'
 
 type AuthMode = 'signin' | 'signup' | 'forgot' | 'recovery'
-type View = 'home' | 'search' | 'tree' | 'add' | 'admin' | 'person' | 'family' | 'account'
+type View = 'home' | 'news' | 'search' | 'tree' | 'add' | 'admin' | 'person' | 'family' | 'account'
 type AddMode = 'family' | 'person' | 'event' | 'relationship'
 type AdminTab = 'requests' | 'edits' | 'activity' | 'users'
 type MessageTone = 'info' | 'success' | 'error'
@@ -487,7 +488,7 @@ function App() {
         await openPersonById(id)
       } else if (target === 'family' && id) {
         await openFamilyById(id)
-      } else if (target === 'search' || target === 'tree' || target === 'add' || target === 'admin' || target === 'account') {
+      } else if (target === 'news' || target === 'search' || target === 'tree' || target === 'add' || target === 'admin' || target === 'account') {
         setView(target as View)
       } else {
         setView('home')
@@ -994,6 +995,7 @@ function App() {
         </button>
         <nav className="desktop-nav">
           <button onClick={() => setView('home')} className={view === 'home' ? 'active' : ''}>الرئيسية</button>
+          <button onClick={() => setView('news')} className={view === 'news' ? 'active' : ''}>الأخبار</button>
           <button onClick={() => setView('search')} className={view === 'search' ? 'active' : ''}>البحث</button>
           <button onClick={() => setView('tree')} className={view === 'tree' ? 'active' : ''}>شجرة العائلة</button>
           <button onClick={() => requireAccount() && setView('add')} className={view === 'add' ? 'active' : ''}>إضافة</button>
@@ -1056,7 +1058,7 @@ function App() {
 
             <section className="home-content-grid">
               <article className="home-feed">
-                <div className="home-section-heading"><h2>آخر أخبار العائلة</h2><button type="button" onClick={() => setView('add')}>إضافة مناسبة</button></div>
+                <div className="home-section-heading"><h2>آخر أخبار العائلة</h2><div className="news-heading-actions"><button type="button" onClick={() => setView('news')}>عرض كل الأخبار</button><button type="button" onClick={() => { if (!requireAccount()) return; setAddMode('event'); setView('add') }}>إضافة مناسبة</button></div></div>
                 {approvedEvents.length ? <div className="nasab-event-list">{approvedEvents.slice(0, 4).map((item) => <div className="nasab-event-item" key={item.id}><span className="nasab-event-date">{formatDate(item.event_date)}</span><div><h3>{item.title}</h3><p>{eventLabels[item.event_type] || item.event_type} · {item.location_name || familyName(item.families) || 'المكان غير محدد'}</p>{item.mentions?.length ? <div className="event-mention-chips">{item.mentions.map((mention) => { const id = personId(mention.people); const name = personName(mention.people); return name ? <button className="event-mention-chip" type="button" key={`${item.id}-${id}-${mention.participant_role}`} onClick={() => id && void openPersonById(id)}>@ {name}</button> : null })}</div> : null}</div></div>)}</div> : <div className="empty-state compact">لا توجد أخبار أو مناسبات معتمدة بعد.</div>}
               </article>
 
@@ -1124,6 +1126,16 @@ function App() {
               ) : <div className="empty-state"><strong>لا توجد مناسبات منشورة</strong><span>ستظهر المناسبات هنا بعد اعتمادها.</span></div>}
             </section>
           </>
+        )}
+
+        {schemaReady && view === 'news' && (
+          <Suspense fallback={<div className="page-section"><LazyPanelFallback /></div>}>
+            <NewsScreen
+              onBack={() => setView('home')}
+              onAdd={() => { if (!requireAccount()) return; setAddMode('event'); setView('add') }}
+              onOpenPerson={(personId) => openPersonById(personId)}
+            />
+          </Suspense>
         )}
 
         {schemaReady && view === 'search' && (

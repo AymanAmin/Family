@@ -43,7 +43,7 @@ export default function PushNotificationSettings() {
     void navigator.serviceWorker.ready
       .then((registration) => registration.pushManager.getSubscription())
       .then((current) => setSubscription(current))
-      .catch(() => undefined)
+      .catch((): void => {})
   }, [supported])
 
   async function invoke(action: string, extra: Record<string, unknown> = {}) {

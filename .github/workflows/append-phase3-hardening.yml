@@ -1,0 +1,29 @@
+name: Append phase three hardening
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/append-phase3-hardening.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Append hardening migration to setup
+        run: node scripts/append-phase3-hardening.mjs
+      - name: Commit setup update
+        run: |
+          if git diff --quiet -- supabase/SETUP.sql; then
+            echo "No setup change"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supabase/SETUP.sql
+          git commit -m "Harden edit request setup"
+          git push

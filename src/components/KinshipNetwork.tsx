@@ -27,6 +27,14 @@ const groupTitles: Record<string, string> = {
   child: 'الأبناء والبنات',
   grandparent: 'الأجداد والجدات',
   grandchild: 'الأحفاد',
+  great_grandparent: 'الجيل الأعلى',
+  great_grandchild: 'أحفاد الأحفاد',
+  paternal_uncle: 'الأعمام',
+  paternal_aunt: 'العمات',
+  maternal_uncle: 'الأخوال',
+  maternal_aunt: 'الخالات',
+  nephew: 'أبناء الإخوة',
+  niece: 'بنات الإخوة',
   guardian: 'الولاية والوصاية',
   other: 'علاقات أخرى',
 }
@@ -39,6 +47,22 @@ function relationLabel(type: string, gender: string | null): string {
   if (type === 'spouse') return female ? 'زوجة' : 'زوج'
   if (type === 'grandparent') return female ? 'جدة' : 'جد'
   if (type === 'grandchild') return female ? 'حفيدة' : 'حفيد'
+  if (type === 'great_grandparent') return female ? 'جدة من الجيل الأعلى' : 'جد من الجيل الأعلى'
+  if (type === 'great_grandchild') return female ? 'حفيدة من الجيل الأدنى' : 'حفيد من الجيل الأدنى'
+  if (type === 'paternal_uncle') return 'عم'
+  if (type === 'paternal_aunt') return 'عمة'
+  if (type === 'maternal_uncle') return 'خال'
+  if (type === 'maternal_aunt') return 'خالة'
+  if (type === 'paternal_parent_sibling') return female ? 'عمة' : 'عم'
+  if (type === 'maternal_parent_sibling') return female ? 'خالة' : 'خال'
+  if (type === 'parent_sibling') return 'أخ/أخت أحد الوالدين'
+  if (type === 'paternal_uncle_child') return female ? 'بنت العم' : 'ابن العم'
+  if (type === 'paternal_aunt_child') return female ? 'بنت العمة' : 'ابن العمة'
+  if (type === 'maternal_uncle_child') return female ? 'بنت الخال' : 'ابن الخال'
+  if (type === 'maternal_aunt_child') return female ? 'بنت الخالة' : 'ابن الخالة'
+  if (type === 'cousin') return female ? 'قريبة من أبناء العمومة/الخؤولة' : 'قريب من أبناء العمومة/الخؤولة'
+  if (type === 'nephew') return 'ابن أخ/أخت'
+  if (type === 'niece') return 'بنت أخ/أخت'
   if (type === 'guardian') return 'ولي / وصي'
   return 'صلة قرابة'
 }
@@ -50,8 +74,8 @@ function relatedPerson(value: DirectRelatedPerson) {
 
 function KinNode({ row, onOpen }: { row: KinshipRow; onOpen: (id: string) => void }) {
   return (
-    <button className="kin-node" type="button" onClick={() => onOpen(row.related_person_id)}>
-      <span className="kin-avatar">{row.full_name.trim().charAt(0) || '؟'}</span>
+    <button className={`kin-node relation-${row.relation_type}`} type="button" onClick={() => onOpen(row.related_person_id)}>
+      <span className={`kin-avatar ${row.gender === 'female' ? 'female' : ''}`}>{row.full_name.trim().charAt(0) || '؟'}</span>
       <span className="kin-copy">
         <strong>{row.full_name}</strong>
         <small>{relationLabel(row.relation_type, row.gender)}</small>
@@ -62,11 +86,11 @@ function KinNode({ row, onOpen }: { row: KinshipRow; onOpen: (id: string) => voi
   )
 }
 
-function KinGroup({ type, rows, onOpen, className = '' }: { type: string; rows: KinshipRow[]; onOpen: (id: string) => void; className?: string }) {
+function KinGroup({ type, rows, onOpen, className = '', title }: { type: string; rows: KinshipRow[]; onOpen: (id: string) => void; className?: string; title?: string }) {
   if (!rows.length) return null
   return (
     <div className={`kin-group kin-${type} ${className}`}>
-      <div className="kin-group-title"><span>{groupTitles[type] || 'صلة قرابة'}</span><b>{rows.length}</b></div>
+      <div className="kin-group-title"><span>{title || groupTitles[type] || 'صلة قرابة'}</span><b>{rows.length}</b></div>
       <div className="kin-nodes">
         {rows.map((row) => <KinNode key={`${row.relation_type}-${row.related_person_id}`} row={row} onOpen={onOpen} />)}
       </div>
@@ -160,19 +184,34 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
   const siblings = grouped.get('sibling') ?? []
   const spouses = grouped.get('spouse') ?? []
   const children = grouped.get('child') ?? []
-  const extended = ['grandparent', 'grandchild', 'guardian', 'other'].flatMap((type) => grouped.get(type) ?? [])
+
+  const extendedSections = useMemo(() => {
+    const collect = (types: string[]) => types.flatMap((type) => grouped.get(type) ?? [])
+    return [
+      { key: 'ancestors', title: 'الأجداد والجيل الأعلى', type: 'grandparent', rows: collect(['grandparent', 'great_grandparent']) },
+      { key: 'paternal', title: 'جهة الأب · الأعمام والعمات', type: 'paternal', rows: collect(['paternal_uncle', 'paternal_aunt', 'paternal_parent_sibling']) },
+      { key: 'maternal', title: 'جهة الأم · الأخوال والخالات', type: 'maternal', rows: collect(['maternal_uncle', 'maternal_aunt', 'maternal_parent_sibling']) },
+      { key: 'paternal-cousins', title: 'أبناء العمومة', type: 'paternal-cousins', rows: collect(['paternal_uncle_child', 'paternal_aunt_child']) },
+      { key: 'maternal-cousins', title: 'أبناء الخؤولة', type: 'maternal-cousins', rows: collect(['maternal_uncle_child', 'maternal_aunt_child']) },
+      { key: 'siblings-children', title: 'أبناء وبنات الإخوة', type: 'siblings-children', rows: collect(['nephew', 'niece']) },
+      { key: 'descendants', title: 'الأحفاد والجيل الأدنى', type: 'grandchild', rows: collect(['grandchild', 'great_grandchild']) },
+      { key: 'other', title: 'علاقات إضافية', type: 'other', rows: collect(['parent_sibling', 'cousin', 'guardian', 'other']) },
+    ].filter((section) => section.rows.length > 0)
+  }, [grouped])
+
+  const inferredCount = rows.filter((row) => row.is_inferred).length
 
   return (
     <section className="detail-section kinship-section">
       <div className="kinship-heading">
         <div>
-          <span className="eyebrow">شبكة القرابة</span>
+          <span className="eyebrow">شبكة القرابة الذكية</span>
           <h2>العلاقات حول {personName.split(' ')[0]}</h2>
-          <p>الوالدان والأبناء والإخوة تُرتّب كشبكة واحدة، والإخوة المشتركون في الأب أو الأم يُستنتجون تلقائيًا.</p>
+          <p>أدخل الوالدين والأبناء فقط قدر الإمكان؛ المنصة تستنتج الإخوة والأجداد والأعمام والعمات والأخوال والخالات وأبناءهم تلقائيًا.</p>
         </div>
         <div className="kinship-heading-actions">
-          {smartAvailable && <span className="smart-badge">✦ استنتاج ذكي</span>}
-          {onAddRelation && <button className="text-link" type="button" onClick={onAddRelation}>إضافة صلة</button>}
+          {smartAvailable && <span className="smart-badge">✦ {inferredCount} علاقة مستنتجة</span>}
+          {onAddRelation && <button className="text-link" type="button" onClick={onAddRelation}>+ إضافة صلة</button>}
         </div>
       </div>
 
@@ -196,22 +235,25 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
               </div>
 
               <KinGroup type="child" rows={children} onOpen={onOpenPerson} className="kin-bottom" />
-
-              {extended.length > 0 && (
-                <div className="kin-extended">
-                  {['grandparent', 'grandchild', 'guardian', 'other'].map((type) => (
-                    <KinGroup key={type} type={type} rows={grouped.get(type) ?? []} onOpen={onOpenPerson} />
-                  ))}
-                </div>
-              )}
             </div>
           </div>
+
+          {extendedSections.length > 0 && (
+            <div className="extended-kinship-area">
+              <div className="extended-kinship-heading"><span>القرابة الممتدة</span><small>مستنتجة من شجرة الوالدين والأبناء</small></div>
+              <div className="extended-kinship-scroll">
+                {extendedSections.map((section) => (
+                  <KinGroup key={section.key} type={section.type} title={section.title} rows={section.rows} onOpen={onOpenPerson} className="extended-kin-group" />
+                ))}
+              </div>
+            </div>
+          )}
         </>
       ) : (
-        <div className="empty-state compact"><strong>لم تُسجّل علاقات لهذا الشخص بعد</strong><span>أضف الأب أو الأم مرة واحدة، وستستنتج المنصة الإخوة والقرابات المرتبطة تلقائيًا.</span></div>
+        <div className="empty-state compact"><strong>لم تُسجّل علاقات لهذا الشخص بعد</strong><span>ابدأ بالأب أو الأم. من هذه البيانات الأساسية ستبني المنصة بقية القرابات تلقائيًا.</span></div>
       )}
 
-      {!smartAvailable && <div className="kinship-update-note">شغّل أحدث <code>supabase/SETUP.sql</code> لتفعيل استنتاج الإخوة والأجداد تلقائيًا.</div>}
+      {!smartAvailable && <div className="kinship-update-note">شغّل أحدث <code>supabase/SETUP.sql</code> لتفعيل قواعد العم والعمة والخال والخالة وأبناء العمومة والخؤولة.</div>}
     </section>
   )
 }

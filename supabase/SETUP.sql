@@ -1696,7 +1696,6 @@ notify pgrst, 'reload schema';
 
 commit;
 
-
 -- INCLUDED MIGRATION: 202608070010_public_scale_performance.sql
 -- PHASE 6: PUBLIC-SCALE PERFORMANCE FOUNDATION
 -- Fast public search, relationship traversal and O(1) homepage statistics.
@@ -1874,7 +1873,6 @@ grant execute on function public.get_public_platform_stats() to anon, authentica
 notify pgrst, 'reload schema';
 
 commit;
-
 
 -- INCLUDED MIGRATION: 202608070011_smart_duplicate_person_search.sql
 -- PHASE 7: SMART DUPLICATE-PERSON SEARCH
@@ -2354,7 +2352,6 @@ with check (
 notify pgrst, 'reload schema';
 
 commit;
-
 
 -- INCLUDED MIGRATION: 202608070014_person_death_date_integrity.sql
 -- PHASE 10: PERSON DEATH STATUS INTEGRITY
@@ -4040,6 +4037,7 @@ grant execute on function public.review_secondary_moderation_request(text,uuid,t
 
 notify pgrst,'reload schema';
 commit;
+
 -- INCLUDED MIGRATION: 202608070021_edit_review_details.sql
 -- PHASE 17: ON-DEMAND EDIT REVIEW DETAILS
 -- Reviewers fetch old/new values only when they open one edit request.
@@ -4177,192 +4175,104 @@ notify pgrst, 'reload schema';
 
 commit;
 
-
--- INCLUDED MIGRATION: 202608070022_admin_contributor_stats_and_link_integrity.sql
--- PHASE 18: ADMIN CONTRIBUTOR RANKINGS + ACCOUNT LINK INTEGRITY
+-- INCLUDED MIGRATION: 202608070022_social_feature_hardening.sql
+-- PHASE 18: SOCIAL FEATURE HARDENING
+-- Finalizes the six requested social-style features after phase 16/17.
 
 begin;
 
-create index if not exists profiles_linked_person_active_idx
-  on public.profiles(linked_person_id, account_status)
-  where linked_person_id is not null;
-create index if not exists content_edit_requests_requester_activity_idx
-  on public.content_edit_requests(requested_by, created_at desc);
+-- Treat a standalone hamza as ignorable as well, and normalize taa marbuta to haa.
+create or replace function public.normalize_arabic_name(p_value text)
+returns text
+language sql
+immutable
+parallel safe
+set search_path = ''
+as $$
+  select lower(trim(
+    regexp_replace(
+      regexp_replace(
+        translate(
+          regexp_replace(coalesce(p_value, ''), '[\u064B-\u065F\u0670\u06D6-\u06ED]', '', 'g'),
+          'أإآٱىئؤةۀ',
+          'ااااييوهه'
+        ),
+        'ء', '', 'g'
+      ),
+      '\s+', ' ', 'g'
+    )
+  ));
+$$;
 
-create or replace function public.list_admin_contributor_stats(
-  p_period_days integer default null,
-  p_limit integer default 12,
-  p_offset integer default 0
+-- A verified linked person may choose their own primary family even when they did not create the public record.
+create or replace function public.request_primary_family_change(
+  p_person_id uuid,
+  p_family_id uuid
 )
-returns table(
-  user_id uuid,
-  display_name text,
-  email text,
-  role text,
-  total_contributions bigint,
-  approved_contributions bigint,
-  pending_contributions bigint,
-  rejected_contributions bigint,
-  people_count bigint,
-  families_count bigint,
-  events_count bigint,
-  relationships_count bigint,
-  memberships_count bigint,
-  edits_count bigint,
-  last_contribution_at timestamptz
-)
+returns text
 language plpgsql
-stable
 security definer
 set search_path = ''
 as $$
 declare
-  v_role text := coalesce(private.active_role(auth.uid()), '');
-  v_limit integer := greatest(1, least(coalesce(p_limit, 12), 50));
-  v_offset integer := greatest(0, coalesce(p_offset, 0));
-  v_since timestamptz := case
-    when p_period_days is null or p_period_days <= 0 then null
-    else now() - make_interval(days => least(p_period_days, 3650))
-  end;
+  v_owner uuid;
+  v_role text;
+  v_linked boolean;
 begin
-  if v_role not in ('admin','super_admin') then
-    raise exception 'Administrator access required';
+  if auth.uid() is null then raise exception 'Authentication required'; end if;
+
+  select p.created_by into v_owner from public.people p where p.id = p_person_id;
+  if v_owner is null then raise exception 'Person not found'; end if;
+  if not exists (
+    select 1 from public.person_family_memberships m
+    where m.person_id=p_person_id and m.family_id=p_family_id and m.status='approved'
+  ) then raise exception 'Selected family is not an approved membership'; end if;
+
+  v_role := coalesce(private.active_role(auth.uid()), '');
+  v_linked := exists (
+    select 1 from public.profiles pr
+    where pr.id=auth.uid()
+      and pr.account_status='active'
+      and pr.linked_person_id=p_person_id
+  );
+
+  if v_role in ('admin','super_admin') or v_linked then
+    perform private.apply_primary_family(p_person_id, p_family_id);
+    return 'approved';
   end if;
 
-  return query
-  with activity as (
-    select f.created_by user_id, 'family'::text kind, f.status::text status, f.created_at
-    from public.families f
-    where f.created_by is not null and (v_since is null or f.created_at >= v_since)
-
-    union all
-    select p.created_by, 'person', p.status::text, p.created_at
-    from public.people p
-    where p.created_by is not null and (v_since is null or p.created_at >= v_since)
-
-    union all
-    select e.created_by, 'event', e.status::text, e.created_at
-    from public.events e
-    where e.created_by is not null and (v_since is null or e.created_at >= v_since)
-
-    union all
-    select r.created_by, 'relationship', r.status::text, r.created_at
-    from public.person_relationships r
-    where r.created_by is not null and (v_since is null or r.created_at >= v_since)
-
-    union all
-    select m.created_by, 'membership', m.status::text, m.created_at
-    from public.person_family_memberships m
-    where m.created_by is not null and (v_since is null or m.created_at >= v_since)
-
-    union all
-    select c.requested_by, 'edit', c.status::text, c.created_at
-    from public.content_edit_requests c
-    where c.requested_by is not null and (v_since is null or c.created_at >= v_since)
-  ), ranked as (
-    select
-      a.user_id,
-      count(*)::bigint total_contributions,
-      count(*) filter (where a.status='approved')::bigint approved_contributions,
-      count(*) filter (where a.status='pending')::bigint pending_contributions,
-      count(*) filter (where a.status='rejected')::bigint rejected_contributions,
-      count(*) filter (where a.kind='person')::bigint people_count,
-      count(*) filter (where a.kind='family')::bigint families_count,
-      count(*) filter (where a.kind='event')::bigint events_count,
-      count(*) filter (where a.kind='relationship')::bigint relationships_count,
-      count(*) filter (where a.kind='membership')::bigint memberships_count,
-      count(*) filter (where a.kind='edit')::bigint edits_count,
-      max(a.created_at) last_contribution_at
-    from activity a
-    group by a.user_id
-  )
-  select
-    r.user_id,
-    coalesce(nullif(p.display_name,''), nullif(p.email,''), 'مستخدم مسجل')::text,
-    p.email::text,
-    coalesce(p.role,'member')::text,
-    r.total_contributions,
-    r.approved_contributions,
-    r.pending_contributions,
-    r.rejected_contributions,
-    r.people_count,
-    r.families_count,
-    r.events_count,
-    r.relationships_count,
-    r.memberships_count,
-    r.edits_count,
-    r.last_contribution_at
-  from ranked r
-  join public.profiles p on p.id=r.user_id
-  order by r.approved_contributions desc, r.total_contributions desc, r.last_contribution_at desc, r.user_id
-  limit v_limit offset v_offset;
-end;
-$$;
-
-revoke all on function public.list_admin_contributor_stats(integer,integer,integer) from public, anon;
-grant execute on function public.list_admin_contributor_stats(integer,integer,integer) to authenticated;
-
-create or replace function public.get_admin_contribution_overview(p_period_days integer default null)
-returns table(
-  total_contributions bigint,
-  active_contributors bigint,
-  approved_contributions bigint,
-  pending_contributions bigint,
-  rejected_contributions bigint,
-  duplicate_linked_people bigint,
-  duplicate_linked_accounts bigint
-)
-language plpgsql
-stable
-security definer
-set search_path = ''
-as $$
-declare
-  v_role text := coalesce(private.active_role(auth.uid()), '');
-  v_since timestamptz := case
-    when p_period_days is null or p_period_days <= 0 then null
-    else now() - make_interval(days => least(p_period_days, 3650))
-  end;
-begin
-  if v_role not in ('admin','super_admin') then
-    raise exception 'Administrator access required';
+  if v_owner <> auth.uid() then
+    raise exception 'Only the verified person, record owner, or an administrator can change the primary family';
   end if;
 
-  return query
-  with activity as (
-    select f.created_by user_id, f.status::text status, f.created_at from public.families f where f.created_by is not null and (v_since is null or f.created_at >= v_since)
-    union all select p.created_by, p.status::text, p.created_at from public.people p where p.created_by is not null and (v_since is null or p.created_at >= v_since)
-    union all select e.created_by, e.status::text, e.created_at from public.events e where e.created_by is not null and (v_since is null or e.created_at >= v_since)
-    union all select r.created_by, r.status::text, r.created_at from public.person_relationships r where r.created_by is not null and (v_since is null or r.created_at >= v_since)
-    union all select m.created_by, m.status::text, m.created_at from public.person_family_memberships m where m.created_by is not null and (v_since is null or m.created_at >= v_since)
-    union all select c.requested_by, c.status::text, c.created_at from public.content_edit_requests c where c.requested_by is not null and (v_since is null or c.created_at >= v_since)
-  ), duplicate_people as (
-    select pr.linked_person_id, count(*)::bigint account_count
-    from public.profiles pr
-    where pr.linked_person_id is not null and pr.account_status='active'
-    group by pr.linked_person_id
-    having count(*) > 1
-  )
-  select
-    count(*)::bigint,
-    count(distinct a.user_id)::bigint,
-    count(*) filter (where a.status='approved')::bigint,
-    count(*) filter (where a.status='pending')::bigint,
-    count(*) filter (where a.status='rejected')::bigint,
-    (select count(*)::bigint from duplicate_people),
-    (select coalesce(sum(dp.account_count),0)::bigint from duplicate_people dp)
-  from activity a;
+  if exists (
+    select 1 from public.content_edit_requests e
+    where e.entity_type='people' and e.record_id=p_person_id and e.requested_by=auth.uid() and e.status='pending'
+  ) then raise exception 'There is already a pending edit request for this person'; end if;
+
+  insert into public.content_edit_requests(entity_type,record_id,proposed_data,requested_by)
+  values ('people', p_person_id, jsonb_build_object('family_id',p_family_id), auth.uid());
+  return 'pending';
 end;
 $$;
+revoke all on function public.request_primary_family_change(uuid, uuid) from public, anon;
+grant execute on function public.request_primary_family_change(uuid, uuid) to authenticated;
 
-revoke all on function public.get_admin_contribution_overview(integer) from public, anon;
-grant execute on function public.get_admin_contribution_overview(integer) to authenticated;
+-- The new request_relationship_change workflow supersedes the older edit-only RPC.
+do $$
+begin
+  begin
+    revoke execute on function public.request_relationship_edit(uuid,text,text) from authenticated;
+  exception when undefined_function then
+    null;
+  end;
+end $$;
 
-notify pgrst, 'reload schema';
+notify pgrst,'reload schema';
 
 commit;
 
--- INCLUDED MIGRATION: 202608070021_relationship_edit_delete_requests.sql
+-- INCLUDED MIGRATION: 202608070023_relationship_edit_delete_requests.sql
 -- PHASE 17: RELATIONSHIP EDIT / DELETE WORKFLOW
 -- Admins apply directly; owners edit/delete their own pending relation directly,
 -- while changes to approved relationships require an admin review request.
@@ -4609,104 +4519,7 @@ notify pgrst,'reload schema';
 
 commit;
 
--- INCLUDED MIGRATION: 202608070022_social_feature_hardening.sql
--- PHASE 18: SOCIAL FEATURE HARDENING
--- Finalizes the six requested social-style features after phase 16/17.
-
-begin;
-
--- Treat a standalone hamza as ignorable as well, and normalize taa marbuta to haa.
-create or replace function public.normalize_arabic_name(p_value text)
-returns text
-language sql
-immutable
-parallel safe
-set search_path = ''
-as $$
-  select lower(trim(
-    regexp_replace(
-      regexp_replace(
-        translate(
-          regexp_replace(coalesce(p_value, ''), '[\u064B-\u065F\u0670\u06D6-\u06ED]', '', 'g'),
-          'أإآٱىئؤةۀ',
-          'ااااييوهه'
-        ),
-        'ء', '', 'g'
-      ),
-      '\s+', ' ', 'g'
-    )
-  ));
-$$;
-
--- A verified linked person may choose their own primary family even when they did not create the public record.
-create or replace function public.request_primary_family_change(
-  p_person_id uuid,
-  p_family_id uuid
-)
-returns text
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_owner uuid;
-  v_role text;
-  v_linked boolean;
-begin
-  if auth.uid() is null then raise exception 'Authentication required'; end if;
-
-  select p.created_by into v_owner from public.people p where p.id = p_person_id;
-  if v_owner is null then raise exception 'Person not found'; end if;
-  if not exists (
-    select 1 from public.person_family_memberships m
-    where m.person_id=p_person_id and m.family_id=p_family_id and m.status='approved'
-  ) then raise exception 'Selected family is not an approved membership'; end if;
-
-  v_role := coalesce(private.active_role(auth.uid()), '');
-  v_linked := exists (
-    select 1 from public.profiles pr
-    where pr.id=auth.uid()
-      and pr.account_status='active'
-      and pr.linked_person_id=p_person_id
-  );
-
-  if v_role in ('admin','super_admin') or v_linked then
-    perform private.apply_primary_family(p_person_id, p_family_id);
-    return 'approved';
-  end if;
-
-  if v_owner <> auth.uid() then
-    raise exception 'Only the verified person, record owner, or an administrator can change the primary family';
-  end if;
-
-  if exists (
-    select 1 from public.content_edit_requests e
-    where e.entity_type='people' and e.record_id=p_person_id and e.requested_by=auth.uid() and e.status='pending'
-  ) then raise exception 'There is already a pending edit request for this person'; end if;
-
-  insert into public.content_edit_requests(entity_type,record_id,proposed_data,requested_by)
-  values ('people', p_person_id, jsonb_build_object('family_id',p_family_id), auth.uid());
-  return 'pending';
-end;
-$$;
-revoke all on function public.request_primary_family_change(uuid, uuid) from public, anon;
-grant execute on function public.request_primary_family_change(uuid, uuid) to authenticated;
-
--- The new request_relationship_change workflow supersedes the older edit-only RPC.
-do $$
-begin
-  begin
-    revoke execute on function public.request_relationship_edit(uuid,text,text) from authenticated;
-  exception when undefined_function then
-    null;
-  end;
-end $$;
-
-notify pgrst,'reload schema';
-
-commit;
-
--- INCLUDED MIGRATION: 202608070023_relationship_changes_in_my_activity.sql
+-- INCLUDED MIGRATION: 202608070024_relationship_changes_in_my_activity.sql
 -- PHASE 19: RELATIONSHIP CHANGE REQUESTS IN MY ACTIVITY
 -- Extends the paginated personal feed without adding client-side table scans.
 
@@ -5062,249 +4875,187 @@ grant execute on function public.review_account_link_request(uuid,text) to authe
 notify pgrst,'reload schema';
 
 commit;
--- INCLUDED MIGRATION: 202608070023_relationship_edit_delete_requests.sql
--- PHASE 17: RELATIONSHIP EDIT / DELETE WORKFLOW
--- Admins apply directly; owners edit/delete their own pending relation directly,
--- while changes to approved relationships require an admin review request.
--- Change requests keep an immutable relationship snapshot so approved deletions remain auditable.
+
+-- INCLUDED MIGRATION: 202608070026_admin_contributor_stats_and_link_integrity.sql
+-- PHASE 18: ADMIN CONTRIBUTOR RANKINGS + ACCOUNT LINK INTEGRITY
 
 begin;
 
-create table if not exists public.relationship_change_requests (
-  id uuid primary key default gen_random_uuid(),
-  relationship_id uuid null,
-  source_person_id uuid null references public.people(id) on delete set null,
-  target_person_id uuid null references public.people(id) on delete set null,
-  source_name text null,
-  target_name text null,
-  original_relation_type text null,
-  requested_by uuid not null references auth.users(id) on delete cascade,
-  action text not null check (action in ('edit','delete')),
-  proposed_relation_type text null check (proposed_relation_type is null or proposed_relation_type in ('parent','child','spouse','sibling','guardian','other')),
-  proposed_notes text null,
-  status text not null default 'pending' check (status in ('pending','approved','rejected')),
-  reviewed_by uuid null references auth.users(id) on delete set null,
-  reviewed_at timestamptz null,
-  review_note text null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
+create index if not exists profiles_linked_person_active_idx
+  on public.profiles(linked_person_id, account_status)
+  where linked_person_id is not null;
+create index if not exists content_edit_requests_requester_activity_idx
+  on public.content_edit_requests(requested_by, created_at desc);
 
--- Upgrade safely if an older draft of phase 17 was executed already.
-alter table public.relationship_change_requests add column if not exists source_person_id uuid null references public.people(id) on delete set null;
-alter table public.relationship_change_requests add column if not exists target_person_id uuid null references public.people(id) on delete set null;
-alter table public.relationship_change_requests add column if not exists source_name text null;
-alter table public.relationship_change_requests add column if not exists target_name text null;
-alter table public.relationship_change_requests add column if not exists original_relation_type text null;
-alter table public.relationship_change_requests alter column relationship_id drop not null;
-alter table public.relationship_change_requests drop constraint if exists relationship_change_requests_relationship_id_fkey;
-alter table public.relationship_change_requests
-  add constraint relationship_change_requests_relationship_id_fkey
-  foreign key (relationship_id) references public.person_relationships(id) on delete set null;
-
-update public.relationship_change_requests q
-set source_person_id = coalesce(q.source_person_id, r.source_person_id),
-    target_person_id = coalesce(q.target_person_id, r.target_person_id),
-    source_name = coalesce(q.source_name, s.full_name),
-    target_name = coalesce(q.target_name, t.full_name),
-    original_relation_type = coalesce(q.original_relation_type, r.relation_type)
-from public.person_relationships r
-left join public.people s on s.id=r.source_person_id
-left join public.people t on t.id=r.target_person_id
-where q.relationship_id=r.id
-  and (q.source_person_id is null or q.target_person_id is null or q.source_name is null or q.target_name is null or q.original_relation_type is null);
-
-create unique index if not exists relationship_change_one_pending_idx
-  on public.relationship_change_requests (relationship_id)
-  where status='pending' and relationship_id is not null;
-create index if not exists relationship_change_pending_created_idx
-  on public.relationship_change_requests (created_at,id) where status='pending';
-create index if not exists relationship_change_owner_idx
-  on public.relationship_change_requests (requested_by,created_at desc);
-
-alter table public.relationship_change_requests enable row level security;
-revoke all on table public.relationship_change_requests from anon,authenticated;
-grant select on table public.relationship_change_requests to authenticated;
-
-drop policy if exists "Relationship change visibility" on public.relationship_change_requests;
-create policy "Relationship change visibility"
-on public.relationship_change_requests for select to authenticated
-using (
-  requested_by=(select auth.uid())
-  or coalesce(private.active_role((select auth.uid())), '') in ('admin','super_admin')
-);
-
-create or replace function public.request_relationship_change(
-  p_relationship_id uuid,
-  p_action text,
-  p_relation_type text default null,
-  p_notes text default null
-)
-returns text
-language plpgsql
-security definer
-set search_path=''
-as $$
-declare
-  v_user_id uuid:=auth.uid();
-  v_role text:=private.active_role(auth.uid());
-  v_relation public.person_relationships%rowtype;
-  v_source_name text;
-  v_target_name text;
-begin
-  if v_user_id is null then raise exception 'Authentication required'; end if;
-  if p_action not in ('edit','delete') then raise exception 'Invalid action'; end if;
-  if p_action='edit' and p_relation_type not in ('parent','child','spouse','sibling','guardian','other') then
-    raise exception 'Invalid relationship type';
-  end if;
-
-  select * into v_relation
-  from public.person_relationships
-  where id=p_relationship_id
-  for update;
-
-  if v_relation.id is null then raise exception 'Relationship not found'; end if;
-  if coalesce(v_role,'') not in ('admin','super_admin') and v_relation.created_by<>v_user_id then
-    raise exception 'Only the relationship owner or an administrator can change it';
-  end if;
-
-  if coalesce(v_role,'') in ('admin','super_admin') then
-    if p_action='delete' then
-      delete from public.person_relationships where id=p_relationship_id;
-    else
-      update public.person_relationships
-      set relation_type=p_relation_type,
-          notes=nullif(trim(coalesce(p_notes,'')),'')
-      where id=p_relationship_id;
-    end if;
-    return 'applied';
-  end if;
-
-  if v_relation.status='pending' then
-    if p_action='delete' then
-      delete from public.person_relationships where id=p_relationship_id;
-    else
-      update public.person_relationships
-      set relation_type=p_relation_type,
-          notes=nullif(trim(coalesce(p_notes,'')),'')
-      where id=p_relationship_id;
-    end if;
-    return 'applied';
-  end if;
-
-  if v_relation.status<>'approved' then raise exception 'Rejected relationship cannot be changed'; end if;
-
-  select s.full_name,t.full_name into v_source_name,v_target_name
-  from public.people s, public.people t
-  where s.id=v_relation.source_person_id and t.id=v_relation.target_person_id;
-
-  insert into public.relationship_change_requests(
-    relationship_id,source_person_id,target_person_id,source_name,target_name,original_relation_type,
-    requested_by,action,proposed_relation_type,proposed_notes
-  )
-  values (
-    p_relationship_id,v_relation.source_person_id,v_relation.target_person_id,v_source_name,v_target_name,v_relation.relation_type,
-    v_user_id,p_action,
-    case when p_action='edit' then p_relation_type else null end,
-    case when p_action='edit' then nullif(trim(coalesce(p_notes,'')),'') else null end
-  );
-
-  return 'pending';
-end;
-$$;
-
-revoke all on function public.request_relationship_change(uuid,text,text,text) from public,anon;
-grant execute on function public.request_relationship_change(uuid,text,text,text) to authenticated;
-
-create or replace function public.list_pending_relationship_changes(
-  p_limit integer default 13,
+create or replace function public.list_admin_contributor_stats(
+  p_period_days integer default null,
+  p_limit integer default 12,
   p_offset integer default 0
 )
 returns table(
-  id uuid,
-  relationship_id uuid,
-  action text,
-  title text,
-  subtitle text,
-  created_at timestamptz
+  user_id uuid,
+  display_name text,
+  email text,
+  role text,
+  total_contributions bigint,
+  approved_contributions bigint,
+  pending_contributions bigint,
+  rejected_contributions bigint,
+  people_count bigint,
+  families_count bigint,
+  events_count bigint,
+  relationships_count bigint,
+  memberships_count bigint,
+  edits_count bigint,
+  last_contribution_at timestamptz
 )
 language plpgsql
 stable
 security definer
-set search_path=''
+set search_path = ''
 as $$
 declare
-  v_limit integer:=greatest(1,least(coalesce(p_limit,13),40));
-  v_offset integer:=greatest(0,coalesce(p_offset,0));
+  v_role text := coalesce(private.active_role(auth.uid()), '');
+  v_limit integer := greatest(1, least(coalesce(p_limit, 12), 50));
+  v_offset integer := greatest(0, coalesce(p_offset, 0));
+  v_since timestamptz := case
+    when p_period_days is null or p_period_days <= 0 then null
+    else now() - make_interval(days => least(p_period_days, 3650))
+  end;
 begin
-  if coalesce(private.active_role(auth.uid()),'') not in ('admin','super_admin') then
-    raise exception 'Not authorized';
+  if v_role not in ('admin','super_admin') then
+    raise exception 'Administrator access required';
   end if;
 
   return query
-  select q.id,q.relationship_id,q.action,
-    (coalesce(q.source_name,'شخص')||' — '||coalesce(q.target_name,'شخص'))::text,
-    (case when q.action='delete' then 'طلب حذف صلة قرابة' else 'تعديل إلى: '||
-      case q.proposed_relation_type when 'parent' then 'والد/والدة' when 'child' then 'ابن/ابنة' when 'spouse' then 'زوج/زوجة' when 'sibling' then 'أخ/أخت' when 'guardian' then 'ولي/وصي' else 'صلة أخرى' end end)::text,
-    q.created_at
-  from public.relationship_change_requests q
-  where q.status='pending'
-  order by q.created_at,q.id
+  with activity as (
+    select f.created_by user_id, 'family'::text kind, f.status::text status, f.created_at
+    from public.families f
+    where f.created_by is not null and (v_since is null or f.created_at >= v_since)
+
+    union all
+    select p.created_by, 'person', p.status::text, p.created_at
+    from public.people p
+    where p.created_by is not null and (v_since is null or p.created_at >= v_since)
+
+    union all
+    select e.created_by, 'event', e.status::text, e.created_at
+    from public.events e
+    where e.created_by is not null and (v_since is null or e.created_at >= v_since)
+
+    union all
+    select r.created_by, 'relationship', r.status::text, r.created_at
+    from public.person_relationships r
+    where r.created_by is not null and (v_since is null or r.created_at >= v_since)
+
+    union all
+    select m.created_by, 'membership', m.status::text, m.created_at
+    from public.person_family_memberships m
+    where m.created_by is not null and (v_since is null or m.created_at >= v_since)
+
+    union all
+    select c.requested_by, 'edit', c.status::text, c.created_at
+    from public.content_edit_requests c
+    where c.requested_by is not null and (v_since is null or c.created_at >= v_since)
+  ), ranked as (
+    select
+      a.user_id,
+      count(*)::bigint total_contributions,
+      count(*) filter (where a.status='approved')::bigint approved_contributions,
+      count(*) filter (where a.status='pending')::bigint pending_contributions,
+      count(*) filter (where a.status='rejected')::bigint rejected_contributions,
+      count(*) filter (where a.kind='person')::bigint people_count,
+      count(*) filter (where a.kind='family')::bigint families_count,
+      count(*) filter (where a.kind='event')::bigint events_count,
+      count(*) filter (where a.kind='relationship')::bigint relationships_count,
+      count(*) filter (where a.kind='membership')::bigint memberships_count,
+      count(*) filter (where a.kind='edit')::bigint edits_count,
+      max(a.created_at) last_contribution_at
+    from activity a
+    group by a.user_id
+  )
+  select
+    r.user_id,
+    coalesce(nullif(p.display_name,''), nullif(p.email,''), 'مستخدم مسجل')::text,
+    p.email::text,
+    coalesce(p.role,'member')::text,
+    r.total_contributions,
+    r.approved_contributions,
+    r.pending_contributions,
+    r.rejected_contributions,
+    r.people_count,
+    r.families_count,
+    r.events_count,
+    r.relationships_count,
+    r.memberships_count,
+    r.edits_count,
+    r.last_contribution_at
+  from ranked r
+  join public.profiles p on p.id=r.user_id
+  order by r.approved_contributions desc, r.total_contributions desc, r.last_contribution_at desc, r.user_id
   limit v_limit offset v_offset;
 end;
 $$;
 
-revoke all on function public.list_pending_relationship_changes(integer,integer) from public,anon;
-grant execute on function public.list_pending_relationship_changes(integer,integer) to authenticated;
+revoke all on function public.list_admin_contributor_stats(integer,integer,integer) from public, anon;
+grant execute on function public.list_admin_contributor_stats(integer,integer,integer) to authenticated;
 
-create or replace function public.review_relationship_change(
-  p_request_id uuid,
-  p_status text,
-  p_review_note text default null
+create or replace function public.get_admin_contribution_overview(p_period_days integer default null)
+returns table(
+  total_contributions bigint,
+  active_contributors bigint,
+  approved_contributions bigint,
+  pending_contributions bigint,
+  rejected_contributions bigint,
+  duplicate_linked_people bigint,
+  duplicate_linked_accounts bigint
 )
-returns void
 language plpgsql
+stable
 security definer
-set search_path=''
+set search_path = ''
 as $$
 declare
-  v_request public.relationship_change_requests%rowtype;
+  v_role text := coalesce(private.active_role(auth.uid()), '');
+  v_since timestamptz := case
+    when p_period_days is null or p_period_days <= 0 then null
+    else now() - make_interval(days => least(p_period_days, 3650))
+  end;
 begin
-  if coalesce(private.active_role(auth.uid()),'') not in ('admin','super_admin') then raise exception 'Not authorized'; end if;
-  if p_status not in ('approved','rejected') then raise exception 'Invalid review status'; end if;
-
-  select * into v_request
-  from public.relationship_change_requests
-  where id=p_request_id and status='pending'
-  for update;
-
-  if v_request.id is null then raise exception 'Request not found or already reviewed'; end if;
-
-  if p_status='approved' then
-    if v_request.relationship_id is null then raise exception 'The original relationship no longer exists'; end if;
-    if v_request.action='delete' then
-      delete from public.person_relationships where id=v_request.relationship_id;
-    else
-      update public.person_relationships
-      set relation_type=v_request.proposed_relation_type,
-          notes=v_request.proposed_notes
-      where id=v_request.relationship_id;
-    end if;
+  if v_role not in ('admin','super_admin') then
+    raise exception 'Administrator access required';
   end if;
 
-  update public.relationship_change_requests
-  set status=p_status,
-      reviewed_by=auth.uid(),
-      reviewed_at=now(),
-      review_note=nullif(trim(coalesce(p_review_note,'')),''),
-      updated_at=now()
-  where id=p_request_id;
+  return query
+  with activity as (
+    select f.created_by user_id, f.status::text status, f.created_at from public.families f where f.created_by is not null and (v_since is null or f.created_at >= v_since)
+    union all select p.created_by, p.status::text, p.created_at from public.people p where p.created_by is not null and (v_since is null or p.created_at >= v_since)
+    union all select e.created_by, e.status::text, e.created_at from public.events e where e.created_by is not null and (v_since is null or e.created_at >= v_since)
+    union all select r.created_by, r.status::text, r.created_at from public.person_relationships r where r.created_by is not null and (v_since is null or r.created_at >= v_since)
+    union all select m.created_by, m.status::text, m.created_at from public.person_family_memberships m where m.created_by is not null and (v_since is null or m.created_at >= v_since)
+    union all select c.requested_by, c.status::text, c.created_at from public.content_edit_requests c where c.requested_by is not null and (v_since is null or c.created_at >= v_since)
+  ), duplicate_people as (
+    select pr.linked_person_id, count(*)::bigint account_count
+    from public.profiles pr
+    where pr.linked_person_id is not null and pr.account_status='active'
+    group by pr.linked_person_id
+    having count(*) > 1
+  )
+  select
+    count(*)::bigint,
+    count(distinct a.user_id)::bigint,
+    count(*) filter (where a.status='approved')::bigint,
+    count(*) filter (where a.status='pending')::bigint,
+    count(*) filter (where a.status='rejected')::bigint,
+    (select count(*)::bigint from duplicate_people),
+    (select coalesce(sum(dp.account_count),0)::bigint from duplicate_people dp)
+  from activity a;
 end;
 $$;
 
-revoke all on function public.review_relationship_change(uuid,text,text) from public,anon;
-grant execute on function public.review_relationship_change(uuid,text,text) to authenticated;
+revoke all on function public.get_admin_contribution_overview(integer) from public, anon;
+grant execute on function public.get_admin_contribution_overview(integer) to authenticated;
 
-notify pgrst,'reload schema';
+notify pgrst, 'reload schema';
 
 commit;

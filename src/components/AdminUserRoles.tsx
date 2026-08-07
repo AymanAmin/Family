@@ -65,7 +65,9 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
   useEffect(() => {
     if (!active) return
     if (timerRef.current) window.clearTimeout(timerRef.current)
-    timerRef.current = window.setTimeout(() => void fetchPage(query, 0, false), 280)
+    timerRef.current = window.setTimeout((): void => {
+      void fetchPage(query, 0, false)
+    }, 280)
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current)
     }

@@ -23,6 +23,16 @@ jobs:
           node-version: 22
       - name: Apply integration
         run: python3 scripts/apply-six-person-event-features.py
+      - name: Tighten directory result typing
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/components/DirectoryScreen.tsx')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace("(smart.data ?? []).map((item) => normalizeFallbackPerson(item as Record<string, unknown>))", "(smart.data ?? []).map((item: unknown) => normalizeFallbackPerson(item as Record<string, unknown>))")
+          path.write_text(text, encoding='utf-8')
+          PY
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Verify TypeScript and production build
@@ -34,7 +44,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/App.tsx src/main.tsx
+          git add src/App.tsx src/main.tsx src/components/DirectoryScreen.tsx
           if ! git diff --cached --quiet; then
             git commit -m "Integrate verified people event mentions and relationship edits"
             git fetch origin main

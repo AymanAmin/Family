@@ -1,0 +1,372 @@
+/* Mobile-first visual layer for admin role management and person life status. */
+
+.life-status-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid #dbe7e2;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #f9fcfb, #eef6f2);
+}
+
+.life-status-card.deceased {
+  border-color: #e6d9c8;
+  background: linear-gradient(145deg, #fffaf4, #f7efe5);
+}
+
+.life-status-copy {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.life-status-copy > div {
+  display: grid;
+  gap: 2px;
+}
+
+.life-status-copy strong {
+  color: var(--green-950);
+  font-size: .76rem;
+}
+
+.life-status-copy small {
+  color: #72827b;
+  font-size: .58rem;
+  line-height: 1.5;
+}
+
+.life-status-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 11px;
+  color: #14745a;
+  background: #dff2ea;
+  font-size: .76rem;
+}
+
+.life-status-card.deceased .life-status-icon {
+  color: #8a6536;
+  background: #f1e2cd;
+}
+
+.life-status-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.life-status-switch input {
+  position: absolute;
+  width: 1px !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  opacity: 0;
+}
+
+.life-status-switch > span {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: #cbd8d3;
+  transition: .18s ease;
+}
+
+.life-status-switch > span::after {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 7px rgb(15 68 54 / 18%);
+  content: '';
+  transition: .18s ease;
+}
+
+.life-status-switch input:checked + span {
+  background: #9b7543;
+}
+
+.life-status-switch input:checked + span::after {
+  transform: translateX(-18px);
+}
+
+.death-date-field input {
+  direction: ltr;
+}
+
+.deceased-fact {
+  border-color: #eadbc6 !important;
+  background: linear-gradient(145deg, #fffaf5, #f7f0e7) !important;
+}
+
+.deceased-fact strong {
+  color: #7e5c31 !important;
+}
+
+.deceased-fact small,
+.alive-fact small {
+  display: block;
+  margin-top: 3px;
+  color: #78867f;
+  font-size: .57rem;
+}
+
+.admin-users-panel {
+  width: min(100%, 920px);
+  margin: 14px auto 0;
+  padding: 13px;
+  border: 1px solid #dce8e3;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgb(7 56 45 / 6%);
+}
+
+.admin-users-heading {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 11px;
+}
+
+.admin-users-heading h2 {
+  margin: 3px 0 4px;
+  color: var(--green-950);
+  font-size: .98rem;
+}
+
+.admin-users-heading p {
+  margin: 0;
+  color: #70817a;
+  font-size: .62rem;
+  line-height: 1.75;
+}
+
+.primary-admin-lock {
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #8b6a37;
+  background: #faf1e1;
+  font-size: .56rem;
+  font-weight: 900;
+}
+
+.admin-user-search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 43px;
+  padding: 5px 9px;
+  border: 1px solid #d6e3de;
+  border-radius: 14px;
+  background: #f9fcfa;
+}
+
+.admin-user-search > span {
+  color: var(--green-600);
+  font-size: 1rem;
+}
+
+.admin-user-search input {
+  min-width: 0;
+  min-height: 32px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: .7rem;
+}
+
+.admin-user-search button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 9px;
+  color: #6f8078;
+  background: #edf4f1;
+}
+
+.admin-users-message {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 11px;
+  color: #526a60;
+  background: #f0f6f3;
+  font-size: .62rem;
+}
+
+.admin-users-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.admin-user-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid #e0e9e5;
+  border-radius: 15px;
+  background: #fcfefd;
+}
+
+.admin-user-card.is-admin {
+  border-color: #d0e4dc;
+  background: linear-gradient(145deg, #f8fcfa, #eef7f3);
+}
+
+.admin-user-avatar {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--green-800);
+  background: #dff0e9;
+  font-size: .82rem;
+  font-weight: 900;
+}
+
+.admin-user-copy {
+  min-width: 0;
+}
+
+.admin-user-name-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-user-name-line strong,
+.admin-user-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-name-line strong {
+  max-width: 100%;
+  color: var(--green-950);
+  font-size: .7rem;
+}
+
+.admin-user-copy > small {
+  display: block;
+  margin-top: 2px;
+  color: #71817a;
+  font-size: .56rem;
+  text-align: right;
+}
+
+.admin-user-copy p {
+  margin: 3px 0 0;
+  color: #83908a;
+  font-size: .52rem;
+}
+
+.role-badge {
+  padding: 3px 6px;
+  border-radius: 999px;
+  font-size: .5rem;
+  font-weight: 900;
+}
+
+.role-badge.member { color: #66766f; background: #eef2f0; }
+.role-badge.admin { color: #176649; background: #dff1e8; }
+.role-badge.primary { color: #856330; background: #f6ead4; }
+
+.admin-user-actions {
+  grid-column: 1 / -1;
+  padding-top: 7px;
+  border-top: 1px solid #edf2f0;
+}
+
+.admin-user-actions > button,
+.role-confirm-actions button,
+.admin-users-more {
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: .58rem;
+  font-weight: 900;
+}
+
+.admin-user-actions > button {
+  width: 100%;
+  border: 0;
+}
+
+.admin-user-actions .promote { color: white; background: var(--green-700); }
+.admin-user-actions .demote { color: #8d513f; background: #f8eae5; }
+
+.role-confirm-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.role-confirm-actions span {
+  color: #62736c;
+  font-size: .56rem;
+}
+
+.role-confirm-actions button {
+  border: 1px solid #dce6e2;
+  color: #607068;
+  background: #fff;
+}
+
+.role-confirm-actions .confirm {
+  border-color: var(--green-700);
+  color: white;
+  background: var(--green-700);
+}
+
+.admin-users-more {
+  width: 100%;
+  margin-top: 9px;
+  border: 1px solid #d5e3dd;
+  color: var(--green-700);
+  background: #f8fbfa;
+}
+
+.admin-users-skeleton {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.admin-users-skeleton i {
+  height: 67px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #eef3f1, #f9fbfa, #eef3f1);
+  background-size: 200% 100%;
+  animation: adminSkeleton 1.1s linear infinite;
+}
+
+@keyframes adminSkeleton {
+  to { background-position: -200% 0; }
+}
+
+@media (min-width: 761px) {
+  .admin-users-panel { padding: 20px; }
+  .admin-users-heading { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+  .admin-users-heading h2 { font-size: 1.15rem; }
+  .admin-users-heading p { font-size: .72rem; }
+  .admin-user-card { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
+  .admin-user-actions { grid-column: auto; padding: 0; border-top: 0; }
+  .admin-user-actions > button { width: auto; min-width: 115px; }
+}

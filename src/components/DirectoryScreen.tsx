@@ -33,6 +33,7 @@ export type DirectoryFamily = {
 
 type Props = {
   initialTerm?: string
+  initialTab?: 'all' | 'people' | 'families'
   onOpenPerson: (person: DirectoryPerson) => void
   onOpenFamily: (family: DirectoryFamily) => void
 }
@@ -188,10 +189,10 @@ async function fetchFamilyPage(page: number, queryTerm: string): Promise<FamilyP
   return value
 }
 
-export default function DirectoryScreen({ initialTerm = '', onOpenPerson, onOpenFamily }: Props) {
+export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', onOpenPerson, onOpenFamily }: Props) {
   const [term, setTerm] = useState(initialTerm)
   const [submittedTerm, setSubmittedTerm] = useState(initialTerm.trim())
-  const [tab, setTab] = useState<Tab>('all')
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [people, setPeople] = useState<DirectoryPerson[]>([])
   const [families, setFamilies] = useState<DirectoryFamily[]>([])
   const [peoplePage, setPeoplePage] = useState(0)
@@ -228,6 +229,10 @@ export default function DirectoryScreen({ initialTerm = '', onOpenPerson, onOpen
     const value = initialTerm.trim()
     setTerm(initialTerm); setSubmittedTerm(value); void reload(value)
   }, [initialTerm, reload])
+
+  useEffect(() => {
+    setTab(initialTab)
+  }, [initialTab])
 
   useEffect(() => () => { if (debounceRef.current) window.clearTimeout(debounceRef.current) }, [])
 

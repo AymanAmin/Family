@@ -250,6 +250,7 @@ function App() {
   const [ownLinkRequest, setOwnLinkRequest] = useState<AccountLinkRequest | null>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
+  const [directoryInitialTab, setDirectoryInitialTab] = useState<'all' | 'people' | 'families'>('all')
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -599,6 +600,7 @@ function App() {
   async function runSearch(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault()
     if (!schemaReady) return
+    setDirectoryInitialTab('all')
     setView('search')
   }
 
@@ -996,7 +998,7 @@ function App() {
         <nav className="desktop-nav">
           <button onClick={() => setView('home')} className={view === 'home' ? 'active' : ''}>الرئيسية</button>
           <button onClick={() => setView('news')} className={view === 'news' ? 'active' : ''}>الأخبار</button>
-          <button onClick={() => setView('search')} className={view === 'search' ? 'active' : ''}>البحث</button>
+          <button onClick={() => { setDirectoryInitialTab('all'); setView('search') }} className={view === 'search' ? 'active' : ''}>البحث</button>
           <button onClick={() => setView('tree')} className={view === 'tree' ? 'active' : ''}>شجرة العائلة</button>
           <button onClick={() => requireAccount() && setView('add')} className={view === 'add' ? 'active' : ''}>إضافة</button>
           {canModerate && <button onClick={() => setView('admin')} className={view === 'admin' ? 'active' : ''}>الإدارة</button>}
@@ -1014,7 +1016,7 @@ function App() {
 
       <nav className="mobile-bottom-nav" aria-label="التنقل الرئيسي">
         <button type="button" onClick={() => setView('home')} className={view === 'home' ? 'active' : ''}><span className="mobile-nav-icon">⌂</span><span>الرئيسية</span></button>
-        <button type="button" onClick={() => setView('search')} className={view === 'search' ? 'active' : ''}><span className="mobile-nav-icon">⌕</span><span>الدليل</span></button>
+        <button type="button" onClick={() => { setDirectoryInitialTab('all'); setView('search') }} className={view === 'search' ? 'active' : ''}><span className="mobile-nav-icon">⌕</span><span>الدليل</span></button>
         <button type="button" onClick={() => requireAccount() && setView('add')} className={view === 'add' ? 'active add-nav-action' : 'add-nav-action'}><span className="mobile-nav-icon">＋</span><span>إضافة</span></button>
         <button type="button" onClick={() => setView('tree')} className={view === 'tree' ? 'active' : ''}><span className="mobile-nav-icon">⌘</span><span>الشجرة</span></button>
         {canModerate ? <button type="button" onClick={() => setView('admin')} className={view === 'admin' ? 'active' : ''}><span className="mobile-nav-icon">▦</span><span>الإدارة</span></button> : <button type="button" onClick={() => { if (session) setView('account'); else { setView('home'); window.setTimeout(() => document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' }), 60) } }} className={view === 'account' ? 'active' : ''}><span className="mobile-nav-icon">◉</span><span>{session ? 'حسابي' : 'دخول'}</span></button>}
@@ -1048,11 +1050,11 @@ function App() {
 
             <section className="nasab-dashboard">
               <div className="app-services unified-home-stats" aria-label="اختصارات وإحصائيات المنصة">
-                <button className="service-tile stat-service-tile" type="button" onClick={() => setView('search')}><span className="service-icon">{platformStats?.approved_families ?? '—'}</span><span><strong>العائلات</strong><small>الأسر المعتمدة في الدليل</small></span></button>
-                <button className="service-tile stat-service-tile" type="button" onClick={() => setView('search')}><span className="service-icon">{platformStats?.approved_people ?? '—'}</span><span><strong>الأفراد</strong><small>ملفات الأشخاص الموثقة</small></span></button>
+                <button className="service-tile stat-service-tile" type="button" onClick={() => { setDirectoryInitialTab('families'); setView('search') }}><span className="service-icon">{platformStats?.approved_families ?? '—'}</span><span><strong>العائلات</strong><small>الأسر المعتمدة في الدليل</small></span></button>
+                <button className="service-tile stat-service-tile" type="button" onClick={() => { setDirectoryInitialTab('people'); setView('search') }}><span className="service-icon">{platformStats?.approved_people ?? '—'}</span><span><strong>الأفراد</strong><small>ملفات الأشخاص الموثقة</small></span></button>
                 <button className="service-tile stat-service-tile" type="button" onClick={() => setView('news')}><span className="service-icon">{platformStats?.approved_events ?? '—'}</span><span><strong>المناسبات</strong><small>الأخبار والمناسبات المنشورة</small></span></button>
                 <button className="service-tile" type="button" onClick={() => setView('tree')}><span className="service-icon">ش</span><span><strong>شجرة العائلة</strong><small>استكشف القرابة ومسارات النسب</small></span></button>
-                {isAdmin && <button className="service-tile stat-service-tile" type="button" onClick={() => setView('admin')}><span className="service-icon">{pending.length}</span><span><strong>بانتظار الاعتماد</strong><small>الطلبات التي تحتاج مراجعة</small></span></button>}
+                {isAdmin && <button className="service-tile stat-service-tile" type="button" onClick={() => { setAdminTab('requests'); setView('admin') }}><span className="service-icon">{pending.length}</span><span><strong>بانتظار الاعتماد</strong><small>الطلبات التي تحتاج مراجعة</small></span></button>}
                 <button className="service-tile" type="button" onClick={() => session ? setView('account') : document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' })}><span className="service-icon">{session ? userName[0] : 'د'}</span><span><strong>{session ? 'حسابي' : 'الدخول'}</strong><small>{session ? 'الربط والملف الشخصي' : 'ساهم في توثيق العائلة'}</small></span></button>
               </div>
 
@@ -1093,7 +1095,7 @@ function App() {
             </section>
 
             <section className="section-block">
-              <div className="section-title"><div><span className="eyebrow">دليل الأسر</span><h2>العائلات المعتمدة</h2></div><button className="text-link" onClick={() => setView('search')}>عرض الكل</button></div>
+              <div className="section-title"><div><span className="eyebrow">دليل الأسر</span><h2>العائلات المعتمدة</h2></div><button className="text-link" onClick={() => { setDirectoryInitialTab('families'); setView('search') }}>عرض الكل</button></div>
               {dataLoading ? <div className="empty-state">جارٍ تحميل البيانات…</div> : approvedFamilies.length ? (
                 <div className="cards-grid">
                   {approvedFamilies.slice(0, 6).map((family) => (
@@ -1125,6 +1127,7 @@ function App() {
           <Suspense fallback={<LazyPanelFallback />}>
             <DirectoryScreen
               initialTerm={searchTerm}
+              initialTab={directoryInitialTab}
               onOpenPerson={(item) => void openPersonById(item.id)}
               onOpenFamily={(item) => openFamily(item as Family)}
             />
@@ -1239,7 +1242,7 @@ function App() {
               <span className={`status ${profile?.linked_person_id ? 'approved' : ownLinkRequest?.status === 'pending' ? 'pending' : ''}`}>{profile?.linked_person_id ? 'مرتبط' : ownLinkRequest?.status === 'pending' ? 'قيد المراجعة' : 'غير مرتبط'}</span>
               <h2>{profile?.linked_person_id ? 'الحساب مرتبط بسجل شخص' : ownLinkRequest?.status === 'pending' ? 'طلب الربط قيد المراجعة' : 'اربط حسابك بسجلك داخل الدليل'}</h2>
               <p>{profile?.linked_person_id ? people.find((item) => item.id === profile.linked_person_id)?.full_name || 'تم اعتماد الربط.' : ownLinkRequest?.status === 'pending' ? `السجل المطلوب: ${personName(ownLinkRequest.people)}` : 'ابحث عن اسمك في الدليل وافتح ملف الشخص ثم اضغط «هذا أنا».'}</p>
-              {!profile?.linked_person_id && ownLinkRequest?.status !== 'pending' && <button className="primary" type="button" onClick={() => setView('search')}>البحث عن سجلي</button>}
+              {!profile?.linked_person_id && ownLinkRequest?.status !== 'pending' && <button className="primary" type="button" onClick={() => { setDirectoryInitialTab('people'); setView('search') }}>البحث عن سجلي</button>}
             </div>
             <div className="account-logout-card"><div><strong>تسجيل الخروج</strong><small>إنهاء الجلسة الحالية على هذا الجهاز.</small></div><button type="button" disabled={busy} onClick={() => void signOut()}>{busy ? 'جارٍ الخروج…' : 'تسجيل الخروج'}</button></div>
             <Suspense fallback={<LazyPanelFallback />}>

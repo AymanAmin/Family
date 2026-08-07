@@ -2,8 +2,11 @@ name: Sync latest migrations into SETUP
 
 on:
   push:
+    branches: [main]
     paths:
       - '.github/workflows/sync-setup-latest.yml'
+      - 'scripts/sync-setup-latest.mjs'
+      - 'supabase/migrations/202608070012_kinship_path_explorer.sql'
 
 permissions:
   contents: write
@@ -13,17 +16,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Sync SETUP.sql
         run: node scripts/sync-setup-latest.mjs
       - name: Commit SETUP.sql
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add supabase/SETUP.sql
           if ! git diff --cached --quiet; then
             git commit -m "Sync latest migrations into SETUP"
-            git push
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
           fi

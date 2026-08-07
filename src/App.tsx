@@ -91,6 +91,12 @@ type AccountLinkRequest = {
   created_at: string
 }
 
+type EventPersonMention = {
+  event_id: string
+  participant_role: string
+  people?: RelatedPerson
+}
+
 type CommunityEvent = {
   id: string
   event_type: string
@@ -101,6 +107,7 @@ type CommunityEvent = {
   status: RecordStatus
   family_id: string | null
   families?: RelatedFamily
+  mentions?: EventPersonMention[]
   created_by: string
   created_at: string
 }
@@ -311,7 +318,27 @@ function App() {
     setSchemaReady(true)
     setFamilies((familyResult.data ?? []) as Family[])
     setPeople((peopleResult.data ?? []) as Person[])
-    setEvents((eventResult.data ?? []) as CommunityEvent[])
+
+    const baseEvents = (eventResult.data ?? []) as CommunityEvent[]
+    let hydratedEvents = baseEvents
+    const eventIds = baseEvents.map((item) => item.id)
+    if (eventIds.length) {
+      const mentionResult = await supabase
+        .from('event_people')
+        .select('event_id,participant_role,people(id,full_name)')
+        .in('event_id', eventIds)
+        .order('sort_order')
+      if (!mentionResult.error) {
+        const byEvent = new Map<string, EventPersonMention[]>()
+        for (const row of (mentionResult.data ?? []) as EventPersonMention[]) {
+          const bucket = byEvent.get(row.event_id) ?? []
+          bucket.push(row)
+          byEvent.set(row.event_id, bucket)
+        }
+        hydratedEvents = baseEvents.map((item) => ({ ...item, mentions: byEvent.get(item.id) ?? [] }))
+      }
+    }
+    setEvents(hydratedEvents)
     if (!statsResult.error) {
       const statsRow = Array.isArray(statsResult.data) ? statsResult.data[0] : null
       setPlatformStats((statsRow as PlatformStats | undefined) ?? null)
@@ -942,6 +969,11 @@ function App() {
                       <div className="event-top"><span>{eventLabels[item.event_type] || item.event_type}</span><time>{formatDate(item.event_date)}</time></div>
                       <h3>{item.title}</h3>
                       <p>{item.description || 'لا توجد تفاصيل إضافية.'}</p>
+                      {item.mentions?.length ? <div className="event-mention-chips">{item.mentions.map((mention) => {
+                        const id = personId(mention.people)
+                        const name = personName(mention.people)
+                        return name ? <button className="event-mention-chip" type="button" key={`${item.id}-${id}-${mention.participant_role}`} onClick={() => id && void openPersonById(id)}>@ {name}</button> : null
+                      })}</div> : null}
                       <small>{item.location_name || familyName(item.families) || 'المكان غير محدد'}</small>
                       <RecordEditButton entityType="events" recordId={item.id} createdBy={item.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} initialData={{ event_type: item.event_type, title: item.title, family_id: item.family_id, event_date: item.event_date, location_name: item.location_name, description: item.description }} onSaved={loadCommunityData} />
                     </article>
@@ -956,7 +988,7 @@ function App() {
           <Suspense fallback={<LazyPanelFallback />}>
             <DirectoryScreen
               initialTerm={searchTerm}
-              onOpenPerson={(item) => void openPerson(item as Person)}
+              onOpenPerson={(item) => void openPersonById(item.id)}
               onOpenFamily={(item) => openFamily(item as Family)}
             />
           </Suspense>

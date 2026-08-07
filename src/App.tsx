@@ -190,6 +190,7 @@ function App() {
   const [dataLoading, setDataLoading] = useState(true)
   const [schemaReady, setSchemaReady] = useState(true)
   const [view, setView] = useState<View>('home')
+  const [routeReady, setRouteReady] = useState(false)
   const [authMode, setAuthMode] = useState<AuthMode>('signin')
   const [addMode, setAddMode] = useState<AddMode>('family')
   const [message, setMessage] = useState('')
@@ -370,6 +371,50 @@ function App() {
       .maybeSingle()
       .then(({ data }) => setOwnLinkRequest((data as AccountLinkRequest | null) ?? null))
   }, [session, profile?.linked_person_id])
+
+  useEffect(() => {
+    if (routeReady || dataLoading || sessionLoading || !schemaReady) return
+    let cancelled = false
+
+    async function restoreRoute() {
+      const rawHash = window.location.hash
+      if (rawHash.startsWith('#access_token=') || rawHash.startsWith('#error=')) {
+        if (!cancelled) setRouteReady(true)
+        return
+      }
+
+      const route = decodeURIComponent(rawHash.replace(/^#\/?/, ''))
+      const [target, id] = route.split('/')
+
+      if (target === 'person' && id) {
+        await openPersonById(id)
+      } else if (target === 'family' && id) {
+        await openFamilyById(id)
+      } else if (target === 'search' || target === 'add' || target === 'admin' || target === 'account') {
+        setView(target as View)
+      } else {
+        setView('home')
+      }
+
+      if (!cancelled) setRouteReady(true)
+    }
+
+    void restoreRoute()
+    return () => { cancelled = true }
+  }, [routeReady, dataLoading, sessionLoading, schemaReady])
+
+  useEffect(() => {
+    if (!routeReady) return
+
+    let route: string = view
+    if (view === 'person' && selectedPerson?.id) route = `person/${selectedPerson.id}`
+    if (view === 'family' && selectedFamily?.id) route = `family/${selectedFamily.id}`
+
+    const nextHash = `#/${route}`
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, '', nextHash)
+    }
+  }, [routeReady, view, selectedPerson?.id, selectedFamily?.id])
 
   const visibleFamilies = useMemo(() => families.filter((item) => item.status === 'approved' || item.status === 'pending'), [families])
   const approvedFamilies = useMemo(() => families.filter((item) => item.status === 'approved'), [families])
@@ -553,6 +598,23 @@ function App() {
     setSelectedFamily(item)
     setView('family')
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  async function openFamilyById(id: string) {
+    const cached = families.find((item) => item.id === id)
+    if (cached) {
+      openFamily(cached)
+      return
+    }
+    if (!supabase) return
+
+    const { data, error } = await supabase
+      .from('families')
+      .select('id,name,description,origin_place,status,created_by,created_at')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) return showMessage(friendlyError(error.message), 'error')
+    if (data) openFamily(data as Family)
   }
 
   async function openPerson(item: Person) {

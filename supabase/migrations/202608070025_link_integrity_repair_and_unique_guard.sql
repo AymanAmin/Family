@@ -6,6 +6,10 @@ begin;
 
 create schema if not exists private;
 
+-- Keep this hotfix runnable even when phase 16 previously rolled back at the unique-index step.
+alter table public.people add column if not exists is_verified boolean not null default false;
+alter table public.people add column if not exists verified_at timestamptz;
+
 create table if not exists private.linked_person_conflicts (
   id bigint generated always as identity primary key,
   person_id uuid not null,
@@ -18,8 +22,6 @@ create table if not exists private.linked_person_conflicts (
 
 revoke all on table private.linked_person_conflicts from public, anon, authenticated;
 
--- Remove an older unique index first, because some databases failed halfway through
--- creating it and others may already have it from a previous attempt.
 drop index if exists public.profiles_one_linked_person_idx;
 
 -- Rank every duplicated link deterministically.
@@ -70,8 +72,8 @@ where not exists (
     and c.detached_user_id = d.user_id
 );
 
--- Re-open old approved requests for detached duplicates by marking them rejected.
--- This keeps the historical row but allows the user to submit a correct link later.
+-- Mark historical approved duplicate link requests as rejected so the detached account
+-- can submit a correct link later. The conflict table keeps the repair audit trail.
 update public.account_link_requests r
 set status = 'rejected',
     reviewed_at = coalesce(r.reviewed_at, now()),
@@ -84,7 +86,7 @@ where r.status = 'approved'
       and c.person_id = r.person_id
   );
 
--- Detach only the duplicated link. No auth user/profile is deleted.
+-- Detach only the duplicated link. No auth user, profile, or person is deleted.
 update public.profiles p
 set linked_person_id = null,
     role = case when p.role = 'verified_member' then 'member' else p.role end,
@@ -96,7 +98,7 @@ where exists (
     and c.person_id = p.linked_person_id
 );
 
--- Keep app metadata aligned for accounts downgraded from verified_member.
+-- Keep app metadata aligned when the role helper from phase 13 is available.
 do $$
 declare
   row_item record;
@@ -114,7 +116,7 @@ begin
   end if;
 end $$;
 
--- Recalculate public verification after repair.
+-- Recalculate the public blue verification mark after repairing duplicates.
 update public.people person
 set is_verified = exists (
       select 1 from public.profiles p
@@ -130,12 +132,12 @@ set is_verified = exists (
       else null
     end;
 
--- Enforce one profile per person going forward.
+-- One person can now be linked to only one account.
 create unique index if not exists profiles_one_linked_person_idx
   on public.profiles(linked_person_id)
   where linked_person_id is not null;
 
--- Latest account-link approval endpoint with a friendly collision check.
+-- Latest account-link approval endpoint with a clear collision message.
 create or replace function public.review_account_link_request(
   p_request_id uuid,
   p_status text

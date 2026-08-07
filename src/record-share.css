@@ -1,0 +1,64 @@
+.record-share-wrap{
+  display:grid;
+  gap:.45rem;
+  width:100%;
+}
+
+.record-share-trigger{
+  min-height:62px;
+  width:100%;
+  border:1px solid rgba(46,115,148,.22);
+  border-radius:22px;
+  background:linear-gradient(135deg,#17395f,#2e7394 60%,#50b8b1);
+  color:#fff;
+  font:inherit;
+  font-weight:800;
+  font-size:1.02rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:.7rem;
+  box-shadow:0 14px 32px rgba(23,57,95,.16);
+  cursor:pointer;
+  transition:transform .18s ease,box-shadow .18s ease,opacity .18s ease;
+}
+
+.record-share-trigger:hover:not(:disabled){
+  transform:translateY(-1px);
+  box-shadow:0 18px 38px rgba(23,57,95,.2);
+}
+
+.record-share-trigger:active:not(:disabled){transform:translateY(1px)}
+.record-share-trigger:disabled{opacity:.68;cursor:wait}
+
+.record-share-icon{
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  background:rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.18);
+  font-size:1.2rem;
+  line-height:1;
+}
+
+.record-share-message{
+  color:#627777;
+  font-size:.78rem;
+  line-height:1.55;
+  text-align:center;
+  padding:0 .35rem;
+}
+
+.record-action-group .record-share-wrap{
+  grid-column:1/-1;
+}
+
+@media (max-width:720px){
+  .record-share-trigger{
+    min-height:58px;
+    border-radius:20px;
+    font-size:1rem;
+  }
+}

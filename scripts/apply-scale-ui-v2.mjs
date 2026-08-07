@@ -116,3 +116,5 @@ if (!main.includes("import './scale-ui-v2.css'")) {
 fs.writeFileSync(appPath, app)
 fs.writeFileSync(mainPath, main)
 console.log('Applied scalable family pickers and tabbed admin console.')
+
+// Integration trigger: 2026-08-07

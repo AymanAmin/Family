@@ -1,0 +1,51 @@
+name: Fix phase 5 kinship SQL aliases
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-phase5-kinship-sql.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fix Phase 5 SQL aliases
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          files = [
+              Path('supabase/SETUP.sql'),
+              Path('supabase/migrations/202608070008_extended_kinship_rules.sql'),
+          ]
+
+          old = """select distinct on (c.related_person_id, c.relation_type)\n    c.id as related_person_id,"""
+          new = """select distinct on (c.id, c.relation_type)\n    c.id as related_person_id,"""
+
+          old_order = """where c.id <> p_person_id\n  order by c.related_person_id, c.relation_type, c.is_inferred asc,"""
+          new_order = """where c.id <> p_person_id\n  order by c.id, c.relation_type, c.is_inferred asc,"""
+
+          for path in files:
+              text = path.read_text()
+              if old not in text:
+                  raise SystemExit(f'Phase 5 DISTINCT marker not found in {path}')
+              if old_order not in text:
+                  raise SystemExit(f'Phase 5 ORDER marker not found in {path}')
+              text = text.replace(old, new, 1)
+              text = text.replace(old_order, new_order, 1)
+              path.write_text(text)
+          PY
+      - name: Commit corrected SQL
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supabase/SETUP.sql supabase/migrations/202608070008_extended_kinship_rules.sql
+          git commit -m "Fix phase 5 kinship SQL column aliases"
+          git push

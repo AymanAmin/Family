@@ -1,0 +1,46 @@
+name: Fix direct admin event label
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-event-admin-label.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Update label
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/App.tsx')
+          s = p.read_text()
+          old = '<button className="primary full" disabled={busy}>إرسال للمراجعة</button></form>}'
+          new = '<button className="primary full" disabled={busy}>{isAdmin ? \'إضافة واعتماد\' : \'إرسال للمراجعة\'}</button></form>}'
+          if old not in s:
+              raise SystemExit('event button marker not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Install and verify
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          git restore index.html 404.html || true
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx
+          git commit -m "Show direct approval label for admin events"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main

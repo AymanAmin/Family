@@ -6,7 +6,7 @@ on:
     paths:
       - '.github/workflows/sync-setup-latest.yml'
       - 'scripts/sync-setup-latest.mjs'
-      - 'supabase/migrations/202608070012_kinship_path_explorer.sql'
+      - 'supabase/migrations/**'
 
 permissions:
   contents: write

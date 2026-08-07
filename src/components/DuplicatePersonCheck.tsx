@@ -30,6 +30,10 @@ function hasCompletedFirstName(value: string) {
   return /\S+\s+/.test(trimmedStart)
 }
 
+function escapeLikePrefix(value: string) {
+  return value.replace(/([\\%_])/g, '\\$1')
+}
+
 function scoreLabel(score: number) {
   if (score >= .98) return 'مطابق تقريبًا'
   if (score >= .86) return 'تشابه قوي'
@@ -68,11 +72,59 @@ export default function DuplicatePersonCheck({ name, onOpenPerson }: Props) {
       const requestId = ++requestRef.current
       setLoading(true)
 
-      const smart = await supabase.rpc('find_similar_people', { p_query: query, p_limit: 6 })
+      // The duplicate check is intentionally prefix-only: typing "محمد الزبير"
+      // should return names that start with "محمد الزبير", not names that merely
+      // contain the same words later in the full name.
+      const prefixResult = await supabase
+        .from('people')
+        .select('id,full_name,gender,birth_year,family_id,status,families(name)')
+        .eq('status', 'approved')
+        .ilike('full_name', `${escapeLikePrefix(query)}%`)
+        .order('full_name')
+        .limit(6)
+
+      if (requestId !== requestRef.current) return
+
+      if (!prefixResult.error) {
+        const smart = await supabase.rpc('find_similar_people', { p_query: query, p_limit: 20 })
+        if (requestId !== requestRef.current) return
+
+        const smartScores = new Map<string, number>()
+        if (!smart.error) {
+          for (const item of (smart.data ?? []) as SimilarPerson[]) smartScores.set(item.id, item.match_score)
+        }
+
+        const mapped: SimilarPerson[] = (prefixResult.data ?? []).map((item) => {
+          const familyValue = item.families as { name?: string } | { name?: string }[] | null
+          const familyName = Array.isArray(familyValue) ? familyValue[0]?.name ?? null : familyValue?.name ?? null
+          const exact = normalizedKey(item.full_name) === key
+          return {
+            id: item.id,
+            full_name: item.full_name,
+            gender: item.gender,
+            birth_year: item.birth_year,
+            family_id: item.family_id,
+            family_name: familyName,
+            status: item.status,
+            match_score: smartScores.get(item.id) ?? (exact ? 1 : .86),
+          }
+        })
+
+        cache.set(key, { savedAt: Date.now(), rows: mapped })
+        setRows(mapped)
+        setAvailable(!smart.error)
+        setLoading(false)
+        return
+      }
+
+      // Compatibility fallback if the direct prefix query is unavailable.
+      const smart = await supabase.rpc('find_similar_people', { p_query: query, p_limit: 20 })
       if (requestId !== requestRef.current) return
 
       if (!smart.error) {
-        const result = (smart.data ?? []) as SimilarPerson[]
+        const result = ((smart.data ?? []) as SimilarPerson[])
+          .filter((person) => normalizedKey(person.full_name).startsWith(key))
+          .slice(0, 6)
         cache.set(key, { savedAt: Date.now(), rows: result })
         setRows(result)
         setAvailable(true)
@@ -80,31 +132,7 @@ export default function DuplicatePersonCheck({ name, onOpenPerson }: Props) {
         return
       }
 
-      // Safe fallback before migration 011 is installed: approved people only.
-      const fallback = await supabase
-        .from('people')
-        .select('id,full_name,gender,birth_year,family_id,status,families(name)')
-        .eq('status', 'approved')
-        .ilike('full_name', `%${query}%`)
-        .order('full_name')
-        .limit(6)
-
-      if (requestId !== requestRef.current) return
-      const mapped: SimilarPerson[] = (fallback.data ?? []).map((item) => {
-        const familyValue = item.families as { name?: string } | { name?: string }[] | null
-        const familyName = Array.isArray(familyValue) ? familyValue[0]?.name ?? null : familyValue?.name ?? null
-        return {
-          id: item.id,
-          full_name: item.full_name,
-          gender: item.gender,
-          birth_year: item.birth_year,
-          family_id: item.family_id,
-          family_name: familyName,
-          status: item.status,
-          match_score: .65,
-        }
-      })
-      setRows(mapped)
+      setRows([])
       setAvailable(false)
       setLoading(false)
     }, SEARCH_DELAY)
@@ -115,7 +143,7 @@ export default function DuplicatePersonCheck({ name, onOpenPerson }: Props) {
   }, [name])
 
   if (!hasCompletedFirstName(name)) {
-    return <div className="duplicate-person-hint"><span>⌕</span><p>بعد كتابة الاسم الأول ثم مسافة، سنبحث تلقائيًا عن أشخاص مشابهين لتجنب التكرار.</p></div>
+    return <div className="duplicate-person-hint"><span>⌕</span><p>بعد كتابة الاسم الأول ثم مسافة، سنبحث تلقائيًا عن أشخاص تبدأ أسماؤهم بما كتبته لتجنب التكرار.</p></div>
   }
 
   return (
@@ -145,10 +173,10 @@ export default function DuplicatePersonCheck({ name, onOpenPerson }: Props) {
       )}
 
       {!loading && rows.length === 0 && (
-        <div className="duplicate-clear-state"><span>✓</span><p><strong>لا يظهر سجل مشابه حاليًا.</strong><small>يمكنك متابعة إدخال بقية البيانات.</small></p></div>
+        <div className="duplicate-clear-state"><span>✓</span><p><strong>لا يظهر سجل يبدأ بهذا الاسم حاليًا.</strong><small>يمكنك متابعة إدخال بقية البيانات.</small></p></div>
       )}
 
-      {!available && <p className="duplicate-migration-note">البحث الأساسي يعمل الآن. تشغيل migration 011 يفعّل تشابه الأسماء العربية المتقدم.</p>}
+      {!available && <p className="duplicate-migration-note">البحث الأساسي يعمل الآن. تشغيل migration 011 يفعّل تقييم التشابه المتقدم للنتائج التي تبدأ بالنص المكتوب.</p>}
     </section>
   )
 }

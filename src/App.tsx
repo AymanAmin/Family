@@ -10,11 +10,12 @@ const KinshipNetwork = lazy(() => import('./components/KinshipNetwork'))
 const FamilyMembersPanel = lazy(() => import('./components/FamilyMembersPanel'))
 const Phase3AdminQueue = lazy(() => import('./components/Phase3AdminQueue'))
 const DuplicatePersonCheck = lazy(() => import('./components/DuplicatePersonCheck'))
+const FamilyTreeScreen = lazy(() => import('./components/FamilyTreeScreen'))
 import './details.css'
 import './nasab-inspired.css'
 
 type AuthMode = 'signin' | 'signup' | 'forgot' | 'recovery'
-type View = 'home' | 'search' | 'add' | 'admin' | 'person' | 'family' | 'account'
+type View = 'home' | 'search' | 'tree' | 'add' | 'admin' | 'person' | 'family' | 'account'
 type AddMode = 'family' | 'person' | 'event' | 'relationship'
 type MessageTone = 'info' | 'success' | 'error'
 type PlatformStats = { approved_families: number; approved_people: number; approved_events: number; updated_at: string }
@@ -405,7 +406,7 @@ function App() {
         await openPersonById(id)
       } else if (target === 'family' && id) {
         await openFamilyById(id)
-      } else if (target === 'search' || target === 'add' || target === 'admin' || target === 'account') {
+      } else if (target === 'search' || target === 'tree' || target === 'add' || target === 'admin' || target === 'account') {
         setView(target as View)
       } else {
         setView('home')
@@ -744,6 +745,7 @@ function App() {
         <nav className="desktop-nav">
           <button onClick={() => setView('home')} className={view === 'home' ? 'active' : ''}>الرئيسية</button>
           <button onClick={() => setView('search')} className={view === 'search' ? 'active' : ''}>البحث</button>
+          <button onClick={() => setView('tree')} className={view === 'tree' ? 'active' : ''}>شجرة العائلة</button>
           <button onClick={() => requireAccount() && setView('add')} className={view === 'add' ? 'active' : ''}>إضافة</button>
           {isAdmin && <button onClick={() => setView('admin')} className={view === 'admin' ? 'active' : ''}>الإدارة</button>}
         </nav>
@@ -760,9 +762,10 @@ function App() {
 
       <nav className="mobile-bottom-nav" aria-label="التنقل الرئيسي">
         <button type="button" onClick={() => setView('home')} className={view === 'home' ? 'active' : ''}><span className="mobile-nav-icon">⌂</span><span>الرئيسية</span></button>
-        <button type="button" onClick={() => setView('search')} className={view === 'search' ? 'active' : ''}><span className="mobile-nav-icon">⌕</span><span>البحث</span></button>
+        <button type="button" onClick={() => setView('search')} className={view === 'search' ? 'active' : ''}><span className="mobile-nav-icon">⌕</span><span>الدليل</span></button>
         <button type="button" onClick={() => requireAccount() && setView('add')} className={view === 'add' ? 'active add-nav-action' : 'add-nav-action'}><span className="mobile-nav-icon">＋</span><span>إضافة</span></button>
-        {isAdmin && <button type="button" onClick={() => setView('admin')} className={view === 'admin' ? 'active' : ''}><span className="mobile-nav-icon">▦</span><span>الإدارة</span></button>}
+        <button type="button" onClick={() => setView('tree')} className={view === 'tree' ? 'active' : ''}><span className="mobile-nav-icon">⌘</span><span>الشجرة</span></button>
+        {isAdmin ? <button type="button" onClick={() => setView('admin')} className={view === 'admin' ? 'active' : ''}><span className="mobile-nav-icon">▦</span><span>الإدارة</span></button> : <button type="button" onClick={() => { if (session) setView('account'); else { setView('home'); window.setTimeout(() => document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' }), 60) } }} className={view === 'account' ? 'active' : ''}><span className="mobile-nav-icon">◉</span><span>{session ? 'حسابي' : 'دخول'}</span></button>}
       </nav>
 
       {message && <div className={`global-message ${messageTone}`} role="status"><span>{message}</span><button onClick={() => setMessage('')}>×</button></div>}
@@ -794,7 +797,7 @@ function App() {
               </article>
 
               <div className="app-services">
-                <button className="service-tile" type="button" onClick={() => requireAccount() && (setAddMode('relationship'), setView('add'))}><span className="service-icon">ش</span><span><strong>شجرة العائلة</strong><small>أضف صلات القرابة وابنِ النسب</small></span></button>
+                <button className="service-tile" type="button" onClick={() => setView('tree')}><span className="service-icon">ش</span><span><strong>شجرة العائلة</strong><small>استكشف القرابة ومسارات النسب</small></span></button>
                 <button className="service-tile" type="button" onClick={() => setView('search')}><span className="service-icon">{platformStats?.approved_families ?? '—'}</span><span><strong>العائلات</strong><small>الأسر المعتمدة في الدليل</small></span></button>
                 <button className="service-tile" type="button" onClick={() => setView('search')}><span className="service-icon">{platformStats?.approved_people ?? '—'}</span><span><strong>الأفراد</strong><small>ملفات الأشخاص الموثقة</small></span></button>
                 <button className="service-tile" type="button" onClick={() => session ? setView('account') : document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' })}><span className="service-icon">{session ? userName[0] : 'د'}</span><span><strong>{session ? 'حسابي' : 'الدخول'}</strong><small>{session ? 'الربط والملف الشخصي' : 'ساهم في توثيق العائلة'}</small></span></button>
@@ -808,7 +811,7 @@ function App() {
               </article>
 
               <article className="family-tree-preview">
-                <div className="home-section-heading"><h2>شجرة العائلة</h2><button type="button" onClick={() => requireAccount() && (setAddMode('relationship'), setView('add'))}>إضافة صلة</button></div>
+                <div className="home-section-heading"><h2>شجرة العائلة</h2><button type="button" onClick={() => setView('tree')}>فتح الشجرة</button></div>
                 <div className="tree-orbit" aria-label="معاينة رمزية لشجرة العائلة"><span className="tree-root">صلة</span><span className="tree-node n1">جد</span><span className="tree-node n2">أب</span><span className="tree-node n3">أم</span><span className="tree-node n4">ابن</span><span className="tree-node n5">ابنة</span></div>
               </article>
             </section>
@@ -874,6 +877,21 @@ function App() {
               initialTerm={searchTerm}
               onOpenPerson={(item) => void openPerson(item as Person)}
               onOpenFamily={(item) => openFamily(item as Family)}
+            />
+          </Suspense>
+        )}
+
+        {schemaReady && view === 'tree' && (
+          <Suspense fallback={<LazyPanelFallback />}>
+            <FamilyTreeScreen
+              initialPersonId={profile?.linked_person_id || selectedPerson?.id || null}
+              onOpenPerson={(id) => void openPersonById(id)}
+              onAddRelation={(id) => {
+                if (!requireAccount()) return
+                if (id) setRelationshipForm((current) => ({ ...current, source_person_id: id }))
+                setAddMode('relationship')
+                setView('add')
+              }}
             />
           </Suspense>
         )}

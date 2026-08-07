@@ -37,6 +37,13 @@ function related(value: RelatedPerson) {
   return Array.isArray(value) ? value[0] ?? null : value
 }
 
+function relationTypeFromCurrentPerson(item: Relationship, personId: string) {
+  const currentIsSource = item.source_person_id === personId
+  if (item.relation_type === 'parent') return currentIsSource ? 'child' : 'parent'
+  if (item.relation_type === 'child') return currentIsSource ? 'parent' : 'child'
+  return item.relation_type
+}
+
 export default function DirectRelationshipManager({ personId, sessionUserId, isAdmin = false, onOpenPerson, onChanged }: Props) {
   const [rows, setRows] = useState<Relationship[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,13 +91,13 @@ export default function DirectRelationshipManager({ personId, sessionUserId, isA
     })
     setBusyId('')
     if (error) {
-      setMessage(error.message.toLowerCase().includes('does not exist') ? 'شغّل migration رقم 023 لتفعيل تعديل وحذف صلات القرابة.' : error.message)
+      setMessage(error.message.toLowerCase().includes('does not exist') ? 'شغّل أحدث ملف SETUP.sql لتفعيل تعديل وحذف صلات القرابة.' : error.message)
       return
     }
     setEditingId('')
     setConfirmDeleteId('')
     const applied = data === 'applied'
-    setMessage(applied ? (action === 'delete' ? 'تم حذف الصلة.' : 'تم تحديث الصلة.') : (action === 'delete' ? 'تم إرسال طلب الحذف للإدارة.' : 'تم إرسال التعديل للإدارة.'))
+    setMessage(applied ? (action === 'delete' ? 'تم حذف الصلة وتحديث الشجرة.' : 'تم تحديث الصلة.') : (action === 'delete' ? 'تم إرسال طلب الحذف للإدارة.' : 'تم إرسال التعديل للإدارة.'))
     await load()
     await onChanged?.()
   }
@@ -107,12 +114,14 @@ export default function DirectRelationshipManager({ personId, sessionUserId, isA
           const source = related(item.source)
           const target = related(item.target)
           const other = item.source_person_id === personId ? target : source
+          const contextualRelationType = relationTypeFromCurrentPerson(item, personId)
+          const contextualLabel = labels[contextualRelationType] || contextualRelationType
           const editable = canManage(item)
           return (
             <article className="direct-relation-card" key={item.id}>
               <button className="direct-relation-person" type="button" onClick={() => other?.id && onOpenPerson?.(other.id)}>
                 <span>{other?.full_name?.charAt(0) || '؟'}</span>
-                <div><strong>{other?.full_name || 'شخص'}</strong><small>{labels[item.relation_type] || item.relation_type}{item.status === 'pending' ? ' · معلقة' : ''}</small></div>
+                <div><strong>{other?.full_name || 'شخص'}</strong><small>{contextualLabel}{item.status === 'pending' ? ' · معلقة' : ''}</small></div>
               </button>
               {item.notes && <p>{item.notes}</p>}
               {editable && <div className="direct-relation-actions"><button type="button" onClick={() => startEdit(item)}>تعديل</button><button className="danger" type="button" onClick={() => { setEditingId(''); setConfirmDeleteId(item.id) }}>حذف</button></div>}
@@ -123,7 +132,7 @@ export default function DirectRelationshipManager({ personId, sessionUserId, isA
                 <div><button className="primary" type="button" disabled={busyId === item.id} onClick={() => void submitChange(item,'edit')}>{busyId === item.id ? '…' : isAdmin || item.status === 'pending' ? 'حفظ' : 'إرسال للمراجعة'}</button><button type="button" onClick={() => setEditingId('')}>إلغاء</button></div>
               </div>}
 
-              {confirmDeleteId === item.id && <div className="direct-relation-delete-confirm"><span>{item.status === 'approved' && !isAdmin ? 'سيُرسل طلب حذف للإدارة ولن تختفي الصلة قبل الاعتماد.' : 'هل تريد حذف هذه الصلة؟'}</span><div><button className="danger" type="button" disabled={busyId === item.id} onClick={() => void submitChange(item,'delete')}>{busyId === item.id ? '…' : 'تأكيد الحذف'}</button><button type="button" onClick={() => setConfirmDeleteId('')}>إلغاء</button></div></div>}
+              {confirmDeleteId === item.id && <div className="direct-relation-delete-confirm"><span>{item.status === 'approved' && !isAdmin ? `سيُرسل طلب حذف صلة «${contextualLabel}» مع ${other?.full_name || 'هذا الشخص'} للإدارة، ولن تختفي قبل الاعتماد.` : `هل تريد حذف صلة «${contextualLabel}» مع ${other?.full_name || 'هذا الشخص'}؟`}</span><div><button className="danger" type="button" disabled={busyId === item.id} onClick={() => void submitChange(item,'delete')}>{busyId === item.id ? '…' : 'تأكيد الحذف'}</button><button type="button" onClick={() => setConfirmDeleteId('')}>إلغاء</button></div></div>}
             </article>
           )
         })}

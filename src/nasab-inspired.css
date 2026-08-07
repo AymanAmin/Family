@@ -1,0 +1,411 @@
+/*
+ * Family-first mobile dashboard inspired by the interaction patterns of modern
+ * Arabic family platforms. It intentionally uses the platform's own identity,
+ * wording and visual assets.
+ */
+
+:root {
+  --heritage-green: #143f34;
+  --heritage-green-2: #1f5a49;
+  --heritage-mint: #e9f2ed;
+  --heritage-cream: #f7f1e5;
+  --heritage-gold: #b88a43;
+  --heritage-gold-soft: #efe1c8;
+}
+
+.nasab-dashboard {
+  display: grid;
+  gap: 18px;
+  padding: 0 18px 34px;
+}
+
+.family-welcome-card {
+  position: relative;
+  display: grid;
+  min-height: 220px;
+  overflow: hidden;
+  padding: clamp(25px, 5vw, 42px);
+  border-radius: 30px;
+  color: white;
+  background:
+    radial-gradient(circle at 16% 20%, rgb(255 255 255 / 12%), transparent 12rem),
+    linear-gradient(135deg, var(--heritage-green-2), var(--heritage-green));
+  box-shadow: 0 28px 68px rgb(15 67 53 / 22%);
+}
+
+.family-welcome-card::after {
+  position: absolute;
+  inset: auto -70px -100px auto;
+  width: 280px;
+  height: 280px;
+  border: 42px solid rgb(255 255 255 / 6%);
+  border-radius: 50%;
+  content: '';
+}
+
+.family-welcome-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.family-welcome-card .eyebrow {
+  color: #d8eadf;
+}
+
+.family-welcome-card h2 {
+  max-width: 720px;
+  margin: 12px 0 9px;
+  font-family: 'Noto Kufi Arabic';
+  font-size: clamp(1.55rem, 5vw, 2.7rem);
+  line-height: 1.55;
+}
+
+.family-welcome-card p {
+  max-width: 690px;
+  margin: 0;
+  color: #d4e4dd;
+  line-height: 1.9;
+}
+
+.family-welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 23px;
+}
+
+.family-welcome-actions button {
+  min-height: 46px;
+  padding-inline: 18px;
+  border-radius: 14px;
+  font-weight: 800;
+}
+
+.family-welcome-actions .light-action {
+  border: 0;
+  color: var(--heritage-green);
+  background: white;
+}
+
+.family-welcome-actions .outline-action {
+  border: 1px solid rgb(255 255 255 / 38%);
+  color: white;
+  background: rgb(255 255 255 / 8%);
+}
+
+.app-services {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.service-tile {
+  position: relative;
+  display: grid;
+  min-height: 132px;
+  align-content: space-between;
+  gap: 14px;
+  padding: 17px;
+  border: 1px solid #e2e9e5;
+  border-radius: 22px;
+  color: inherit;
+  background: white;
+  box-shadow: 0 10px 30px rgb(14 64 50 / 7%);
+  text-align: right;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.service-tile:hover {
+  border-color: #bcd1c8;
+  box-shadow: 0 16px 38px rgb(14 64 50 / 11%);
+  transform: translateY(-2px);
+}
+
+.service-icon {
+  display: grid;
+  width: 47px;
+  height: 47px;
+  place-items: center;
+  border-radius: 16px;
+  color: var(--heritage-green-2);
+  background: var(--heritage-mint);
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+.service-tile:nth-child(2) .service-icon,
+.service-tile:nth-child(4) .service-icon {
+  color: #76531d;
+  background: var(--heritage-gold-soft);
+}
+
+.service-tile strong {
+  display: block;
+  color: var(--heritage-green);
+  font-family: 'Noto Kufi Arabic';
+  font-size: .88rem;
+}
+
+.service-tile small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.home-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, .7fr);
+  gap: 18px;
+  padding: 0 18px 50px;
+}
+
+.home-feed,
+.family-tree-preview {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 25px;
+  background: white;
+  box-shadow: var(--shadow);
+}
+
+.family-tree-preview {
+  align-self: start;
+  background: linear-gradient(160deg, #fff, var(--heritage-cream));
+}
+
+.tree-orbit {
+  position: relative;
+  display: grid;
+  min-height: 270px;
+  place-items: center;
+  overflow: hidden;
+  margin-top: 16px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle, rgb(20 63 52 / 7%) 1px, transparent 1px),
+    #fbfcfb;
+  background-size: 18px 18px;
+}
+
+.tree-orbit::before,
+.tree-orbit::after {
+  position: absolute;
+  border: 1px solid #cadbd4;
+  border-radius: 50%;
+  content: '';
+}
+
+.tree-orbit::before {
+  width: 205px;
+  height: 205px;
+}
+
+.tree-orbit::after {
+  width: 120px;
+  height: 120px;
+}
+
+.tree-root {
+  z-index: 2;
+  display: grid;
+  width: 78px;
+  height: 78px;
+  place-items: center;
+  border: 7px solid white;
+  border-radius: 50%;
+  color: white;
+  background: var(--heritage-green-2);
+  box-shadow: 0 12px 30px rgb(14 64 50 / 20%);
+  font-family: 'Noto Kufi Arabic';
+  font-weight: 800;
+}
+
+.tree-node {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  width: 45px;
+  height: 45px;
+  place-items: center;
+  border: 5px solid white;
+  border-radius: 50%;
+  color: var(--heritage-green);
+  background: var(--heritage-gold-soft);
+  box-shadow: 0 7px 18px rgb(14 64 50 / 13%);
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.tree-node.n1 { transform: translate(0, -100px); }
+.tree-node.n2 { transform: translate(96px, -20px); }
+.tree-node.n3 { transform: translate(-96px, -20px); }
+.tree-node.n4 { transform: translate(62px, 84px); }
+.tree-node.n5 { transform: translate(-62px, 84px); }
+
+.home-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 17px;
+}
+
+.home-section-heading h2 {
+  margin: 0;
+  color: var(--heritage-green);
+  font-family: 'Noto Kufi Arabic';
+  font-size: 1.15rem;
+}
+
+.home-section-heading button {
+  border: 0;
+  color: var(--heritage-green-2);
+  background: none;
+  font-weight: 800;
+}
+
+.nasab-event-list {
+  display: grid;
+  gap: 10px;
+}
+
+.nasab-event-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 13px;
+  padding: 13px;
+  border: 1px solid #e8eeeb;
+  border-radius: 17px;
+  background: #fcfdfc;
+}
+
+.nasab-event-date {
+  display: grid;
+  width: 54px;
+  min-height: 58px;
+  place-items: center;
+  padding: 7px;
+  border-radius: 15px;
+  color: var(--heritage-green);
+  background: var(--heritage-mint);
+  text-align: center;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.nasab-event-item h3 {
+  margin: 0 0 4px;
+  color: var(--heritage-green);
+  font-size: .92rem;
+}
+
+.nasab-event-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .78rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .app-services {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero-panel {
+    display: none;
+  }
+
+  .nasab-dashboard {
+    gap: 14px;
+    padding: 14px 13px 20px;
+  }
+
+  .family-welcome-card {
+    min-height: 200px;
+    padding: 24px 19px;
+    border-radius: 25px;
+  }
+
+  .family-welcome-card h2 {
+    font-size: 1.45rem;
+  }
+
+  .family-welcome-card p {
+    font-size: .84rem;
+  }
+
+  .family-welcome-actions {
+    flex-wrap: nowrap;
+  }
+
+  .family-welcome-actions button {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 8px;
+    font-size: .75rem;
+  }
+
+  .app-services {
+    grid-template-columns: repeat(4, minmax(76px, 1fr));
+    gap: 9px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .app-services::-webkit-scrollbar {
+    display: none;
+  }
+
+  .service-tile {
+    min-width: 105px;
+    min-height: 118px;
+    padding: 13px 11px;
+    border-radius: 19px;
+    scroll-snap-align: start;
+  }
+
+  .service-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+  }
+
+  .service-tile strong {
+    font-size: .73rem;
+  }
+
+  .service-tile small {
+    display: none;
+  }
+
+  .home-content-grid {
+    gap: 13px;
+    padding: 0 13px 30px;
+  }
+
+  .home-feed,
+  .family-tree-preview {
+    padding: 17px;
+    border-radius: 22px;
+  }
+
+  .tree-orbit {
+    min-height: 240px;
+  }
+
+  .section-block,
+  .section-block.soft {
+    padding-top: 26px;
+  }
+}

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sila-region-v3'
+const CACHE_VERSION = 'sila-region-v4'
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 
 function appUrl(path = '') {
@@ -15,6 +15,7 @@ self.addEventListener('install', (event) => {
         appUrl('icons/icon-512.png'),
         appUrl('icons/maskable-512.png'),
         appUrl('icons/apple-touch-icon.png'),
+        appUrl('icons/notification-badge.png'),
       ]))
       .then(() => self.skipWaiting()),
   )
@@ -40,7 +41,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body: data.body || 'لديك تحديث جديد في صلة.',
     icon: data.icon || appUrl('icons/icon-192.png'),
-    badge: data.badge || appUrl('icons/icon-192.png'),
+    badge: appUrl('icons/notification-badge.png'),
     tag: data.tag || 'family-update',
     renotify: true,
     data: { url: data.url || appUrl('./#/account') },

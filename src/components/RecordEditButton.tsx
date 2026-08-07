@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
+import RecordShareButton from './RecordShareButton'
 import '../modal-position-fix.css'
 import '../record-archive.css'
 
@@ -41,6 +42,7 @@ export default function RecordEditButton({
   const [scopedCanEdit, setScopedCanEdit] = useState(false)
   const canEdit = directCanEdit || scopedCanEdit
   const canArchive = isAdmin && (entityType === 'families' || entityType === 'people')
+  const canShare = entityType === 'families' || entityType === 'people'
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -98,7 +100,7 @@ export default function RecordEditButton({
     return String(initialData.title ?? '').trim()
   }, [entityType, initialData])
 
-  if (!canEdit && !canArchive) return null
+  if (!canEdit && !canArchive && !canShare) return null
 
   function resetAndOpen() {
     setForm(normalize(initialData))
@@ -316,6 +318,7 @@ export default function RecordEditButton({
   return (
     <>
       <div className="record-action-group">
+        {canShare && <RecordShareButton entityType={entityType as 'families' | 'people'} recordId={recordId} />}
         {canEdit && <button className="record-edit-trigger" type="button" onClick={resetAndOpen}>تعديل</button>}
         {canArchive && <button className="record-archive-trigger" type="button" onClick={openArchiveDialog}>{entityType === 'families' ? 'حذف العائلة' : 'حذف الفرد'}</button>}
       </div>

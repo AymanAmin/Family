@@ -6,11 +6,14 @@ import PersonFamilyMemberships from './components/PersonFamilyMemberships'
 import PeoplePicker from './components/PeoplePicker'
 import EventPeopleFields, { eventParticipantPayload, eventParticipantsRequired } from './components/EventPeopleFields'
 import { PersonVerifiedBadge } from './components/VerifiedBadge'
+import EventShareButton from './components/EventShareButton'
 
 const DirectoryScreen = lazy(() => import('./components/DirectoryScreen'))
 const NewsScreen = lazy(() => import('./components/NewsScreen'))
 const KinshipNetwork = lazy(() => import('./components/KinshipNetwork'))
 const FamilyMembersPanel = lazy(() => import('./components/FamilyMembersPanel'))
+const PersonFamilyOverview = lazy(() => import('./components/PersonFamilyOverview'))
+const FamilyQuickAddPerson = lazy(() => import('./components/FamilyQuickAddPerson'))
 const Phase3AdminQueue = lazy(() => import('./components/Phase3AdminQueue'))
 const DuplicatePersonCheck = lazy(() => import('./components/DuplicatePersonCheck'))
 const FamilyTreeScreen = lazy(() => import('./components/FamilyTreeScreen'))
@@ -1080,6 +1083,7 @@ function App() {
                         return name ? <button className="event-mention-chip" type="button" key={`${item.id}-${id}-${mention.participant_role}`} onClick={() => id && void openPersonById(id)}>@ {name}</button> : null
                       })}</div> : null}
                       <small>{item.location_name || familyName(item.families) || 'المكان غير محدد'}</small>
+                      <EventShareButton compact event={{ id: item.id, event_type: item.event_type, title: item.title, description: item.description, event_date: item.event_date, location_name: item.location_name, family_name: familyName(item.families) || null, people: (item.mentions ?? []).map((mention) => personName(mention.people)).filter(Boolean) }} />
                       <RecordEditButton entityType="events" recordId={item.id} createdBy={item.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} initialData={{ event_type: item.event_type, title: item.title, family_id: item.family_id, event_date: item.event_date, location_name: item.location_name, description: item.description }} onSaved={loadCommunityData} />
                     </article>
                   ))}
@@ -1168,7 +1172,17 @@ function App() {
               <article><span>دليل الأفراد</span><strong>تحميل تدريجي</strong></article>
               <article><span>حالة السجل</span><strong>{selectedFamily.status === 'approved' ? 'معتمد' : 'بانتظار الاعتماد'}</strong></article>
             </div>
-            <Suspense fallback={<LazyPanelFallback />}><FamilyMembersPanel familyId={selectedFamily.id} people={approvedPeople} onOpenPerson={(id) => void openPersonById(id)} /></Suspense>
+            <Suspense fallback={<LazyPanelFallback />}>
+              <FamilyQuickAddPerson
+                familyId={selectedFamily.id}
+                familyName={selectedFamily.name}
+                sessionUserId={session?.user.id}
+                isAdmin={isAdmin}
+                onOpenPerson={(id) => void openPersonById(id)}
+                onChanged={async () => { setRelationshipRefresh((value) => value + 1); await loadCommunityData() }}
+              />
+            </Suspense>
+            <Suspense fallback={<LazyPanelFallback />}><FamilyMembersPanel key={`${selectedFamily.id}-${relationshipRefresh}`} familyId={selectedFamily.id} people={approvedPeople} onOpenPerson={(id) => void openPersonById(id)} /></Suspense>
           </section>
         )}
 
@@ -1180,31 +1194,24 @@ function App() {
               <div><span className="eyebrow">ملف شخص</span><div className="person-title-line"><h1>{selectedPerson.full_name}</h1><PersonVerifiedBadge personId={selectedPerson.id} /></div><p>{selectedPerson.description || 'لا توجد نبذة مضافة لهذا الشخص.'}</p></div>
               <RecordEditButton entityType="people" recordId={selectedPerson.id} createdBy={selectedPerson.created_by} sessionUserId={session?.user.id} isAdmin={isAdmin} initialData={{ full_name: selectedPerson.full_name, gender: selectedPerson.gender, birth_year: selectedPerson.birth_year, is_deceased: selectedPerson.is_deceased, death_date: selectedPerson.death_date, description: selectedPerson.description }} onSaved={loadCommunityData} />
             </div>
-            {session && <div className="person-detail-quick-actions" aria-label="إجراءات إضافة مرتبطة بهذا الشخص">
-              <button className="person-profile-action primary-action" type="button" onClick={() => {
-                if (!requireAccount()) return
-                setPersonRelationForm({ relation_type: 'child', related_person_id: selectedPerson.id, notes: '' })
-                setAddMode('person')
-                setView('add')
-              }}>
-                <span className="person-profile-action-icon" aria-hidden="true">＋</span>
-                <span><strong>إضافة فرد مرتبط</strong><small>أضف الشخص وحدد صلته في نفس الخطوة</small></span>
-              </button>
-              <button className="person-profile-action secondary-action" type="button" onClick={() => {
-                if (!requireAccount()) return
-                setRelationshipForm((current) => ({ ...current, source_person_id: selectedPerson.id }))
-                setAddMode('relationship')
-                setView('add')
-              }}>
-                <span className="person-profile-action-icon" aria-hidden="true">⌘</span>
-                <span><strong>إضافة صلة فقط</strong><small>اربط هذا الشخص بشخص موجود</small></span>
-              </button>
-            </div>}
             <div className="detail-facts">
               <article><span>العائلة الأساسية</span><strong>{familyName(selectedPerson.families) || 'غير محددة'}</strong></article>
               <article><span>سنة الميلاد</span><strong>{selectedPerson.birth_year || 'غير محددة'}</strong></article>
               <article className={selectedPerson.is_deceased ? 'deceased-fact' : 'alive-fact'}><span>الحالة</span><strong>{selectedPerson.is_deceased ? 'متوفى' : 'على قيد الحياة'}</strong>{selectedPerson.is_deceased && <small>تاريخ الوفاة: {formatDate(selectedPerson.death_date)}</small>}</article>
             </div>
+            <Suspense fallback={<LazyPanelFallback />}>
+              <PersonFamilyOverview
+                key={`${selectedPerson.id}-${relationshipRefresh}`}
+                personId={selectedPerson.id}
+                personName={selectedPerson.full_name}
+                personGender={selectedPerson.gender}
+                primaryFamilyId={selectedPerson.family_id}
+                sessionUserId={session?.user.id}
+                isAdmin={isAdmin}
+                onOpenPerson={(id) => void openPersonById(id)}
+                onChanged={() => setRelationshipRefresh((value) => value + 1)}
+              />
+            </Suspense>
             {isAdmin && <div className="relationship-sync-card">
               <div className="relationship-sync-copy"><span className="relationship-sync-icon" aria-hidden="true">↻</span><div><strong>إعادة مزامنة العلاقات</strong><small>يعيد فحص علاقات هذا الفرد مع جميع الأشخاص، وينظف التكرار غير الصالح، ثم يبني القرابات المستنتجة من جديد.</small></div></div>
               <button className="secondary relationship-sync-button" type="button" disabled={relationshipSyncBusy} onClick={() => void resyncSelectedPersonRelationships()}>{relationshipSyncBusy ? 'جارٍ المزامنة…' : 'إعادة المزامنة'}</button>

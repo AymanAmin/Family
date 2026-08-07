@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import RecordEditButton from './RecordEditButton'
+import EventShareButton from './EventShareButton'
 import './NewsScreen.css'
 
 type RelatedFamily = { name?: string } | { name?: string }[] | null
@@ -230,23 +231,26 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
                         })}
                       </div>
                     ) : null}
-                    <div className="news-admin-edit">
-                      <RecordEditButton
-                        entityType="events"
-                        recordId={item.id}
-                        createdBy={item.created_by}
-                        sessionUserId={sessionUserId}
-                        isAdmin={isAdmin}
-                        initialData={{
-                          event_type: item.event_type,
-                          title: item.title,
-                          family_id: item.family_id,
-                          event_date: item.event_date,
-                          location_name: item.location_name,
-                          description: item.description,
-                        }}
-                        onSaved={() => loadPage(0, false)}
-                      />
+                    <div className="news-card-actions">
+                      <EventShareButton event={{ id: item.id, event_type: item.event_type, title: item.title, description: item.description, event_date: item.event_date, location_name: item.location_name, family_name: family || null, people: (item.mentions ?? []).map((mention) => personName(mention.people)).filter(Boolean) }} />
+                      <div className="news-admin-edit">
+                        <RecordEditButton
+                          entityType="events"
+                          recordId={item.id}
+                          createdBy={item.created_by}
+                          sessionUserId={sessionUserId}
+                          isAdmin={isAdmin}
+                          initialData={{
+                            event_type: item.event_type,
+                            title: item.title,
+                            family_id: item.family_id,
+                            event_date: item.event_date,
+                            location_name: item.location_name,
+                            description: item.description,
+                          }}
+                          onSaved={() => loadPage(0, false)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </article>

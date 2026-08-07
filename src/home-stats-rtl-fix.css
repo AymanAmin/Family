@@ -1,0 +1,16 @@
+/* Keep the home statistics/services strip in the natural Arabic RTL order. */
+.unified-home-stats {
+  direction: rtl !important;
+}
+
+.unified-home-stats > * {
+  direction: rtl;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .unified-home-stats {
+    direction: rtl !important;
+    scroll-padding-inline-start: 12px;
+  }
+}

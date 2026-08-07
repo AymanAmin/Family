@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { getApplicationUrl, supabase, supabaseConfiguration } from './lib/supabase'
+import './auth.css'
 
 type AuthStatus = 'idle' | 'loading' | 'error'
+type AuthMode = 'signin' | 'signup' | 'forgot' | 'recovery'
+type MessageTone = 'info' | 'success' | 'error'
 
 const families = [
   { name: 'عائلة النور', people: 186, generations: 7 },
@@ -45,11 +48,31 @@ function GoogleIcon() {
   )
 }
 
+function getFriendlyAuthError(message: string): string {
+  const normalized = message.toLowerCase()
+
+  if (normalized.includes('invalid login credentials')) return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.'
+  if (normalized.includes('email not confirmed')) return 'لم يتم تأكيد البريد الإلكتروني بعد. راجع رسالة التفعيل في بريدك.'
+  if (normalized.includes('user already registered')) return 'يوجد حساب مسجل بهذا البريد. استخدم تسجيل الدخول أو استعادة كلمة المرور.'
+  if (normalized.includes('password should be at least')) return 'يجب ألا تقل كلمة المرور عن 8 أحرف.'
+  if (normalized.includes('rate limit')) return 'تم تنفيذ محاولات كثيرة. حاول مرة أخرى بعد قليل.'
+  if (normalized.includes('signup is disabled')) return 'التسجيل بالبريد غير مفعّل حاليًا في إعدادات Supabase.'
+  if (normalized.includes('email logins are disabled')) return 'الدخول بالبريد غير مفعّل حاليًا في إعدادات Supabase.'
+
+  return message || 'تعذر إكمال العملية. حاول مرة أخرى.'
+}
+
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [sessionLoading, setSessionLoading] = useState(true)
   const [authStatus, setAuthStatus] = useState<AuthStatus>('idle')
+  const [authMode, setAuthMode] = useState<AuthMode>('signin')
   const [authMessage, setAuthMessage] = useState('')
+  const [messageTone, setMessageTone] = useState<MessageTone>('info')
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
@@ -62,19 +85,33 @@ function App() {
 
     void supabase.auth.getSession().then(({ data, error }) => {
       if (!isMounted) return
-      if (error) setAuthMessage('تعذر قراءة جلسة الدخول. حاول تحديث الصفحة.')
+      if (error) {
+        setMessageTone('error')
+        setAuthMessage('تعذر قراءة جلسة الدخول. حاول تحديث الصفحة.')
+      }
       setSession(data.session)
       setSessionLoading(false)
     })
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const handleAuthChange = (event: AuthChangeEvent, nextSession: Session | null) => {
       if (!isMounted) return
       setSession(nextSession)
       setSessionLoading(false)
       setAuthStatus('idle')
-    })
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthMode('recovery')
+        setMessageTone('info')
+        setAuthMessage('اكتب كلمة مرور جديدة لحسابك.')
+        window.setTimeout(() => {
+          document.getElementById('auth-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 100)
+      }
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(handleAuthChange)
 
     return () => {
       isMounted = false
@@ -86,18 +123,33 @@ function App() {
     if (!session?.user) return null
     const metadata = session.user.user_metadata ?? {}
     return {
-      name: metadata.full_name || metadata.name || 'عضو جديد',
+      name: metadata.full_name || metadata.name || session.user.email?.split('@')[0] || 'عضو جديد',
       avatar: metadata.avatar_url || metadata.picture || '',
       email: session.user.email || '',
     }
   }, [session])
+
+  function showAuthMode(mode: AuthMode) {
+    setAuthMode(mode)
+    setAuthStatus('idle')
+    setAuthMessage('')
+    setMessageTone('info')
+    setPassword('')
+    setConfirmPassword('')
+  }
+
+  function focusAuthCard(mode: AuthMode = 'signin') {
+    showAuthMode(mode)
+    document.getElementById('auth-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 
   async function signInWithGoogle() {
     setAuthMessage('')
 
     if (!supabase || !supabaseConfiguration.isComplete) {
       setAuthStatus('error')
-      setAuthMessage('يلزم إضافة رابط مشروع Supabase لتفعيل تسجيل Google على الموقع المنشور.')
+      setMessageTone('error')
+      setAuthMessage('إعدادات Supabase غير مكتملة على الموقع المنشور.')
       return
     }
 
@@ -115,8 +167,141 @@ function App() {
 
     if (error) {
       setAuthStatus('error')
-      setAuthMessage(error.message || 'تعذر بدء تسجيل الدخول عبر Google.')
+      setMessageTone('error')
+      setAuthMessage(getFriendlyAuthError(error.message))
     }
+  }
+
+  async function handleEmailAuth(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setAuthMessage('')
+
+    if (!supabase) {
+      setAuthStatus('error')
+      setMessageTone('error')
+      setAuthMessage('تعذر الاتصال بخدمة الحسابات.')
+      return
+    }
+
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail) {
+      setMessageTone('error')
+      setAuthMessage('أدخل بريدك الإلكتروني.')
+      return
+    }
+
+    setAuthStatus('loading')
+
+    if (authMode === 'forgot') {
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: getApplicationUrl(),
+      })
+
+      if (error) {
+        setAuthStatus('error')
+        setMessageTone('error')
+        setAuthMessage(getFriendlyAuthError(error.message))
+        return
+      }
+
+      setAuthStatus('idle')
+      setMessageTone('success')
+      setAuthMessage('أرسلنا رابط استعادة كلمة المرور إلى بريدك. افحص صندوق الوارد والرسائل غير المرغوبة.')
+      return
+    }
+
+    if (password.length < 8) {
+      setAuthStatus('error')
+      setMessageTone('error')
+      setAuthMessage('يجب ألا تقل كلمة المرور عن 8 أحرف.')
+      return
+    }
+
+    if (authMode === 'signup') {
+      if (fullName.trim().length < 3) {
+        setAuthStatus('error')
+        setMessageTone('error')
+        setAuthMessage('اكتب اسمك الكامل بصورة صحيحة.')
+        return
+      }
+
+      if (password !== confirmPassword) {
+        setAuthStatus('error')
+        setMessageTone('error')
+        setAuthMessage('كلمتا المرور غير متطابقتين.')
+        return
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
+          emailRedirectTo: getApplicationUrl(),
+          data: {
+            full_name: fullName.trim(),
+          },
+        },
+      })
+
+      if (error) {
+        setAuthStatus('error')
+        setMessageTone('error')
+        setAuthMessage(getFriendlyAuthError(error.message))
+        return
+      }
+
+      setPassword('')
+      setConfirmPassword('')
+      setAuthStatus('idle')
+      setMessageTone('success')
+      setAuthMessage(
+        data.session
+          ? 'تم إنشاء الحساب وتسجيل الدخول بنجاح.'
+          : 'تم إنشاء الحساب. أرسلنا رسالة تفعيل إلى بريدك الإلكتروني، افتحها ثم سجّل الدخول.',
+      )
+      return
+    }
+
+    if (authMode === 'recovery') {
+      if (password !== confirmPassword) {
+        setAuthStatus('error')
+        setMessageTone('error')
+        setAuthMessage('كلمتا المرور غير متطابقتين.')
+        return
+      }
+
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) {
+        setAuthStatus('error')
+        setMessageTone('error')
+        setAuthMessage(getFriendlyAuthError(error.message))
+        return
+      }
+
+      setPassword('')
+      setConfirmPassword('')
+      setAuthStatus('idle')
+      setMessageTone('success')
+      setAuthMessage('تم تغيير كلمة المرور بنجاح.')
+      return
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    })
+
+    if (error) {
+      setAuthStatus('error')
+      setMessageTone('error')
+      setAuthMessage(getFriendlyAuthError(error.message))
+      return
+    }
+
+    setPassword('')
+    setAuthStatus('idle')
+    setMessageTone('success')
+    setAuthMessage('تم تسجيل الدخول بنجاح.')
   }
 
   async function signOut() {
@@ -125,21 +310,36 @@ function App() {
     const { error } = await supabase.auth.signOut()
     if (error) {
       setAuthStatus('error')
+      setMessageTone('error')
       setAuthMessage('تعذر تسجيل الخروج. حاول مرة أخرى.')
       return
     }
+    setAuthMode('signin')
     setAuthStatus('idle')
+    setAuthMessage('')
   }
 
-  function handleSearch(event: React.FormEvent<HTMLFormElement>) {
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const value = searchTerm.trim()
     if (!value) {
+      setMessageTone('info')
       setAuthMessage('اكتب اسم شخص أو عائلة للبحث.')
       return
     }
+    setMessageTone('info')
     setAuthMessage(`سيتم البحث عن «${value}» بعد ربط قاعدة بيانات الأشخاص والعائلات.`)
   }
+
+  const isBusy = authStatus === 'loading'
+  const formTitle =
+    authMode === 'signup'
+      ? 'إنشاء حساب جديد'
+      : authMode === 'forgot'
+        ? 'استعادة كلمة المرور'
+        : authMode === 'recovery'
+          ? 'كلمة مرور جديدة'
+          : 'تسجيل الدخول'
 
   return (
     <div className="app-shell">
@@ -167,12 +367,12 @@ function App() {
               <strong>{userInfo.name}</strong>
               <small>{userInfo.email}</small>
             </div>
-            <button className="text-button" type="button" onClick={signOut} disabled={authStatus === 'loading'}>
+            <button className="text-button" type="button" onClick={signOut} disabled={isBusy}>
               خروج
             </button>
           </div>
         ) : (
-          <button className="header-login" type="button" onClick={signInWithGoogle} disabled={authStatus === 'loading'}>
+          <button className="header-login" type="button" onClick={() => focusAuthCard('signin')} disabled={isBusy}>
             دخول
           </button>
         )}
@@ -209,7 +409,7 @@ function App() {
             </div>
           </div>
 
-          <aside className="auth-card" aria-labelledby="auth-title">
+          <aside className="auth-card" id="auth-card" aria-labelledby="auth-title">
             {userInfo ? (
               <>
                 <span className="auth-icon success" aria-hidden="true">✓</span>
@@ -221,18 +421,148 @@ function App() {
             ) : (
               <>
                 <span className="auth-icon" aria-hidden="true">◎</span>
-                <h2 id="auth-title">شارك في توثيق المنطقة</h2>
-                <p>سجّل بحساب Gmail لتقديم أشخاص وعلاقات ومناسبات وأخبار. جميع الإضافات تنتظر اعتماد الإدارة.</p>
-                <button className="google-button" type="button" onClick={signInWithGoogle} disabled={authStatus === 'loading'}>
-                  <GoogleIcon />
-                  <span>{authStatus === 'loading' ? 'جارٍ تحويلك إلى Google…' : 'المتابعة باستخدام Google'}</span>
-                </button>
+                <h2 id="auth-title">{formTitle}</h2>
+                <p>
+                  {authMode === 'signup'
+                    ? 'أنشئ حسابًا لتقديم الأشخاص والعلاقات والمناسبات. جميع الإضافات تنتظر اعتماد الإدارة.'
+                    : authMode === 'forgot'
+                      ? 'أدخل بريدك وسنرسل لك رابطًا آمنًا لتعيين كلمة مرور جديدة.'
+                      : authMode === 'recovery'
+                        ? 'اختر كلمة مرور قوية جديدة لحسابك.'
+                        : 'ادخل بالبريد وكلمة المرور، أو استخدم Google بعد اكتمال تفعيله.'}
+                </p>
+
+                {authMode !== 'forgot' && authMode !== 'recovery' && (
+                  <div className="auth-tabs" role="tablist" aria-label="نوع الحساب">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={authMode === 'signin'}
+                      className={authMode === 'signin' ? 'active' : ''}
+                      onClick={() => showAuthMode('signin')}
+                    >
+                      تسجيل الدخول
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={authMode === 'signup'}
+                      className={authMode === 'signup' ? 'active' : ''}
+                      onClick={() => showAuthMode('signup')}
+                    >
+                      حساب جديد
+                    </button>
+                  </div>
+                )}
+
+                <form className="email-auth-form" onSubmit={handleEmailAuth} noValidate>
+                  {authMode === 'signup' && (
+                    <label>
+                      <span>الاسم الكامل</span>
+                      <input
+                        value={fullName}
+                        onChange={(event) => setFullName(event.target.value)}
+                        autoComplete="name"
+                        placeholder="اكتب اسمك الكامل"
+                        disabled={isBusy}
+                        required
+                      />
+                    </label>
+                  )}
+
+                  {authMode !== 'recovery' && (
+                    <label>
+                      <span>البريد الإلكتروني</span>
+                      <input
+                        type="email"
+                        inputMode="email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        autoComplete="email"
+                        placeholder="name@example.com"
+                        dir="ltr"
+                        disabled={isBusy}
+                        required
+                      />
+                    </label>
+                  )}
+
+                  {authMode !== 'forgot' && (
+                    <label>
+                      <span>{authMode === 'recovery' ? 'كلمة المرور الجديدة' : 'كلمة المرور'}</span>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        autoComplete={authMode === 'signin' ? 'current-password' : 'new-password'}
+                        placeholder="8 أحرف على الأقل"
+                        dir="ltr"
+                        disabled={isBusy}
+                        minLength={8}
+                        required
+                      />
+                    </label>
+                  )}
+
+                  {(authMode === 'signup' || authMode === 'recovery') && (
+                    <label>
+                      <span>تأكيد كلمة المرور</span>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        autoComplete="new-password"
+                        placeholder="أعد كتابة كلمة المرور"
+                        dir="ltr"
+                        disabled={isBusy}
+                        minLength={8}
+                        required
+                      />
+                    </label>
+                  )}
+
+                  <button className="primary-button auth-submit" type="submit" disabled={isBusy}>
+                    {isBusy
+                      ? 'جارٍ التنفيذ…'
+                      : authMode === 'signup'
+                        ? 'إنشاء الحساب'
+                        : authMode === 'forgot'
+                          ? 'إرسال رابط الاستعادة'
+                          : authMode === 'recovery'
+                            ? 'حفظ كلمة المرور الجديدة'
+                            : 'تسجيل الدخول'}
+                  </button>
+                </form>
+
+                <div className="auth-links">
+                  {authMode === 'signin' && (
+                    <button type="button" onClick={() => showAuthMode('forgot')} disabled={isBusy}>
+                      نسيت كلمة المرور؟
+                    </button>
+                  )}
+                  {(authMode === 'forgot' || authMode === 'recovery') && (
+                    <button type="button" onClick={() => showAuthMode('signin')} disabled={isBusy}>
+                      العودة إلى تسجيل الدخول
+                    </button>
+                  )}
+                </div>
+
+                {authMode !== 'forgot' && authMode !== 'recovery' && (
+                  <>
+                    <div className="auth-divider"><span>أو</span></div>
+                    <button className="google-button" type="button" onClick={signInWithGoogle} disabled={isBusy}>
+                      <GoogleIcon />
+                      <span>المتابعة باستخدام Google</span>
+                    </button>
+                  </>
+                )}
+
                 <small>لن ننشر بريدك الإلكتروني أو بيانات حسابك للعامة.</small>
               </>
             )}
 
             {authMessage && (
-              <p className={authStatus === 'error' ? 'inline-message error' : 'inline-message'} role="status">
+              <p className={`inline-message ${messageTone === 'error' ? 'error' : messageTone === 'success' ? 'success' : ''}`} role="status" aria-live="polite">
                 {authMessage}
               </p>
             )}
@@ -302,7 +632,7 @@ function App() {
             <p>كل شخص أو علاقة أو مناسبة يضيفها عضو مسجل تبقى خاصة به حتى يراجعها مسؤول العائلة أو إدارة المنصة.</p>
           </div>
           <ol>
-            <li><span>1</span><div><strong>سجّل بحساب Gmail</strong><small>دخول آمن وسريع عبر Google.</small></div></li>
+            <li><span>1</span><div><strong>أنشئ حسابك</strong><small>بالبريد وكلمة المرور، أو عبر Google بعد تفعيله.</small></div></li>
             <li><span>2</span><div><strong>قدّم المعلومة</strong><small>أضف المصدر والتفاصيل المتاحة.</small></div></li>
             <li><span>3</span><div><strong>تتم المراجعة</strong><small>يفحص المشرف التكرار والتعارض والخصوصية.</small></div></li>
             <li><span>4</span><div><strong>تظهر بعد الاعتماد</strong><small>يصل إشعار للمستخدم بنتيجة الطلب.</small></div></li>

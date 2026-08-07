@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 type KinshipRow = {
@@ -78,6 +78,7 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
   const [rows, setRows] = useState<KinshipRow[]>([])
   const [loading, setLoading] = useState(true)
   const [smartAvailable, setSmartAvailable] = useState(true)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -97,7 +98,6 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
         return
       }
 
-      // Graceful fallback until the latest SETUP.sql is applied.
       const fallback = await supabase
         .from('person_relationships')
         .select('source_person_id,target_person_id,relation_type,notes,source:people!person_relationships_source_person_id_fkey(id,full_name,gender),target:people!person_relationships_target_person_id_fkey(id,full_name,gender)')
@@ -133,6 +133,19 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
     return () => { cancelled = true }
   }, [personId])
 
+  useEffect(() => {
+    if (loading || !rows.length) return
+    const scroller = scrollRef.current
+    if (!scroller) return
+
+    const frame = window.requestAnimationFrame(() => {
+      const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth)
+      scroller.scrollLeft = maxScroll / 2
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [loading, rows, personId])
+
   const grouped = useMemo(() => {
     const map = new Map<string, KinshipRow[]>()
     for (const row of rows) {
@@ -164,31 +177,36 @@ export default function KinshipNetwork({ personId, personName, onOpenPerson, onA
       </div>
 
       {loading ? <div className="empty-state compact">جارٍ بناء شبكة القرابة…</div> : rows.length ? (
-        <div className="kinship-map">
-          <KinGroup type="parent" rows={parents} onOpen={onOpenPerson} className="kin-top" />
+        <>
+          <div className="kinship-pan-hint" aria-hidden="true"><span>↔</span> اسحب المخطط يمينًا ويسارًا</div>
+          <div className="kinship-scroll" ref={scrollRef}>
+            <div className="kinship-map">
+              <KinGroup type="parent" rows={parents} onOpen={onOpenPerson} className="kin-top" />
 
-          <div className="kin-middle">
-            <KinGroup type="sibling" rows={siblings} onOpen={onOpenPerson} />
+              <div className="kin-middle">
+                <KinGroup type="sibling" rows={siblings} onOpen={onOpenPerson} />
 
-            <div className="kin-self" aria-label={`الشخص الحالي ${personName}`}>
-              <span className="kin-self-ring"><b>{personName.trim().charAt(0) || '؟'}</b></span>
-              <strong>{personName}</strong>
-              <small>الشخص الحالي</small>
+                <div className="kin-self" aria-label={`الشخص الحالي ${personName}`}>
+                  <span className="kin-self-ring"><b>{personName.trim().charAt(0) || '؟'}</b></span>
+                  <strong>{personName}</strong>
+                  <small>الشخص الحالي</small>
+                </div>
+
+                <KinGroup type="spouse" rows={spouses} onOpen={onOpenPerson} />
+              </div>
+
+              <KinGroup type="child" rows={children} onOpen={onOpenPerson} className="kin-bottom" />
+
+              {extended.length > 0 && (
+                <div className="kin-extended">
+                  {['grandparent', 'grandchild', 'guardian', 'other'].map((type) => (
+                    <KinGroup key={type} type={type} rows={grouped.get(type) ?? []} onOpen={onOpenPerson} />
+                  ))}
+                </div>
+              )}
             </div>
-
-            <KinGroup type="spouse" rows={spouses} onOpen={onOpenPerson} />
           </div>
-
-          <KinGroup type="child" rows={children} onOpen={onOpenPerson} className="kin-bottom" />
-
-          {extended.length > 0 && (
-            <div className="kin-extended">
-              {['grandparent', 'grandchild', 'guardian', 'other'].map((type) => (
-                <KinGroup key={type} type={type} rows={grouped.get(type) ?? []} onOpen={onOpenPerson} />
-              ))}
-            </div>
-          )}
-        </div>
+        </>
       ) : (
         <div className="empty-state compact"><strong>لم تُسجّل علاقات لهذا الشخص بعد</strong><span>أضف الأب أو الأم مرة واحدة، وستستنتج المنصة الإخوة والقرابات المرتبطة تلقائيًا.</span></div>
       )}

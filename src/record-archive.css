@@ -1,0 +1,236 @@
+.record-action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.record-archive-trigger {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid rgba(168, 55, 55, 0.26);
+  border-radius: 12px;
+  background: rgba(255, 246, 246, 0.96);
+  color: #9f2f2f;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.record-archive-trigger:hover {
+  background: #fff0f0;
+  border-color: rgba(159, 47, 47, 0.48);
+  transform: translateY(-1px);
+}
+
+.record-archive-trigger:focus-visible,
+.record-archive-cancel:focus-visible,
+.record-archive-confirm:focus-visible {
+  outline: 3px solid rgba(31, 105, 78, 0.2);
+  outline-offset: 2px;
+}
+
+.record-archive-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(24, 20, 17, 0.54);
+  backdrop-filter: blur(7px);
+}
+
+.record-archive-sheet {
+  width: min(100%, 520px);
+  max-height: min(88dvh, 720px);
+  overflow-y: auto;
+  border: 1px solid rgba(159, 47, 47, 0.16);
+  border-radius: 22px;
+  background: #fffdfa;
+  box-shadow: 0 24px 70px rgba(37, 28, 23, 0.24);
+  padding: clamp(18px, 4vw, 28px);
+}
+
+.record-archive-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.record-archive-heading span {
+  display: block;
+  margin-bottom: 4px;
+  color: #a53a3a;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.record-archive-heading h2 {
+  margin: 0;
+  color: #382821;
+  font-size: clamp(1.2rem, 5vw, 1.55rem);
+}
+
+.record-archive-heading > button {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 0;
+  border-radius: 12px;
+  background: #f4eee8;
+  color: #5e5048;
+  font-size: 1.6rem;
+  cursor: pointer;
+}
+
+.record-archive-warning {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+  margin: 0 0 18px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff3f1;
+  color: #6d3732;
+  line-height: 1.75;
+}
+
+.record-archive-warning > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #f6d7d2;
+  color: #922f2f;
+  font-weight: 900;
+}
+
+.record-archive-warning strong,
+.record-archive-warning small {
+  display: block;
+}
+
+.record-archive-warning small {
+  margin-top: 3px;
+  color: #805a55;
+}
+
+.record-archive-form {
+  display: grid;
+  gap: 14px;
+}
+
+.record-archive-form label {
+  display: grid;
+  gap: 7px;
+  color: #453831;
+  font-weight: 750;
+}
+
+.record-archive-form label small {
+  color: #7c6e65;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.record-archive-form input,
+.record-archive-form textarea {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  border: 1px solid #d9cec5;
+  border-radius: 12px;
+  background: #fff;
+  color: #302721;
+  font: inherit;
+  padding: 11px 12px;
+}
+
+.record-archive-form textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.record-archive-form input:focus,
+.record-archive-form textarea:focus {
+  border-color: #8b6d5e;
+  outline: 3px solid rgba(139, 109, 94, 0.12);
+}
+
+.record-archive-message {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff0ee;
+  color: #922f2f;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.record-archive-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.record-archive-cancel,
+.record-archive-confirm {
+  min-height: 46px;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.record-archive-cancel {
+  border: 1px solid #d8cec6;
+  background: #f7f2ee;
+  color: #554943;
+}
+
+.record-archive-confirm {
+  border: 1px solid #992f2f;
+  background: #a83737;
+  color: #fff;
+}
+
+.record-archive-confirm:disabled,
+.record-archive-cancel:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 540px) {
+  .record-action-group {
+    width: 100%;
+  }
+
+  .record-action-group > button {
+    flex: 1 1 120px;
+  }
+
+  .record-archive-overlay {
+    align-items: end;
+    padding: 0;
+  }
+
+  .record-archive-sheet {
+    width: 100%;
+    max-height: 88dvh;
+    border-radius: 22px 22px 0 0;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .record-archive-trigger {
+    transition: none;
+  }
+}

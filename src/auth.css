@@ -1,0 +1,140 @@
+.auth-tabs {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: #f3f7f5;
+}
+
+.auth-tabs button {
+  min-height: 44px;
+  padding-inline: 10px;
+  border: 0;
+  border-radius: 11px;
+  color: #63756f;
+  background: transparent;
+  font-weight: 700;
+}
+
+.auth-tabs button.active {
+  color: var(--primary-800);
+  background: white;
+  box-shadow: 0 5px 14px rgb(7 56 45 / 9%);
+}
+
+.email-auth-form {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 13px;
+}
+
+.email-auth-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.email-auth-form label > span {
+  color: #39564c;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.email-auth-form input {
+  width: 100%;
+  min-height: 50px;
+  padding: 10px 13px;
+  border: 1px solid #cbd9d3;
+  border-radius: 13px;
+  outline: none;
+  color: var(--ink);
+  background: white;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.email-auth-form input::placeholder {
+  color: #91a09a;
+}
+
+.email-auth-form input:hover {
+  border-color: #a9bdb5;
+}
+
+.email-auth-form input:focus {
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 4px rgb(21 116 91 / 11%);
+}
+
+.email-auth-form input:disabled {
+  background: #f3f6f4;
+}
+
+.auth-submit {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 3px;
+}
+
+.auth-links {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+}
+
+.auth-links button {
+  min-height: 40px;
+  padding: 5px 8px;
+  border: 0;
+  color: var(--primary-700);
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.auth-divider {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  color: #82918c;
+  font-size: 0.72rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  height: 1px;
+  background: var(--border);
+  content: '';
+}
+
+.inline-message.success {
+  color: #176b4b !important;
+  background: #e8f7f0;
+}
+
+@media (max-width: 420px) {
+  .auth-card {
+    padding-inline: 20px;
+  }
+
+  .auth-tabs button {
+    font-size: 0.78rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .email-auth-form {
+    gap: 14px;
+  }
+}

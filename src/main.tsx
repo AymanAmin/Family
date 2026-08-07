@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import InstallPrompt from './components/InstallPrompt'
 import './styles.css'
 import './mobile-app.css'
 import './mobile-fixes.css'
@@ -27,6 +28,7 @@ import './contributor-stats.css'
 import './edit-review-diff.css'
 import './tree-action-buttons.css'
 import './person-name-wrap.css'
+import './pwa-install.css'
 
 function disablePageZoom() {
   document.documentElement.style.touchAction = 'pan-x pan-y'
@@ -52,7 +54,18 @@ function disablePageZoom() {
   document.addEventListener('dblclick', preventGesture, { passive: false })
 }
 
+function registerServiceWorker() {
+  if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return
+
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker
+      .register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL })
+      .catch((error) => console.warn('Service worker registration failed.', error))
+  })
+}
+
 disablePageZoom()
+registerServiceWorker()
 
 const rootElement = document.getElementById('root')
 
@@ -63,5 +76,6 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <App />
+    <InstallPrompt />
   </StrictMode>,
 )

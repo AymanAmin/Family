@@ -83,7 +83,9 @@ export default function FamilyPicker({ label, value, onChange, required = false,
       return
     }
     if (timerRef.current) window.clearTimeout(timerRef.current)
-    timerRef.current = window.setTimeout(() => void execute(), 260)
+    timerRef.current = window.setTimeout((): void => {
+      void execute()
+    }, 260)
   }
 
   function handleQuery(valueText: string) {

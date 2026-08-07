@@ -9,7 +9,11 @@ create extension if not exists pg_trgm with schema extensions;
 alter table public.people add column if not exists is_verified boolean not null default false;
 alter table public.people add column if not exists verified_at timestamptz;
 
-create unique index if not exists profiles_one_linked_person_idx
+-- Existing databases may already contain more than one account linked to the same
+-- person. Do not unlink or destroy data automatically. A normal index is enough
+-- for the verification lookup and lets administrators review duplicates safely.
+drop index if exists public.profiles_one_linked_person_idx;
+create index if not exists profiles_linked_person_idx
   on public.profiles(linked_person_id)
   where linked_person_id is not null;
 

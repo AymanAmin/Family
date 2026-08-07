@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 
 type RelatedFamily = { name?: string } | { name?: string }[] | null
@@ -34,12 +34,22 @@ type Props = {
 }
 
 type Tab = 'all' | 'people' | 'families'
+type PeoplePage = { rows: DirectoryPerson[]; count: number | null; hasMore: boolean }
+type FamilyPage = { rows: DirectoryFamily[]; count: number | null; hasMore: boolean }
+
 const PAGE_SIZE = 8
+const CACHE_TTL = 45_000
+const peopleCache = new Map<string, PeoplePage & { savedAt: number }>()
+const familyCache = new Map<string, FamilyPage & { savedAt: number }>()
 
 function familyName(value: RelatedFamily): string {
   if (!value) return ''
   if (Array.isArray(value)) return value[0]?.name ?? ''
   return value.name ?? ''
+}
+
+function cacheKey(term: string, page: number) {
+  return `${term.trim().toLocaleLowerCase('ar')}::${page}`
 }
 
 function PersonCard({ item, onOpen }: { item: DirectoryPerson; onOpen: (item: DirectoryPerson) => void }) {
@@ -48,9 +58,9 @@ function PersonCard({ item, onOpen }: { item: DirectoryPerson; onOpen: (item: Di
       <span className={`directory-avatar ${item.gender === 'female' ? 'female' : ''}`}>{item.full_name.trim().charAt(0) || '؟'}</span>
       <span className="directory-card-copy">
         <strong>{item.full_name}</strong>
-        <small>{familyName(item.families) || 'العائلة غير محددة'}{item.birth_year ? ` · ${item.birth_year}` : ''}</small>
+        <small>{familyName(item.families) || 'العائلة غير محددة'}{item.birth_year ? ` · ${item.birth_year}` : ''}{item.is_deceased ? ' · متوفى' : ''}</small>
       </span>
-      <span className="directory-arrow">‹</span>
+      <span className="directory-arrow" aria-hidden="true">‹</span>
     </button>
   )
 }
@@ -63,9 +73,63 @@ function FamilyCard({ item, onOpen }: { item: DirectoryFamily; onOpen: (item: Di
         <strong>{item.name}</strong>
         <small>{item.origin_place || item.description || 'عائلة معتمدة'}</small>
       </span>
-      <span className="directory-arrow">‹</span>
+      <span className="directory-arrow" aria-hidden="true">‹</span>
     </button>
   )
+}
+
+async function fetchPeoplePage(page: number, queryTerm: string): Promise<PeoplePage> {
+  if (!supabase) return { rows: [], count: null, hasMore: false }
+  const key = cacheKey(queryTerm, page)
+  const cached = peopleCache.get(key)
+  if (cached && Date.now() - cached.savedAt < CACHE_TTL) return cached
+
+  const from = page * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+  let query = supabase
+    .from('people')
+    .select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)', { count: 'planned' })
+    .eq('status', 'approved')
+
+  if (queryTerm) query = query.ilike('full_name', `%${queryTerm}%`)
+  const result = await query.order(queryTerm ? 'full_name' : 'created_at', { ascending: Boolean(queryTerm) }).range(from, to)
+  if (result.error) throw result.error
+
+  const rows = (result.data ?? []) as DirectoryPerson[]
+  const value = {
+    rows,
+    count: result.count ?? null,
+    hasMore: rows.length === PAGE_SIZE && (result.count == null || to + 1 < result.count),
+  }
+  peopleCache.set(key, { ...value, savedAt: Date.now() })
+  return value
+}
+
+async function fetchFamilyPage(page: number, queryTerm: string): Promise<FamilyPage> {
+  if (!supabase) return { rows: [], count: null, hasMore: false }
+  const key = cacheKey(queryTerm, page)
+  const cached = familyCache.get(key)
+  if (cached && Date.now() - cached.savedAt < CACHE_TTL) return cached
+
+  const from = page * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+  let query = supabase
+    .from('families')
+    .select('id,name,description,origin_place,status,created_by,created_at', { count: 'planned' })
+    .eq('status', 'approved')
+
+  if (queryTerm) query = query.ilike('name', `%${queryTerm}%`)
+  const result = await query.order(queryTerm ? 'name' : 'created_at', { ascending: Boolean(queryTerm) }).range(from, to)
+  if (result.error) throw result.error
+
+  const rows = (result.data ?? []) as DirectoryFamily[]
+  const value = {
+    rows,
+    count: result.count ?? null,
+    hasMore: rows.length === PAGE_SIZE && (result.count == null || to + 1 < result.count),
+  }
+  familyCache.set(key, { ...value, savedAt: Date.now() })
+  return value
 }
 
 export default function DirectoryScreen({ initialTerm = '', onOpenPerson, onOpenFamily }: Props) {
@@ -83,76 +147,96 @@ export default function DirectoryScreen({ initialTerm = '', onOpenPerson, onOpen
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState<'people' | 'families' | null>(null)
   const [error, setError] = useState('')
-
-  const loadPage = useCallback(async (kind: 'people' | 'families', page: number, append: boolean, queryTerm: string) => {
-    if (!supabase) return
-    const from = page * PAGE_SIZE
-    const to = from + PAGE_SIZE - 1
-
-    if (kind === 'people') {
-      let query = supabase
-        .from('people')
-        .select('id,full_name,gender,birth_year,is_deceased,description,status,family_id,created_by,created_at,families(name)', { count: 'exact' })
-        .eq('status', 'approved')
-      if (queryTerm) query = query.ilike('full_name', `%${queryTerm}%`)
-      const result = await query.order(queryTerm ? 'full_name' : 'created_at', { ascending: Boolean(queryTerm) }).range(from, to)
-      if (result.error) throw result.error
-      const rows = (result.data ?? []) as DirectoryPerson[]
-      setPeople((current) => append ? [...current, ...rows.filter((row) => !current.some((old) => old.id === row.id))] : rows)
-      setPeopleCount(result.count ?? null)
-      setPeopleHasMore(rows.length === PAGE_SIZE && (result.count == null || to + 1 < result.count))
-      setPeoplePage(page)
-      return
-    }
-
-    let query = supabase
-      .from('families')
-      .select('id,name,description,origin_place,status,created_by,created_at', { count: 'exact' })
-      .eq('status', 'approved')
-    if (queryTerm) query = query.ilike('name', `%${queryTerm}%`)
-    const result = await query.order(queryTerm ? 'name' : 'created_at', { ascending: Boolean(queryTerm) }).range(from, to)
-    if (result.error) throw result.error
-    const rows = (result.data ?? []) as DirectoryFamily[]
-    setFamilies((current) => append ? [...current, ...rows.filter((row) => !current.some((old) => old.id === row.id))] : rows)
-    setFamilyCount(result.count ?? null)
-    setFamilyHasMore(rows.length === PAGE_SIZE && (result.count == null || to + 1 < result.count))
-    setFamilyPage(page)
-  }, [])
+  const requestRef = useRef(0)
+  const debounceRef = useRef<number | null>(null)
 
   const reload = useCallback(async (queryTerm: string) => {
     if (!supabase) return
+    const requestId = ++requestRef.current
     setLoading(true)
     setError('')
     try {
-      await Promise.all([
-        loadPage('people', 0, false, queryTerm),
-        loadPage('families', 0, false, queryTerm),
+      const [peopleResult, familyResult] = await Promise.all([
+        fetchPeoplePage(0, queryTerm),
+        fetchFamilyPage(0, queryTerm),
       ])
+      if (requestId !== requestRef.current) return
+
+      setPeople(peopleResult.rows)
+      setPeopleCount(peopleResult.count)
+      setPeopleHasMore(peopleResult.hasMore)
+      setPeoplePage(0)
+      setFamilies(familyResult.rows)
+      setFamilyCount(familyResult.count)
+      setFamilyHasMore(familyResult.hasMore)
+      setFamilyPage(0)
     } catch (err) {
+      if (requestId !== requestRef.current) return
       setError(err instanceof Error ? err.message : 'تعذر تحميل الدليل.')
     } finally {
-      setLoading(false)
+      if (requestId === requestRef.current) setLoading(false)
     }
-  }, [loadPage])
+  }, [])
 
   useEffect(() => {
+    const value = initialTerm.trim()
     setTerm(initialTerm)
-    setSubmittedTerm(initialTerm.trim())
-    void reload(initialTerm.trim())
+    setSubmittedTerm(value)
+    void reload(value)
   }, [initialTerm, reload])
+
+  useEffect(() => () => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current)
+  }, [])
+
+  function updateTerm(value: string) {
+    setTerm(value)
+    if (debounceRef.current) window.clearTimeout(debounceRef.current)
+
+    const normalized = value.trim()
+    if (normalized.length === 1) return
+
+    debounceRef.current = window.setTimeout(() => {
+      setSubmittedTerm(normalized)
+      void reload(normalized)
+    }, 360)
+  }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (debounceRef.current) window.clearTimeout(debounceRef.current)
     const value = term.trim()
+    if (value.length === 1) return
     setSubmittedTerm(value)
     void reload(value)
+  }
+
+  function clearSearch() {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current)
+    setTerm('')
+    setSubmittedTerm('')
+    void reload('')
   }
 
   async function loadMore(kind: 'people' | 'families') {
     setLoadingMore(kind)
     setError('')
     try {
-      await loadPage(kind, kind === 'people' ? peoplePage + 1 : familyPage + 1, true, submittedTerm)
+      if (kind === 'people') {
+        const nextPage = peoplePage + 1
+        const result = await fetchPeoplePage(nextPage, submittedTerm)
+        setPeople((current) => [...current, ...result.rows.filter((row) => !current.some((old) => old.id === row.id))])
+        setPeopleCount(result.count)
+        setPeopleHasMore(result.hasMore)
+        setPeoplePage(nextPage)
+      } else {
+        const nextPage = familyPage + 1
+        const result = await fetchFamilyPage(nextPage, submittedTerm)
+        setFamilies((current) => [...current, ...result.rows.filter((row) => !current.some((old) => old.id === row.id))])
+        setFamilyCount(result.count)
+        setFamilyHasMore(result.hasMore)
+        setFamilyPage(nextPage)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'تعذر تحميل المزيد.')
     } finally {
@@ -162,6 +246,7 @@ export default function DirectoryScreen({ initialTerm = '', onOpenPerson, onOpen
 
   const showPeople = tab === 'all' || tab === 'people'
   const showFamilies = tab === 'all' || tab === 'families'
+  const waitingForSecondCharacter = term.trim().length === 1
 
   return (
     <section className="directory-v2-page">
@@ -169,31 +254,32 @@ export default function DirectoryScreen({ initialTerm = '', onOpenPerson, onOpen
         <div className="directory-v2-heading">
           <span className="directory-kicker">دليل صلة</span>
           <h1>اعثر على الشخص أو العائلة بسرعة</h1>
-          <p>النتائج تُحمّل على دفعات صغيرة من قاعدة البيانات للحفاظ على سرعة التطبيق.</p>
+          <p>بحث مباشر من قاعدة البيانات، تحميل تدريجي، ونتائج صغيرة مناسبة للجوال مهما كبر السجل.</p>
         </div>
-        <form className="directory-search-box" onSubmit={submit}>
-          <span className="directory-search-icon">⌕</span>
-          <input value={term} onChange={(event) => setTerm(event.target.value)} placeholder="ابحث بالاسم…" autoComplete="off" />
-          {term && <button className="directory-clear" type="button" onClick={() => { setTerm(''); setSubmittedTerm(''); void reload('') }}>×</button>}
-          <button className="directory-search-submit" type="submit">بحث</button>
+        <form className="directory-search-box" onSubmit={submit} role="search">
+          <span className="directory-search-icon" aria-hidden="true">⌕</span>
+          <input value={term} onChange={(event) => updateTerm(event.target.value)} placeholder="ابحث بالاسم…" autoComplete="off" enterKeyHint="search" aria-label="البحث في دليل الأشخاص والعائلات" />
+          {term && <button className="directory-clear" type="button" onClick={clearSearch} aria-label="مسح البحث">×</button>}
+          <button className="directory-search-submit" type="submit" disabled={waitingForSecondCharacter}>بحث</button>
         </form>
+        {waitingForSecondCharacter && <div className="directory-search-tip">اكتب حرفًا ثانيًا لبدء البحث السريع.</div>}
         <div className="directory-tabs" role="tablist" aria-label="نوع النتائج">
           <button className={tab === 'all' ? 'active' : ''} type="button" onClick={() => setTab('all')}>الكل</button>
-          <button className={tab === 'people' ? 'active' : ''} type="button" onClick={() => setTab('people')}>الأشخاص {peopleCount != null && <b>{peopleCount}</b>}</button>
-          <button className={tab === 'families' ? 'active' : ''} type="button" onClick={() => setTab('families')}>العائلات {familyCount != null && <b>{familyCount}</b>}</button>
+          <button className={tab === 'people' ? 'active' : ''} type="button" onClick={() => setTab('people')}>الأشخاص {peopleCount != null && <b title="عدد تقديري سريع">≈{peopleCount}</b>}</button>
+          <button className={tab === 'families' ? 'active' : ''} type="button" onClick={() => setTab('families')}>العائلات {familyCount != null && <b title="عدد تقديري سريع">≈{familyCount}</b>}</button>
         </div>
       </div>
 
-      {error && <div className="directory-inline-error">{error}</div>}
+      {error && <div className="directory-inline-error" role="alert">{error}</div>}
       {loading ? (
         <div className="directory-skeleton-list" aria-label="جارٍ تحميل الدليل">
           {Array.from({ length: 5 }).map((_, index) => <span key={index} />)}
         </div>
       ) : (
-        <div className="directory-result-stack">
+        <div className="directory-result-stack" aria-live="polite">
           {showPeople && (
             <section className="directory-result-section">
-              <header><div><span>الأفراد</span><h2>{submittedTerm ? `نتائج «${submittedTerm}»` : 'أحدث الأفراد المعتمدين'}</h2></div>{peopleCount != null && <strong>{peopleCount}</strong>}</header>
+              <header><div><span>الأفراد</span><h2>{submittedTerm ? `نتائج «${submittedTerm}»` : 'أحدث الأفراد المعتمدين'}</h2></div>{peopleCount != null && <strong title="عدد تقديري سريع">≈{peopleCount}</strong>}</header>
               {people.length ? (
                 <div className="directory-person-list">{people.map((item) => <PersonCard key={item.id} item={item} onOpen={onOpenPerson} />)}</div>
               ) : <div className="directory-empty">لا توجد نتائج أشخاص مطابقة.</div>}
@@ -203,7 +289,7 @@ export default function DirectoryScreen({ initialTerm = '', onOpenPerson, onOpen
 
           {showFamilies && (
             <section className="directory-result-section family-results">
-              <header><div><span>العائلات</span><h2>{submittedTerm ? 'العائلات المطابقة' : 'العائلات المعتمدة'}</h2></div>{familyCount != null && <strong>{familyCount}</strong>}</header>
+              <header><div><span>العائلات</span><h2>{submittedTerm ? 'العائلات المطابقة' : 'العائلات المعتمدة'}</h2></div>{familyCount != null && <strong title="عدد تقديري سريع">≈{familyCount}</strong>}</header>
               {families.length ? (
                 <div className="directory-family-grid">{families.map((item) => <FamilyCard key={item.id} item={item} onOpen={onOpenFamily} />)}</div>
               ) : <div className="directory-empty">لا توجد عائلات مطابقة.</div>}

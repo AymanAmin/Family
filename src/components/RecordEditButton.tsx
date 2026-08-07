@@ -1,9 +1,9 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 
-type EntityType = 'families' | 'people' | 'events'
+const FamilyPicker = lazy(() => import('./FamilyPicker'))
 
-type FamilyOption = { id: string; name: string }
+type EntityType = 'families' | 'people' | 'events'
 
 type Props = {
   entityType: EntityType
@@ -12,7 +12,6 @@ type Props = {
   sessionUserId: string | null | undefined
   isAdmin: boolean
   initialData: Record<string, string | number | boolean | null | undefined>
-  familyOptions?: FamilyOption[]
   onSaved?: () => void | Promise<void>
 }
 
@@ -33,7 +32,6 @@ export default function RecordEditButton({
   sessionUserId,
   isAdmin,
   initialData,
-  familyOptions = [],
   onSaved,
 }: Props) {
   const canEdit = Boolean(isAdmin || (sessionUserId && createdBy === sessionUserId))
@@ -149,7 +147,14 @@ export default function RecordEditButton({
                   <label><span>العنوان</span><input required value={String(form.title ?? '')} onChange={(e) => setValue('title', e.target.value)} /></label>
                   <div className="edit-form-grid">
                     <label><span>التاريخ</span><input type="date" value={String(form.event_date ?? '')} onChange={(e) => setValue('event_date', e.target.value)} /></label>
-                    <label><span>العائلة</span><select value={String(form.family_id ?? '')} onChange={(e) => setValue('family_id', e.target.value)}><option value="">بدون عائلة محددة</option>{familyOptions.map((family) => <option key={family.id} value={family.id}>{family.name}</option>)}</select></label>
+                    <Suspense fallback={<div className="picker-skeleton compact">جارٍ تجهيز بحث العائلات…</div>}>
+                      <FamilyPicker
+                        label="العائلة"
+                        value={String(form.family_id ?? '')}
+                        onChange={(familyId) => setValue('family_id', familyId)}
+                        emptyLabel="بدون عائلة محددة"
+                      />
+                    </Suspense>
                   </div>
                   <label><span>المكان</span><input value={String(form.location_name ?? '')} onChange={(e) => setValue('location_name', e.target.value)} /></label>
                   <label><span>التفاصيل</span><textarea rows={4} value={String(form.description ?? '')} onChange={(e) => setValue('description', e.target.value)} /></label>

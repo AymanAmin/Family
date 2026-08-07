@@ -35,6 +35,7 @@ import './detail-avatar-icons.css'
 import './pwa-install.css'
 import './push-notifications.css'
 import './brand-identity.css'
+import './home-news-preview.css'
 
 function disablePageZoom() {
   document.documentElement.style.touchAction = 'pan-x pan-y'

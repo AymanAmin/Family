@@ -1,0 +1,1 @@
+Promoted the approved-events news cards to the top of the home page, added the كل الأخبار action, and removed the previous compact home news feed.

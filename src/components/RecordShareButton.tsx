@@ -189,11 +189,18 @@ function downloadFile(file: File) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1500)
 }
 
-async function shareFile(file: File, title: string) {
+function recordShareUrl(entityType: ShareEntity, recordId: string) {
+  const baseUrl = window.location.href.split('#')[0]
+  const route = entityType === 'people' ? 'person' : 'family'
+  return `${baseUrl}#/${route}/${encodeURIComponent(recordId)}`
+}
+
+async function shareFile(file: File, title: string, recordUrl: string) {
   const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean }
+  const text = `من منصة صلة القرابة\n${recordUrl}`
   if (typeof nav.share === 'function' && (!nav.canShare || nav.canShare({ files: [file] }))) {
     try {
-      await nav.share({ title, text: 'من منصة صلة القرابة', files: [file] })
+      await nav.share({ title, text, files: [file] })
       return 'shared' as const
     } catch (error) {
       if ((error as DOMException)?.name === 'AbortError') return 'cancelled' as const
@@ -468,7 +475,7 @@ export default function RecordShareButton({ entityType, recordId }: Props) {
       const result = entityType === 'people' ? await renderPersonCard(recordId) : await renderFamilyCard(recordId)
       const blob = await canvasBlob(result.canvas)
       const file = new File([blob], result.filename, { type: 'image/png' })
-      const action = await shareFile(file, result.title)
+      const action = await shareFile(file, result.title, recordShareUrl(entityType, recordId))
       if (action === 'downloaded') setMessage('تم حفظ الصورة ويمكنك مشاركتها من الجهاز.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'تعذر إنشاء صورة المشاركة.')

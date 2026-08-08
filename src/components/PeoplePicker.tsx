@@ -12,6 +12,7 @@ type PersonOption = {
 }
 
 type SearchMode = 'prefix' | 'broad'
+type GenderFilter = 'male' | 'female'
 
 type Props = {
   label: string
@@ -20,17 +21,18 @@ type Props = {
   excludeId?: string
   required?: boolean
   searchMode?: SearchMode
+  genderFilter?: GenderFilter
 }
 
 const SEARCH_DELAY = 320
 const CACHE_TTL = 60_000
 const resultCache = new Map<string, { savedAt: number; rows: PersonOption[] }>()
 
-function cacheKey(query: string, excludeId: string | undefined, searchMode: SearchMode) {
-  return `${searchMode}::${query.trim().toLocaleLowerCase('ar')}::${excludeId ?? ''}`
+function cacheKey(query: string, excludeId: string | undefined, searchMode: SearchMode, genderFilter: GenderFilter | undefined) {
+  return `${searchMode}::${genderFilter ?? 'any'}::${query.trim().toLocaleLowerCase('ar')}::${excludeId ?? ''}`
 }
 
-export default function PeoplePicker({ label, value, onChange, excludeId, required = false, searchMode = 'prefix' }: Props) {
+export default function PeoplePicker({ label, value, onChange, excludeId, required = false, searchMode = 'prefix', genderFilter }: Props) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<PersonOption | null>(null)
   const [results, setResults] = useState<PersonOption[]>([])
@@ -48,17 +50,19 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
     if (selected?.id === value) return
 
     const requestId = ++requestRef.current
-    void supabase
+    let selectedQuery = supabase
       .from('people')
       .select('id,full_name,gender,birth_year,is_verified')
       .eq('id', value)
       .eq('status', 'approved')
+    if (genderFilter) selectedQuery = selectedQuery.eq('gender', genderFilter)
+    void selectedQuery
       .maybeSingle()
       .then(({ data }) => {
         if (requestId !== requestRef.current) return
         setSelected((data as PersonOption | null) ?? null)
       })
-  }, [value, selected?.id])
+  }, [value, selected?.id, genderFilter])
 
   useEffect(() => {
     function closeWhenClickingOutside(event: PointerEvent) {
@@ -88,7 +92,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
       return
     }
 
-    const key = cacheKey(normalized, excludeId, searchMode)
+    const key = cacheKey(normalized, excludeId, searchMode, genderFilter)
     const cached = resultCache.get(key)
     if (cached && Date.now() - cached.savedAt < CACHE_TTL) {
       setResults(cached.rows)
@@ -101,16 +105,17 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
       const requestId = ++requestRef.current
       setLoading(true)
 
-      if (searchMode === 'prefix') {
-        let prefixQuery = supabase
+      if (searchMode === 'prefix' || genderFilter) {
+        let directQuery = supabase
           .from('people')
           .select('id,full_name,gender,birth_year,is_verified')
           .eq('status', 'approved')
-          .ilike('full_name', `${normalized}%`)
+          .ilike('full_name', searchMode === 'prefix' ? `${normalized}%` : `%${normalized}%`)
           .order('full_name')
           .limit(6)
-        if (excludeId) prefixQuery = prefixQuery.neq('id', excludeId)
-        const { data } = await prefixQuery
+        if (excludeId) directQuery = directQuery.neq('id', excludeId)
+        if (genderFilter) directQuery = directQuery.eq('gender', genderFilter)
+        const { data } = await directQuery
         if (requestId !== requestRef.current) return
         const rows = (data ?? []) as PersonOption[]
         resultCache.set(key, { savedAt: Date.now(), rows })
@@ -214,7 +219,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
                 <span className="people-picker-avatar">{person.full_name.charAt(0)}</span>
                 <span><span className="verified-name-line"><strong>{person.full_name}</strong>{person.is_verified && <VerifiedBadge compact />}</span><small>{person.birth_year || 'سنة الميلاد غير محددة'}</small></span>
               </button>
-            )) : <div className="people-picker-state">لا توجد نتيجة تبدأ بهذا الاسم.</div>}
+            )) : <div className="people-picker-state">لا توجد نتيجة مطابقة لهذا الاسم.</div>}
           </div>
         )}
       </div>

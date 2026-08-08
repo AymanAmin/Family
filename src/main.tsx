@@ -46,6 +46,7 @@ import './brand-identity.css'
 import './home-news-preview.css'
 import './family-context-ux.css'
 import './home-stats-rtl-fix.css'
+import './admin-tabs-mobile-fix.css'
 
 type FamilyHistoryState = Record<string, unknown> & {
   __familyApp?: boolean

@@ -96,3 +96,5 @@ replaceOnce(
 
 fs.writeFileSync(path, source)
 console.log('Enhanced share headings, brand typography, and awareness copy applied.')
+
+// Deployment marker: source changes above are already integrated; this keeps Pages publishing from the latest main state.

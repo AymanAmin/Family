@@ -1,5 +1,6 @@
 name: Apply kinship path performance
 
+# Source patch is idempotent; this workflow also provides a verified deployment trigger.
 on:
   push:
     branches: [main]

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sila-region-v13'
+const CACHE_VERSION = 'sila-region-v14'
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 
 function appUrl(path = '') {

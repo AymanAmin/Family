@@ -101,15 +101,67 @@
 
 .lineage-family-units {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   padding: 10px 11px;
   border: 1px solid #eadfce;
   border-radius: 14px;
   background: #fffaf3;
 }
 .lineage-family-units > small { color: #8b6a49; font-size: .58rem; font-weight: 850; }
-.lineage-family-units > div { display: flex; flex-wrap: wrap; gap: 6px; }
-.lineage-family-units span { padding: 6px 9px; border: 1px solid #ecd8be; border-radius: 999px; color: #76553a; background: #fff; font-size: .65rem; font-weight: 850; }
+.lineage-family-groups { display: grid; gap: 8px; }
+.lineage-family-group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #ecd8be;
+  border-radius: 13px;
+  background: #fff;
+}
+.lineage-family-group > strong {
+  overflow-wrap: anywhere;
+  color: #76553a;
+  font-size: .68rem;
+  line-height: 1.55;
+}
+.lineage-family-spouses { display: grid; gap: 6px; }
+.lineage-family-spouses > small { color: #9a7d61; font-size: .55rem; font-weight: 850; }
+.lineage-family-spouses > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.lineage-family-spouses button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border: 1px solid #eadbc7;
+  border-radius: 12px;
+  color: #654b38;
+  background: #fffaf5;
+  text-align: right;
+}
+.lineage-family-spouses button > span {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 9px;
+  color: #315f68;
+  background: #e3f1ed;
+  font-size: .62rem;
+  font-weight: 900;
+}
+.lineage-family-spouses button > span.female { color: #795c70; background: #f0e8ee; }
+.lineage-family-spouses button b {
+  min-width: 0;
+  overflow: hidden;
+  font-size: .61rem;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lineage-family-spouses button:disabled { cursor: default; opacity: 1; }
 
 .lineage-quick-actions {
   display: grid;
@@ -229,6 +281,9 @@
   .lineage-breadcrumb-step:first-child { grid-template-columns: minmax(0, 1fr); }
   .lineage-breadcrumb-step i { display: grid; width: 20px; height: 20px; place-items: center; transform: rotate(-90deg); }
   .lineage-breadcrumb-step button { max-width: none; width: 100%; text-align: right; white-space: normal; }
+  .lineage-family-spouses > div { display: grid; grid-template-columns: 1fr; }
+  .lineage-family-spouses button { width: 100%; }
+  .lineage-family-spouses button b { white-space: normal; overflow-wrap: anywhere; }
   .lineage-generation-list > section > div { display: grid; grid-template-columns: 1fr; }
   .lineage-person-chip { width: 100%; }
   .lineage-person-chip strong { white-space: normal; }

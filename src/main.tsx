@@ -9,6 +9,7 @@ import InstallPrompt from './components/InstallPrompt'
 import PushNotificationSettings from './components/PushNotificationSettings'
 import AdminVisitorStat from './components/AdminVisitorStat'
 import AdminPendingDashboard from './components/AdminPendingDashboard'
+import AdminLineageReview from './components/AdminLineageReview'
 import './styles.css'
 import './mobile-app.css'
 import './mobile-fixes.css'
@@ -154,6 +155,7 @@ createRoot(rootElement).render(
     <InstallPrompt />
     <PushNotificationSettings />
     <AdminPendingDashboard />
+    <AdminLineageReview />
     <AdminVisitorStat />
   </StrictMode>,
 )

@@ -187,9 +187,36 @@
   font-weight: 900;
 }
 .direct-relations-panel.is-collapsible > summary::-webkit-details-marker { display: none; }
+.direct-relations-panel.is-collapsible > summary small { color: var(--muted); font-size: .58rem; font-weight: 750; }
 .direct-relations-panel.is-collapsible > summary::after { content: '⌄'; color: var(--brand-teal-600); font-size: 1rem; transition: transform .18s ease; }
 .direct-relations-panel.is-collapsible[open] > summary::after { transform: rotate(180deg); }
 .direct-relations-collapsible-body { display: grid; gap: 12px; padding: 0 12px 12px; }
+
+.family-memberships-collapsible {
+  padding: 0 !important;
+  border: 1px solid #e1e8e7 !important;
+  border-radius: 18px !important;
+  background: #fff;
+  overflow: hidden;
+}
+.family-memberships-collapsible > summary {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+.family-memberships-collapsible > summary::-webkit-details-marker { display: none; }
+.family-memberships-collapsible > summary > span { min-width: 0; display: grid; gap: 2px; }
+.family-memberships-collapsible > summary b { color: var(--brand-navy-950); font-size: .72rem; }
+.family-memberships-collapsible > summary small { overflow: hidden; color: var(--muted); font-size: .59rem; text-overflow: ellipsis; white-space: nowrap; }
+.family-memberships-collapsible > summary em { display: grid; flex: 0 0 28px; width: 28px; height: 28px; place-items: center; border-radius: 9px; color: #356f7a; background: #edf7f5; font-size: .6rem; font-style: normal; font-weight: 900; }
+.family-memberships-collapsible > summary::after { content: '⌄'; color: var(--brand-teal-600); font-size: 1rem; transition: transform .18s ease; }
+.family-memberships-collapsible[open] > summary::after { transform: rotate(180deg); }
+.family-memberships-collapsible-body { display: grid; gap: 12px; padding: 4px 14px 14px; border-top: 1px solid #edf1f0; }
 
 @media (max-width: 760px) {
   .lineage-summary-card { padding: 12px; border-radius: 18px; }
@@ -205,8 +232,10 @@
   .lineage-generation-list > section > div { display: grid; grid-template-columns: 1fr; }
   .lineage-person-chip { width: 100%; }
   .lineage-person-chip strong { white-space: normal; }
+  .family-memberships-collapsible > summary small { max-width: 210px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .direct-relations-panel.is-collapsible > summary::after { transition: none; }
+  .direct-relations-panel.is-collapsible > summary::after,
+  .family-memberships-collapsible > summary::after { transition: none; }
 }

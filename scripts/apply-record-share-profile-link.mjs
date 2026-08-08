@@ -52,3 +52,5 @@ if (!source.includes(newCall)) {
 
 fs.writeFileSync(path, source)
 console.log('Record sharing now includes the direct profile URL in shared text.')
+
+// This patch is intentionally idempotent so deployment-trigger commits are safe.

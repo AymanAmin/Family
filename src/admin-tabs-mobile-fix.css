@@ -1,0 +1,61 @@
+/* Keep the growing admin section list readable on phones.
+   The admin area receives extra tabs through portals, so a fixed grid eventually
+   becomes too dense. On mobile we keep every label intact and let the row scroll. */
+@media (max-width: 760px) {
+  .admin-console-tabs {
+    display: flex !important;
+    grid-template-columns: none !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 7px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 6px 6px 8px !important;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 6px;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-console-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-console-tabs > button {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    width: max-content !important;
+    min-width: 112px !important;
+    max-width: none !important;
+    min-height: 56px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 8px 12px !important;
+    line-height: 1.35 !important;
+    white-space: nowrap !important;
+    text-wrap: nowrap !important;
+    overflow: visible !important;
+    scroll-snap-align: start;
+  }
+
+  .admin-console-tabs > button > span {
+    flex: 0 0 auto !important;
+    min-width: 24px !important;
+    height: 24px !important;
+    margin: 0 !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-console-tabs > button {
+    min-width: 104px !important;
+    min-height: 52px !important;
+    padding-inline: 10px !important;
+    font-size: .62rem !important;
+  }
+}

@@ -157,13 +157,13 @@ export default function AdminPendingDashboard() {
   useEffect(() => {
     if (!portalTarget || !canModerate) return
     let timer = 0
-    const consoleElement = portalTarget.closest('.admin-console')
-    if (!consoleElement) return
+    const panel = portalTarget.closest('.admin-console')?.querySelector('.admin-console-panel')
+    if (!panel) return
     const observer = new MutationObserver(() => {
       window.clearTimeout(timer)
       timer = window.setTimeout(() => void loadCounts(), 280)
     })
-    observer.observe(consoleElement, { childList: true, subtree: true })
+    observer.observe(panel, { childList: true, subtree: true })
     return () => {
       window.clearTimeout(timer)
       observer.disconnect()

@@ -8,6 +8,7 @@ import './home-occasion-greetings'
 import InstallPrompt from './components/InstallPrompt'
 import PushNotificationSettings from './components/PushNotificationSettings'
 import AdminVisitorStat from './components/AdminVisitorStat'
+import AdminPendingDashboard from './components/AdminPendingDashboard'
 import './styles.css'
 import './mobile-app.css'
 import './mobile-fixes.css'
@@ -37,6 +38,7 @@ import './person-name-wrap.css'
 import './detail-avatar-icons.css'
 import './pwa-install.css'
 import './push-notifications.css'
+import './admin-pending-dashboard.css'
 import './brand-identity.css'
 import './home-news-preview.css'
 import './family-context-ux.css'
@@ -90,6 +92,7 @@ createRoot(rootElement).render(
     <App />
     <InstallPrompt />
     <PushNotificationSettings />
+    <AdminPendingDashboard />
     <AdminVisitorStat />
   </StrictMode>,
 )

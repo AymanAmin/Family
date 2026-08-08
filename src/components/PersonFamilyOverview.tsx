@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import DuplicatePersonCheck from './DuplicatePersonCheck'
 import FamilyPicker from './FamilyPicker'
 import PeoplePicker from './PeoplePicker'
+import LineageSummaryCard from './LineageSummaryCard'
 
 type Gender = 'male' | 'female' | null
 type RelationSlot = 'father' | 'mother' | 'husband' | 'wife' | 'son' | 'daughter' | 'brother' | 'sister'
@@ -218,12 +219,14 @@ export default function PersonFamilyOverview({ personId, personName, personGende
 
   return <section className="family-overview-card detail-section" aria-label={`الأسرة المباشرة لـ ${personName}`}>
     <header className="family-overview-heading">
-      <div><span className="eyebrow">العائلة في لمحة</span><h2>أقرب العلاقات</h2><p>عرض مباشر وبسيط. اضغط الاسم لفتح ملفه، أو أضف الشخص من مكانه الصحيح.</p></div>
+      <div><span className="eyebrow">العائلة في لمحة</span><h2>الأسرة المباشرة</h2><p>أهم معلومات النسب والعلاقات في شاشة واحدة. اضغط الاسم لفتح ملفه أو أضف الشخص من مكانه الصحيح.</p></div>
       <span className="family-overview-count">{rows.length}</span>
     </header>
 
+    <LineageSummaryCard personId={personId} personName={personName} onOpenPerson={onOpenPerson} />
+
     {memberships.length > 0 && <div className="family-overview-affiliations">
-      <span>ينتمي إلى</span>
+      <span>ارتباطات العائلة الحالية</span>
       <div>{memberships.slice(0, 4).map((membership) => {
         const family = oneFamily(membership.families ?? null)
         return family?.name ? <span className={membership.is_primary ? 'primary' : ''} key={membership.id}>{family.name}{membership.is_primary ? ' · أساسية' : ''}</span> : null

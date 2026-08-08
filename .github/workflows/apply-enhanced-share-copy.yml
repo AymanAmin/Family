@@ -1,0 +1,51 @@
+name: Apply enhanced share copy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply-enhanced-share-copy.mjs'
+      - '.github/workflows/apply-enhanced-share-copy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply enhanced sharing copy
+        run: node scripts/apply-enhanced-share-copy.mjs
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Verify TypeScript and production build
+        run: npm run build
+
+      - name: Keep only source changes for integration commit
+        run: |
+          git reset --hard HEAD -- . ':!src/components/RecordShareButton.tsx'
+          git clean -fd -e src/components/RecordShareButton.tsx
+
+      - name: Commit integration
+        run: |
+          if git diff --quiet -- src/components/RecordShareButton.tsx; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/RecordShareButton.tsx
+          git commit -m "Enhance person and family share cards"
+          git pull --rebase origin main
+          git push origin HEAD:main

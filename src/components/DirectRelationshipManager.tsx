@@ -138,42 +138,45 @@ export default function DirectRelationshipManager({ personId, sessionUserId, isA
   if (!rows.length) return null
 
   return (
-    <section className="direct-relations-panel">
-      <div className="direct-relations-heading"><div><span className="eyebrow">إدارة الصلات</span><h3>العلاقات المسجلة يدويًا</h3><p>العلاقات المستنتجة تلقائيًا لا تُحذف من هنا؛ عدّل أصل النسب الذي استُنتجت منه.</p></div></div>
-      {message && <div className="direct-relations-message">{message}</div>}
-      <div className="direct-relations-list">
-        {rows.map((item) => {
-          const source = related(item.source)
-          const target = related(item.target)
-          const other = item.source_person_id === personId ? target : source
-          const contextualRelationType = relationTypeFromCurrentPerson(item, personId)
-          const contextualLabel = labels[contextualRelationType] || contextualRelationType
-          const note = displayRelationshipNote(item.notes, contextualRelationType)
-          return (
-            <article className="direct-relation-card" key={item.id}>
-              <div className="direct-relation-main">
-                <button className="direct-relation-person" type="button" onClick={() => other?.id && onOpenPerson?.(other.id)}>
-                  <span>{other?.full_name?.charAt(0) || '؟'}</span>
-                  <div className="direct-relation-copy">
-                    <strong>{other?.full_name || 'شخص'}</strong>
-                    <small className="direct-relation-type">{contextualLabel}{item.status === 'pending' ? ' · معلقة' : ''}</small>
-                    {note && <small className="direct-relation-note">{note}</small>}
-                  </div>
-                </button>
-                <div className="direct-relation-actions"><button type="button" onClick={() => startEdit(item)}>تعديل</button><button className="danger" type="button" onClick={() => { setEditingId(''); setConfirmDeleteId(item.id) }}>حذف</button></div>
-              </div>
+    <details className="direct-relations-panel is-collapsible">
+      <summary><span>تعديل العلاقات المسجلة</span><small>{rows.length} صلة</small></summary>
+      <div className="direct-relations-collapsible-body">
+        <div className="direct-relations-heading"><div><span className="eyebrow">إدارة متقدمة</span><h3>العلاقات المسجلة يدويًا</h3><p>استخدم هذا القسم فقط عند تعديل أو حذف علاقة مسجلة. العلاقات المستنتجة تُصحح من أصل النسب.</p></div></div>
+        {message && <div className="direct-relations-message">{message}</div>}
+        <div className="direct-relations-list">
+          {rows.map((item) => {
+            const source = related(item.source)
+            const target = related(item.target)
+            const other = item.source_person_id === personId ? target : source
+            const contextualRelationType = relationTypeFromCurrentPerson(item, personId)
+            const contextualLabel = labels[contextualRelationType] || contextualRelationType
+            const note = displayRelationshipNote(item.notes, contextualRelationType)
+            return (
+              <article className="direct-relation-card" key={item.id}>
+                <div className="direct-relation-main">
+                  <button className="direct-relation-person" type="button" onClick={() => other?.id && onOpenPerson?.(other.id)}>
+                    <span>{other?.full_name?.charAt(0) || '؟'}</span>
+                    <div className="direct-relation-copy">
+                      <strong>{other?.full_name || 'شخص'}</strong>
+                      <small className="direct-relation-type">{contextualLabel}{item.status === 'pending' ? ' · معلقة' : ''}</small>
+                      {note && <small className="direct-relation-note">{note}</small>}
+                    </div>
+                  </button>
+                  <div className="direct-relation-actions"><button type="button" onClick={() => startEdit(item)}>تعديل</button><button className="danger" type="button" onClick={() => { setEditingId(''); setConfirmDeleteId(item.id) }}>حذف</button></div>
+                </div>
 
-              {editingId === item.id && <div className="direct-relation-edit">
-                <label><span>نوع الصلة</span><select value={form.relation_type} onChange={(e) => setForm((current) => ({ ...current, relation_type: e.target.value }))}>{Object.entries(labels).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-                <label><span>ملاحظة</span><textarea rows={2} value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></label>
-                <div><button className="primary" type="button" disabled={busyId === item.id} onClick={() => void submitChange(item,'edit')}>{busyId === item.id ? '…' : 'حفظ'}</button><button type="button" onClick={() => setEditingId('')}>إلغاء</button></div>
-              </div>}
+                {editingId === item.id && <div className="direct-relation-edit">
+                  <label><span>نوع الصلة</span><select value={form.relation_type} onChange={(e) => setForm((current) => ({ ...current, relation_type: e.target.value }))}>{Object.entries(labels).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+                  <label><span>ملاحظة</span><textarea rows={2} value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></label>
+                  <div><button className="primary" type="button" disabled={busyId === item.id} onClick={() => void submitChange(item,'edit')}>{busyId === item.id ? '…' : 'حفظ'}</button><button type="button" onClick={() => setEditingId('')}>إلغاء</button></div>
+                </div>}
 
-              {confirmDeleteId === item.id && <div className="direct-relation-delete-confirm"><span>{`هل تريد حذف صلة «${contextualLabel}» مع ${other?.full_name || 'هذا الشخص'}؟`}</span><div><button className="danger" type="button" disabled={busyId === item.id} onClick={() => void submitChange(item,'delete')}>{busyId === item.id ? '…' : 'تأكيد الحذف'}</button><button type="button" onClick={() => setConfirmDeleteId('')}>إلغاء</button></div></div>}
-            </article>
-          )
-        })}
+                {confirmDeleteId === item.id && <div className="direct-relation-delete-confirm"><span>{`هل تريد حذف صلة «${contextualLabel}» مع ${other?.full_name || 'هذا الشخص'}؟`}</span><div><button className="danger" type="button" disabled={busyId === item.id} onClick={() => void submitChange(item,'delete')}>{busyId === item.id ? '…' : 'تأكيد الحذف'}</button><button type="button" onClick={() => setConfirmDeleteId('')}>إلغاء</button></div></div>}
+              </article>
+            )
+          })}
+        </div>
       </div>
-    </section>
+    </details>
   )
 }

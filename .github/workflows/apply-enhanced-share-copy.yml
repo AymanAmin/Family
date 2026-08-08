@@ -32,11 +32,6 @@ jobs:
       - name: Verify TypeScript and production build
         run: npm run build
 
-      - name: Keep only source changes for integration commit
-        run: |
-          git reset --hard HEAD -- . ':!src/components/RecordShareButton.tsx'
-          git clean -fd -e src/components/RecordShareButton.tsx
-
       - name: Commit integration
         run: |
           if git diff --quiet -- src/components/RecordShareButton.tsx; then
@@ -47,5 +42,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/components/RecordShareButton.tsx
           git commit -m "Enhance person and family share cards"
+          git reset --hard HEAD
+          git clean -fd
           git pull --rebase origin main
           git push origin HEAD:main

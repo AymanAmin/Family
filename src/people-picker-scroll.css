@@ -1,0 +1,24 @@
+.people-picker-menu {
+  max-height: min(42vh, 320px) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+.people-picker-menu > button {
+  touch-action: manipulation;
+}
+
+@media (max-width: 760px) {
+  .people-picker-menu {
+    max-height: min(46vh, 360px) !important;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .people-picker-menu > button {
+    min-height: 64px;
+  }
+}

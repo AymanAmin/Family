@@ -17,67 +17,72 @@ jobs:
           fetch-depth: 0
 
       - name: Patch App navigation history
-        shell: python
+        shell: bash
         run: |
+          python3 <<'PY'
           from pathlib import Path
 
           path = Path('src/App.tsx')
           text = path.read_text(encoding='utf-8')
 
           old = """  useEffect(() => {
-    if (!routeReady) return
+            if (!routeReady) return
 
-    let route: string = view
-    if (view === 'person' && selectedPerson?.id) route = `person/${selectedPerson.id}`
-    if (view === 'family' && selectedFamily?.id) route = `family/${selectedFamily.id}`
+            let route: string = view
+            if (view === 'person' && selectedPerson?.id) route = `person/${selectedPerson.id}`
+            if (view === 'family' && selectedFamily?.id) route = `family/${selectedFamily.id}`
 
-    const nextHash = `#/${route}`
-    if (window.location.hash !== nextHash) {
-      window.history.replaceState(null, '', nextHash)
-    }
-  }, [routeReady, view, selectedPerson?.id, selectedFamily?.id])
-"""
+            const nextHash = `#/${route}`
+            if (window.location.hash !== nextHash) {
+              window.history.replaceState(null, '', nextHash)
+            }
+          }, [routeReady, view, selectedPerson?.id, selectedFamily?.id])
+          """
+
+          # The source block is indented by two spaces, not the workflow indentation above.
+          old = old.replace('\n          ', '\n').replace('"""  useEffect', '"""  useEffect')
 
           new = """  useEffect(() => {
-    if (!routeReady) return
+            if (!routeReady) return
 
-    function restoreHistoryRoute() {
-      const rawHash = window.location.hash
-      if (rawHash.startsWith('#access_token=') || rawHash.startsWith('#error=')) return
+            function restoreHistoryRoute() {
+              const rawHash = window.location.hash
+              if (rawHash.startsWith('#access_token=') || rawHash.startsWith('#error=')) return
 
-      const route = decodeURIComponent(rawHash.replace(/^#\\/?/, ''))
-      const [target, id] = route.split('/')
+              const route = decodeURIComponent(rawHash.replace(/^#\\/?/, ''))
+              const [target, id] = route.split('/')
 
-      if (target === 'person' && id) {
-        void openPersonById(id)
-      } else if (target === 'family' && id) {
-        void openFamilyById(id)
-      } else if (target === 'news' || target === 'search' || target === 'tree' || target === 'add' || target === 'admin' || target === 'account') {
-        setView(target as View)
-        window.scrollTo({ top: 0, behavior: 'auto' })
-      } else {
-        setView('home')
-        window.scrollTo({ top: 0, behavior: 'auto' })
-      }
-    }
+              if (target === 'person' && id) {
+                void openPersonById(id)
+              } else if (target === 'family' && id) {
+                void openFamilyById(id)
+              } else if (target === 'news' || target === 'search' || target === 'tree' || target === 'add' || target === 'admin' || target === 'account') {
+                setView(target as View)
+                window.scrollTo({ top: 0, behavior: 'auto' })
+              } else {
+                setView('home')
+                window.scrollTo({ top: 0, behavior: 'auto' })
+              }
+            }
 
-    window.addEventListener('popstate', restoreHistoryRoute)
-    return () => window.removeEventListener('popstate', restoreHistoryRoute)
-  }, [routeReady])
+            window.addEventListener('popstate', restoreHistoryRoute)
+            return () => window.removeEventListener('popstate', restoreHistoryRoute)
+          }, [routeReady])
 
-  useEffect(() => {
-    if (!routeReady) return
+          useEffect(() => {
+            if (!routeReady) return
 
-    let route: string = view
-    if (view === 'person' && selectedPerson?.id) route = `person/${selectedPerson.id}`
-    if (view === 'family' && selectedFamily?.id) route = `family/${selectedFamily.id}`
+            let route: string = view
+            if (view === 'person' && selectedPerson?.id) route = `person/${selectedPerson.id}`
+            if (view === 'family' && selectedFamily?.id) route = `family/${selectedFamily.id}`
 
-    const nextHash = `#/${route}`
-    if (window.location.hash !== nextHash) {
-      window.history.pushState({ familyAppRoute: route }, '', nextHash)
-    }
-  }, [routeReady, view, selectedPerson?.id, selectedFamily?.id])
-"""
+            const nextHash = `#/${route}`
+            if (window.location.hash !== nextHash) {
+              window.history.pushState({ familyAppRoute: route }, '', nextHash)
+            }
+          }, [routeReady, view, selectedPerson?.id, selectedFamily?.id])
+          """
+          new = new.replace('\n          ', '\n')
 
           if old not in text:
               if "window.history.pushState({ familyAppRoute: route }, '', nextHash)" in text:
@@ -87,8 +92,10 @@ jobs:
           else:
               path.write_text(text.replace(old, new, 1), encoding='utf-8')
               print('Patched src/App.tsx')
+          PY
 
       - name: Commit patch
+        shell: bash
         run: |
           if git diff --quiet -- src/App.tsx; then
             echo "No changes needed."

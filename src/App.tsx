@@ -644,7 +644,6 @@ function App() {
     event.preventDefault()
     if (!supabase || !session || !requireAccount()) return
     if (personForm.full_name.trim().length < 3) return showMessage('اكتب الاسم الكامل.', 'error')
-    if (personForm.is_deceased && !personForm.death_date) return showMessage('حدد تاريخ الوفاة.', 'error')
 
     const relationType = personRelationForm.relation_type
     const relatedPersonId = personRelationForm.related_person_id

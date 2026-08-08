@@ -130,11 +130,6 @@ export default function RecordEditButton({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!supabase) return
-    if (entityType === 'people' && Boolean(form.is_deceased) && !String(form.death_date ?? '').trim()) {
-      setMessage('حدد تاريخ الوفاة أولًا.')
-      return
-    }
-
     setBusy(true)
     setMessage('')
 

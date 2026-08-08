@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/apply-mobile-shell.yml'
+      - 'scripts/fix-mobile-shell.mjs'
 
 permissions:
   contents: write
@@ -27,5 +28,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/App.tsx
-          git commit -m "Separate mobile bottom navigation from header"
+          git commit -m "Apply mobile navigation updates"
           git push

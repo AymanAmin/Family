@@ -62,50 +62,98 @@ function childWord(gender: PathRow['gender']) {
   return 'ابن/بنت'
 }
 
-function directKinshipTerm(type: string, sourceGender: PathRow['gender']) {
-  if (type === 'parent') return childWord(sourceGender)
-  if (type === 'child') return sourceGender === 'female' ? 'أم' : sourceGender === 'male' ? 'أب' : 'والد/والدة'
-  if (type === 'sibling') return sourceGender === 'female' ? 'أخت' : sourceGender === 'male' ? 'أخ' : 'أخ/أخت'
-  if (type === 'spouse') return sourceGender === 'female' ? 'زوجة' : sourceGender === 'male' ? 'زوج' : 'زوج/زوجة'
-  return ''
+function personRelationWord(type: string, gender: PathRow['gender']) {
+  if (type === 'parent') return gender === 'female' ? 'أم' : gender === 'male' ? 'أب' : 'والد/والدة'
+  if (type === 'child') return childWord(gender)
+  if (type === 'sibling') return gender === 'female' ? 'أخت' : gender === 'male' ? 'أخ' : 'أخ/أخت'
+  if (type === 'spouse') return gender === 'female' ? 'زوجة' : gender === 'male' ? 'زوج' : 'زوج/زوجة'
+  if (type === 'guardian') return 'ولي/وصي'
+  return 'قريب'
 }
 
-function cousinRoot(sourceParentGender: PathRow['gender'], targetParentGender: PathRow['gender']) {
-  if (!sourceParentGender || !targetParentGender) return ''
-  if (targetParentGender === 'male') return sourceParentGender === 'male' ? 'عم' : 'عمة'
-  return sourceParentGender === 'male' ? 'خال' : 'خالة'
+function parentWord(gender: PathRow['gender']) {
+  return gender === 'female' ? 'أم' : gender === 'male' ? 'أب' : 'والد/والدة'
 }
 
-function inferKinshipTerm(path: PathRow[]) {
+function siblingWord(gender: PathRow['gender']) {
+  return gender === 'female' ? 'أخت' : gender === 'male' ? 'أخ' : 'أخ/أخت'
+}
+
+function spouseWord(gender: PathRow['gender']) {
+  return gender === 'female' ? 'زوجة' : gender === 'male' ? 'زوج' : 'زوج/زوجة'
+}
+
+function targetKinshipTerm(path: PathRow[]) {
   if (path.length < 2) return ''
-  const source = path[0]
   const relations = path.slice(1).map((step) => step.relation_type)
   const signature = relations.join('>')
+  const target = path[path.length - 1]
 
-  if (relations.length === 1) return directKinshipTerm(relations[0], source.gender)
+  if (relations.length === 1) return personRelationWord(relations[0], target.gender)
 
-  if (signature === 'parent>parent') return source.gender === 'female' ? 'حفيدة' : source.gender === 'male' ? 'حفيد' : 'حفيد/حفيدة'
-  if (signature === 'child>child') return source.gender === 'female' ? 'جدة' : source.gender === 'male' ? 'جد' : 'جد/جدة'
+  if (signature === 'parent>parent') return target.gender === 'female' ? 'جدة' : target.gender === 'male' ? 'جد' : 'جد/جدة'
+  if (signature === 'child>child') return target.gender === 'female' ? 'حفيدة' : target.gender === 'male' ? 'حفيد' : 'حفيد/حفيدة'
 
   if (signature === 'parent>sibling') {
-    const parentGender = path[1]?.gender
-    if (!parentGender) return ''
-    return `${childWord(source.gender)} ${parentGender === 'male' ? 'أخ' : 'أخت'}`
+    const sourceParent = path[1]
+    if (sourceParent.gender === 'male') return target.gender === 'female' ? 'عمة' : target.gender === 'male' ? 'عم' : 'عم/عمة'
+    if (sourceParent.gender === 'female') return target.gender === 'female' ? 'خالة' : target.gender === 'male' ? 'خال' : 'خال/خالة'
   }
 
   if (signature === 'sibling>child') {
-    const targetParentGender = path[1]?.gender
-    if (!targetParentGender || !source.gender) return ''
-    if (targetParentGender === 'male') return source.gender === 'male' ? 'عم' : 'عمة'
-    return source.gender === 'male' ? 'خال' : 'خالة'
+    const sibling = path[1]
+    return `${childWord(target.gender)} ${siblingWord(sibling.gender)}`
+  }
+
+  if (signature === 'sibling>spouse') {
+    const sibling = path[1]
+    return `${spouseWord(target.gender)} ${siblingWord(sibling.gender)}`
+  }
+
+  if (signature === 'parent>spouse') {
+    const parent = path[1]
+    return `${spouseWord(target.gender)} ${parentWord(parent.gender)}`
+  }
+
+  if (signature === 'child>spouse') {
+    const child = path[1]
+    return `${spouseWord(target.gender)} ${childWord(child.gender)}`
+  }
+
+  if (signature === 'spouse>parent') {
+    const spouse = path[1]
+    return `${parentWord(target.gender)} ${spouseWord(spouse.gender)}`
+  }
+
+  if (signature === 'spouse>sibling') {
+    const spouse = path[1]
+    return `${siblingWord(target.gender)} ${spouseWord(spouse.gender)}`
+  }
+
+  if (signature === 'spouse>child') {
+    const spouse = path[1]
+    return `${childWord(target.gender)} ${spouseWord(spouse.gender)}`
   }
 
   if (signature === 'parent>sibling>child') {
-    const root = cousinRoot(path[1]?.gender ?? null, path[2]?.gender ?? null)
-    return root ? `${childWord(source.gender)} ${root}` : ''
+    const sourceParent = path[1]
+    const parentSibling = path[2]
+    let root = ''
+    if (sourceParent.gender === 'male') root = parentSibling.gender === 'female' ? 'عمة' : parentSibling.gender === 'male' ? 'عم' : ''
+    if (sourceParent.gender === 'female') root = parentSibling.gender === 'female' ? 'خالة' : parentSibling.gender === 'male' ? 'خال' : ''
+    return root ? `${childWord(target.gender)} ${root}` : ''
   }
 
   return ''
+}
+
+function directThirdDegreePhrase(path: PathRow[]) {
+  const degree = path.length - 1
+  if (degree < 1 || degree > 3) return ''
+  const sourceName = shortPersonName(path[0].full_name)
+  const targetName = shortPersonName(path[path.length - 1].full_name)
+  const parts = path.slice(1).reverse().map((step) => personRelationWord(step.relation_type, step.gender))
+  return `${targetName} ${parts.join(' ')} ${sourceName}`
 }
 
 function edgeExplanation(from: PathRow, to: PathRow) {
@@ -124,14 +172,15 @@ function buildKinshipSummary(path: PathRow[]) {
   if (path.length < 2) return null
   const source = path[0]
   const target = path[path.length - 1]
-  const term = inferKinshipTerm(path)
   const sourceName = shortPersonName(source.full_name)
   const targetName = shortPersonName(target.full_name)
+  const term = targetKinshipTerm(path)
+  const directPhrase = directThirdDegreePhrase(path)
   const title = term
-    ? `${sourceName} ${term} ${targetName}`
-    : `${sourceName} ${source.gender === 'female' ? 'قريبة من' : 'قريب من'} ${targetName}`
+    ? `${targetName} ${term} ${sourceName}`
+    : directPhrase || `${targetName} ${target.gender === 'female' ? 'قريبة من' : 'قريب من'} ${sourceName}`
   const explanation = path.slice(1).map((step, index) => edgeExplanation(path[index], step)).join('، و')
-  return { title, explanation: `${explanation}.`, inferred: Boolean(term) }
+  return { title, explanation: `${explanation}.`, inferred: Boolean(term || directPhrase) }
 }
 
 export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddPerson, onAddRelation }: Props) {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import PeoplePicker from './PeoplePicker'
 import KinshipNetwork from './KinshipNetwork'
+import LineageSummaryCard from './LineageSummaryCard'
 import '../kinship-path-summary.css'
 
 type PersonSummary = {
@@ -301,8 +302,8 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
         </div>
         <div>
           <span className="tree-kicker">شجرة صلة</span>
-          <h1>اكتشف عائلتك بصريًا</h1>
-          <p>ابدأ من شخص واحد فقط. تُحمّل المنصة شبكة قرابته عند الطلب بدون جلب دليل الأشخاص كاملًا.</p>
+          <h1>النسب والعلاقات</h1>
+          <p>اختر شخصًا واحدًا لعرض أصله وفرعه وأقرب علاقاته، وافتح التفاصيل فقط عند الحاجة.</p>
         </div>
       </header>
 
@@ -314,7 +315,7 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
       {mode === 'tree' ? (
         <div className="tree-workspace">
           <section className="tree-focus-card">
-            <div className="tree-card-heading"><div><span>نقطة البداية</span><h2>اختر شخصًا لبناء المشهد</h2></div>{focus && <button type="button" onClick={() => onOpenPerson(focus.id)}>فتح الملف</button>}</div>
+            <div className="tree-card-heading"><div><span>نقطة البداية</span><h2>اختر شخصًا</h2></div>{focus && <button type="button" onClick={() => onOpenPerson(focus.id)}>فتح الملف</button>}</div>
             <PeoplePicker searchMode="broad" label="الشخص المحوري" value={focusId} onChange={(id) => { setFocusId(id); if (id && !fromId) setFromId(id) }} />
             {focusLoading && <div className="tree-inline-loading">جارٍ تجهيز الشجرة…</div>}
             {focus && !focusLoading && (
@@ -328,6 +329,8 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
               </div>
             )}
           </section>
+
+          {focus && !focusLoading && <LineageSummaryCard compact personId={focus.id} personName={focus.full_name} onOpenPerson={onOpenPerson} />}
 
           {focus ? (
             <KinshipNetwork personId={focus.id} personName={focus.full_name} onOpenPerson={onOpenPerson} onAddRelation={() => onAddRelation(focus.id)} />

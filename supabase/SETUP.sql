@@ -5463,15 +5463,3 @@ grant execute on function public.resync_person_relationships(uuid) to authentica
 notify pgrst, 'reload schema';
 
 commit;
-
--- INCLUDED MIGRATION: 20260808115125_make_death_date_optional_for_deceased_people.sql
-
-begin;
-
-alter table public.people
-  drop constraint if exists people_deceased_requires_death_date;
-
-comment on column public.people.death_date is
-  'Optional death date. A person may be marked deceased even when the historical death date is unknown.';
-
-commit;

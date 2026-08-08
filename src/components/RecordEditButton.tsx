@@ -233,13 +233,13 @@ export default function RecordEditButton({
               <div className={`life-status-card ${Boolean(form.is_deceased) ? 'deceased' : 'alive'}`}>
                 <div className="life-status-copy">
                   <span className="life-status-icon">{Boolean(form.is_deceased) ? '✦' : '●'}</span>
-                  <div><strong>{Boolean(form.is_deceased) ? 'متوفى' : 'على قيد الحياة'}</strong><small>{Boolean(form.is_deceased) ? 'يجب تحديد تاريخ الوفاة' : 'يمكن تغيير الحالة عند الحاجة'}</small></div>
+                  <div><strong>{Boolean(form.is_deceased) ? 'متوفى' : 'على قيد الحياة'}</strong><small>{Boolean(form.is_deceased) ? 'تاريخ الوفاة اختياري ويمكن استكماله لاحقًا' : 'يمكن تغيير الحالة عند الحاجة'}</small></div>
                 </div>
                 <label className="life-status-switch"><input type="checkbox" checked={Boolean(form.is_deceased)} onChange={(e) => setDeceased(e.target.checked)} /><span /></label>
               </div>
 
               {Boolean(form.is_deceased) && (
-                <label className="death-date-field"><span>تاريخ الوفاة *</span><input type="date" required value={String(form.death_date ?? '')} onChange={(e) => setValue('death_date', e.target.value)} /></label>
+                <label className="death-date-field"><span>تاريخ الوفاة <small>اختياري</small></span><input type="date" value={String(form.death_date ?? '')} onChange={(e) => setValue('death_date', e.target.value)} /></label>
               )}
 
               <label><span>نبذة</span><textarea rows={4} value={String(form.description ?? '')} onChange={(e) => setValue('description', e.target.value)} /></label>

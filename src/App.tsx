@@ -701,7 +701,7 @@ function App() {
       gender: personForm.gender || null,
       birth_year: personForm.birth_year ? Number(personForm.birth_year) : null,
       is_deceased: personForm.is_deceased,
-      death_date: personForm.is_deceased ? personForm.death_date : null,
+      death_date: personForm.is_deceased && personForm.death_date ? personForm.death_date : null,
       description: personForm.description.trim() || null,
       created_by: session.user.id,
       status: directApproval ? 'approved' : 'pending',
@@ -1302,8 +1302,8 @@ function App() {
               </Suspense>
               <label><span>الجنس</span><select value={personForm.gender} onChange={(e) => setPersonForm({ ...personForm, gender: e.target.value })}><option value="">غير محدد</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
               <label><span>سنة الميلاد</span><input type="number" min="1800" max="2100" value={personForm.birth_year} onChange={(e) => setPersonForm({ ...personForm, birth_year: e.target.value })} /></label>
-              <div className={`life-status-card full ${personForm.is_deceased ? 'deceased' : 'alive'}`}><div className="life-status-copy"><span className="life-status-icon">{personForm.is_deceased ? '✦' : '●'}</span><div><strong>{personForm.is_deceased ? 'متوفى' : 'على قيد الحياة'}</strong><small>{personForm.is_deceased ? 'حدد تاريخ الوفاة لإكمال السجل' : 'فعّل الخيار فقط إذا كان الشخص متوفى'}</small></div></div><label className="life-status-switch"><input type="checkbox" checked={personForm.is_deceased} onChange={(e) => setPersonForm({ ...personForm, is_deceased: e.target.checked, death_date: e.target.checked ? personForm.death_date : '' })} /><span /></label></div>
-              {personForm.is_deceased && <label className="full death-date-field"><span>تاريخ الوفاة *</span><input type="date" required value={personForm.death_date} onChange={(e) => setPersonForm({ ...personForm, death_date: e.target.value })} /></label>}
+              <div className={`life-status-card full ${personForm.is_deceased ? 'deceased' : 'alive'}`}><div className="life-status-copy"><span className="life-status-icon">{personForm.is_deceased ? '✦' : '●'}</span><div><strong>{personForm.is_deceased ? 'متوفى' : 'على قيد الحياة'}</strong><small>{personForm.is_deceased ? 'تاريخ الوفاة اختياري ويمكن استكماله لاحقًا' : 'فعّل الخيار فقط إذا كان الشخص متوفى'}</small></div></div><label className="life-status-switch"><input type="checkbox" checked={personForm.is_deceased} onChange={(e) => setPersonForm({ ...personForm, is_deceased: e.target.checked, death_date: e.target.checked ? personForm.death_date : '' })} /><span /></label></div>
+              {personForm.is_deceased && <label className="full death-date-field"><span>تاريخ الوفاة <small>اختياري</small></span><input type="date" value={personForm.death_date} onChange={(e) => setPersonForm({ ...personForm, death_date: e.target.value })} /></label>}
               <label className="full"><span>وصف أو نبذة</span><textarea value={personForm.description} onChange={(e) => setPersonForm({ ...personForm, description: e.target.value })} rows={4} /></label>
               <button className="primary full" disabled={busy}>{busy ? 'جارٍ الحفظ…' : personRelationForm.relation_type ? (isAdmin ? 'إضافة الشخص والصلة واعتمادهما' : 'إرسال الشخص والصلة للمراجعة') : (isAdmin ? 'إضافة واعتماد' : 'إرسال للمراجعة')}</button>
             </form>}

@@ -14,10 +14,9 @@ const labels: Record<string, string> = {
   birth: 'بالنسب / عائلة الأصل', marriage: 'بالزواج', paternal: 'من جهة الأب', maternal: 'من جهة الأم', guardian: 'وصاية أو كفالة', other: 'انتماء آخر',
 }
 
-// A family profile should feel complete on first open. Fifty members keeps the
-// initial request bounded while covering normal/medium families without forcing
-// the user to repeatedly tap "load more".
-const PAGE_SIZE = 50
+// Keep the family profile light: load a small first batch, then fetch more only
+// when the user explicitly asks for it.
+const PAGE_SIZE = 10
 
 type Membership = {
   id: string
@@ -69,7 +68,7 @@ export default function FamilyMembersPanel({ familyId, onOpenPerson }: Props) {
   }, [familyId])
 
   async function loadMore() {
-    if (!supabase) return
+    if (!supabase || loading || !hasMore) return
     const requestId = ++requestRef.current
     setLoading(true)
     const nextPage = page + 1
@@ -95,9 +94,12 @@ export default function FamilyMembersPanel({ familyId, onOpenPerson }: Props) {
     setLoading(false)
   }
 
+  const remaining = count == null ? null : Math.max(0, count - rows.length)
+  const nextBatchSize = remaining == null ? PAGE_SIZE : Math.min(PAGE_SIZE, remaining)
+
   return <div className="detail-section family-members-panel">
     <div className="section-title family-members-title">
-      <div><span className="eyebrow">دليل العائلة</span><h2>الأفراد حسب النسب والزواج والفروع</h2><p>يعرض ملف العائلة أعضاءها المعتمدين، بما في ذلك العضويات الإضافية، مع تحميل المزيد فقط للعائلات الكبيرة.</p></div>
+      <div><span className="eyebrow">دليل العائلة</span><h2>الأفراد حسب النسب والزواج والفروع</h2><p>يتم تحميل 10 أفراد فقط في البداية، ثم يمكنك عرض المزيد عند الحاجة.</p></div>
       {count != null && <span className="family-members-count" title="عدد أفراد العائلة"><b>{count}</b><small>عضو</small></span>}
     </div>
     <div className="detail-list family-member-list">
@@ -111,6 +113,6 @@ export default function FamilyMembersPanel({ familyId, onOpenPerson }: Props) {
         </button>
       }) : <div className="empty-state compact">{loading ? 'جارٍ تحميل أفراد العائلة…' : 'لا توجد عضويات عائلية معتمدة لهذه العائلة بعد.'}</div>}
     </div>
-    {hasMore && <button className="directory-more" type="button" disabled={loading} onClick={() => void loadMore()}>{loading ? 'جارٍ التحميل…' : `عرض ${PAGE_SIZE} عضوًا إضافيًا`}</button>}
+    {hasMore && <button className="directory-more" type="button" disabled={loading} onClick={() => void loadMore()}>{loading ? 'جارٍ التحميل…' : `عرض المزيد${nextBatchSize > 0 ? ` (${nextBatchSize})` : ''}`}</button>}
   </div>
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import PeoplePicker from './PeoplePicker'
 import KinshipNetwork from './KinshipNetwork'
@@ -30,6 +30,14 @@ type Props = {
 }
 
 type Mode = 'tree' | 'path'
+
+const PATH_MAX_DEPTH = 6
+const PATH_CACHE_TTL = 5 * 60_000
+const pathResultCache = new Map<string, { savedAt: number; rows: PathRow[] }>()
+
+function pathCacheKey(fromId: string, toId: string) {
+  return `${fromId}>${toId}>${PATH_MAX_DEPTH}`
+}
 
 function familyName(value: PersonSummary['families']) {
   if (!value) return ''
@@ -193,12 +201,17 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
   const [path, setPath] = useState<PathRow[]>([])
   const [pathLoading, setPathLoading] = useState(false)
   const [pathMessage, setPathMessage] = useState('')
+  const pathRequestRef = useRef(0)
 
   useEffect(() => {
     if (!initialPersonId) return
     setFocusId((current) => current || initialPersonId)
     setFromId((current) => current || initialPersonId)
   }, [initialPersonId])
+
+  useEffect(() => () => {
+    pathRequestRef.current += 1
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -239,23 +252,43 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
       return
     }
 
+    const cacheKey = pathCacheKey(fromId, toId)
+    const cached = pathResultCache.get(cacheKey)
+    if (cached && Date.now() - cached.savedAt < PATH_CACHE_TTL) {
+      setPath(cached.rows)
+      setPathMessage(cached.rows.length ? '' : 'لم نجد مسار قرابة موثقًا بين الشخصين ضمن ست درجات.')
+      return
+    }
+
+    const requestId = ++pathRequestRef.current
     setPathLoading(true)
-    setPath([])
     setPathMessage('')
+
     const { data, error } = await supabase.rpc('get_kinship_path', {
       p_from_person_id: fromId,
       p_to_person_id: toId,
-      p_max_depth: 6,
+      p_max_depth: PATH_MAX_DEPTH,
     })
+
+    if (requestId !== pathRequestRef.current) return
     setPathLoading(false)
 
     if (error) {
-      const unavailable = error.message.toLowerCase().includes('does not exist') || error.message.toLowerCase().includes('schema cache')
-      setPathMessage(unavailable ? 'فعّل migration مسار القرابة في Supabase لاستخدام هذه الأداة.' : 'تعذر حساب مسار القرابة الآن.')
+      const lowered = error.message.toLowerCase()
+      const unavailable = lowered.includes('does not exist') || lowered.includes('schema cache')
+      const timedOut = lowered.includes('statement timeout') || lowered.includes('57014') || lowered.includes('canceling statement')
+      setPathMessage(
+        unavailable
+          ? 'خدمة مسار القرابة غير متاحة حاليًا.'
+          : timedOut
+            ? 'استغرق التحليل وقتًا أطول من المتوقع. أعد المحاولة بعد لحظة.'
+            : 'تعذر حساب مسار القرابة الآن. أعد المحاولة.',
+      )
       return
     }
 
     const rows = (data ?? []) as PathRow[]
+    pathResultCache.set(cacheKey, { savedAt: Date.now(), rows })
     setPath(rows)
     setPathMessage(rows.length ? '' : 'لم نجد مسار قرابة موثقًا بين الشخصين ضمن ست درجات.')
   }
@@ -311,9 +344,9 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
           <section className="path-picker-card">
             <div className="tree-card-heading"><div><span>اكتشاف ذكي</span><h2>ما صلة فلان بفلان؟</h2></div></div>
             <div className="path-pickers">
-              <PeoplePicker searchMode="broad" label="من" value={fromId} onChange={(id) => { setFromId(id); setPath([]); setPathMessage('') }} excludeId={toId || undefined} required />
+              <PeoplePicker searchMode="broad" label="من" value={fromId} onChange={(id) => { pathRequestRef.current += 1; setPathLoading(false); setFromId(id); setPath([]); setPathMessage('') }} excludeId={toId || undefined} required />
               <span className="path-switch" aria-hidden="true">↔</span>
-              <PeoplePicker searchMode="broad" label="إلى" value={toId} onChange={(id) => { setToId(id); setPath([]); setPathMessage('') }} excludeId={fromId || undefined} required />
+              <PeoplePicker searchMode="broad" label="إلى" value={toId} onChange={(id) => { pathRequestRef.current += 1; setPathLoading(false); setToId(id); setPath([]); setPathMessage('') }} excludeId={fromId || undefined} required />
             </div>
             <button className="path-discover-button" type="button" disabled={pathLoading || !fromId || !toId} onClick={() => void discoverPath()}>{pathLoading ? 'جارٍ تحليل شجرة النسب…' : 'اكتشف صلة القرابة'}</button>
           </section>

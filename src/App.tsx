@@ -457,8 +457,9 @@ function App() {
   }, [loadCommunityData, loadProfile, showMessage])
 
   useEffect(() => {
+    if (!routeReady || (view !== 'home' && view !== 'admin')) return
     void loadPending()
-  }, [loadPending])
+  }, [routeReady, view, loadPending])
 
   useEffect(() => {
     if (!supabase || !session) {

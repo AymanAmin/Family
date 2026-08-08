@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import PeoplePicker from './PeoplePicker'
 import KinshipNetwork from './KinshipNetwork'
+import '../kinship-path-summary.css'
 
 type PersonSummary = {
   id: string
@@ -43,6 +44,94 @@ function relationLabel(type: string, gender: string | null) {
   if (type === 'spouse') return gender === 'female' ? 'زوجة' : gender === 'male' ? 'زوج' : 'زوج/زوجة'
   if (type === 'guardian') return 'وصاية'
   return 'صلة'
+}
+
+function shortPersonName(fullName: string) {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean)
+  if (parts.length <= 1) return parts[0] || fullName
+  const first = parts[0]
+  const second = parts[1]
+  const compoundFirst = new Set(['عبد', 'أبو', 'ابو', 'أم', 'ام'])
+  const compoundSecond = new Set(['الدين', 'الأمين', 'الامين', 'الرحمن', 'الرحيم', 'الحفيظ'])
+  return compoundFirst.has(first) || compoundSecond.has(second) ? `${first} ${second}` : first
+}
+
+function childWord(gender: PathRow['gender']) {
+  if (gender === 'female') return 'بنت'
+  if (gender === 'male') return 'ابن'
+  return 'ابن/بنت'
+}
+
+function directKinshipTerm(type: string, sourceGender: PathRow['gender']) {
+  if (type === 'parent') return childWord(sourceGender)
+  if (type === 'child') return sourceGender === 'female' ? 'أم' : sourceGender === 'male' ? 'أب' : 'والد/والدة'
+  if (type === 'sibling') return sourceGender === 'female' ? 'أخت' : sourceGender === 'male' ? 'أخ' : 'أخ/أخت'
+  if (type === 'spouse') return sourceGender === 'female' ? 'زوجة' : sourceGender === 'male' ? 'زوج' : 'زوج/زوجة'
+  return ''
+}
+
+function cousinRoot(sourceParentGender: PathRow['gender'], targetParentGender: PathRow['gender']) {
+  if (!sourceParentGender || !targetParentGender) return ''
+  if (targetParentGender === 'male') return sourceParentGender === 'male' ? 'عم' : 'عمة'
+  return sourceParentGender === 'male' ? 'خال' : 'خالة'
+}
+
+function inferKinshipTerm(path: PathRow[]) {
+  if (path.length < 2) return ''
+  const source = path[0]
+  const relations = path.slice(1).map((step) => step.relation_type)
+  const signature = relations.join('>')
+
+  if (relations.length === 1) return directKinshipTerm(relations[0], source.gender)
+
+  if (signature === 'parent>parent') return source.gender === 'female' ? 'حفيدة' : source.gender === 'male' ? 'حفيد' : 'حفيد/حفيدة'
+  if (signature === 'child>child') return source.gender === 'female' ? 'جدة' : source.gender === 'male' ? 'جد' : 'جد/جدة'
+
+  if (signature === 'parent>sibling') {
+    const parentGender = path[1]?.gender
+    if (!parentGender) return ''
+    return `${childWord(source.gender)} ${parentGender === 'male' ? 'أخ' : 'أخت'}`
+  }
+
+  if (signature === 'sibling>child') {
+    const targetParentGender = path[1]?.gender
+    if (!targetParentGender || !source.gender) return ''
+    if (targetParentGender === 'male') return source.gender === 'male' ? 'عم' : 'عمة'
+    return source.gender === 'male' ? 'خال' : 'خالة'
+  }
+
+  if (signature === 'parent>sibling>child') {
+    const root = cousinRoot(path[1]?.gender ?? null, path[2]?.gender ?? null)
+    return root ? `${childWord(source.gender)} ${root}` : ''
+  }
+
+  return ''
+}
+
+function edgeExplanation(from: PathRow, to: PathRow) {
+  const fromName = shortPersonName(from.full_name)
+  const toName = shortPersonName(to.full_name)
+
+  if (to.relation_type === 'parent') return `${fromName} ${childWord(from.gender)} ${toName}`
+  if (to.relation_type === 'child') return `${fromName} ${from.gender === 'female' ? 'أم' : from.gender === 'male' ? 'أب' : 'والد/والدة'} ${toName}`
+  if (to.relation_type === 'sibling') return `${fromName} ${from.gender === 'female' ? 'أخت' : from.gender === 'male' ? 'أخ' : 'أخ/أخت'} ${toName}`
+  if (to.relation_type === 'spouse') return `${fromName} ${from.gender === 'female' ? 'زوجة' : from.gender === 'male' ? 'زوج' : 'زوج/زوجة'} ${toName}`
+  if (to.relation_type === 'guardian') return `${fromName} مرتبط بوصاية مع ${toName}`
+  return `${fromName} مرتبط بـ ${toName}`
+}
+
+function buildKinshipSummary(path: PathRow[]) {
+  if (path.length < 2) return null
+  const source = path[0]
+  const target = path[path.length - 1]
+  const term = inferKinshipTerm(path)
+  const sourceName = shortPersonName(source.full_name)
+  const targetName = shortPersonName(target.full_name)
+  const title = term
+    ? `${sourceName} ${term} ${targetName}`
+    : `${sourceName} ${source.gender === 'female' ? 'قريبة من' : 'قريب من'} ${targetName}`
+  const explanation = path.slice(1).map((step, index) => edgeExplanation(path[index], step)).join('، و')
+  return { title, explanation: `${explanation}.`, inferred: Boolean(term) }
 }
 
 export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddPerson, onAddRelation }: Props) {
@@ -88,6 +177,8 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
     if (path.length < 2) return ''
     return `${path[0]?.full_name ?? ''} ← ${path[path.length - 1]?.full_name ?? ''}`
   }, [path])
+
+  const kinshipSummary = useMemo(() => buildKinshipSummary(path), [path])
 
   async function discoverPath() {
     if (!supabase || !fromId || !toId) {
@@ -181,6 +272,12 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
           {path.length > 0 && (
             <section className="path-result-card">
               <header><div><span>أقصر مسار موثق</span><h3>{pathTitle}</h3></div><b>{Math.max(0, path.length - 1)} درجات</b></header>
+
+              {kinshipSummary && <section className="path-kinship-summary" aria-label="مسمى صلة القرابة">
+                <div className="path-kinship-label"><span aria-hidden="true">✦</span><div><small>مسمى القرابة</small><strong>{kinshipSummary.title}</strong></div></div>
+                <div className="path-kinship-explanation"><small>كيف وصلنا إليها؟</small><p>{kinshipSummary.explanation}</p></div>
+              </section>}
+
               <div className="kinship-path-strip">
                 {path.map((step, index) => (
                   <div className="path-step-wrap" key={`${step.person_id}-${step.step_no}`}>

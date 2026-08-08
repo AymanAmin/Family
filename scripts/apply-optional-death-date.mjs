@@ -5,8 +5,9 @@ function patchFile(path, operations) {
   let changed = false
 
   for (const { from, to, label } of operations) {
-    if (source.includes(to)) continue
+    if (to && source.includes(to)) continue
     if (!source.includes(from)) {
+      if (!to) continue
       throw new Error(`Could not find expected snippet for ${label} in ${path}`)
     }
     source = source.replace(from, to)

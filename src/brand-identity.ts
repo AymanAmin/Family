@@ -2,7 +2,7 @@ const svgIcon = (body: string): string => `<svg viewBox="0 0 24 24" aria-hidden=
 
 const icons = {
   home: svgIcon('<path d="M3.5 11.2 12 4l8.5 7.2"/><path d="M5.8 10.2V20h12.4v-9.8"/><path d="M9.5 20v-5.6h5V20"/>'),
-  search: svgIcon('<circle cx="10.8" cy="10.8" r="6.2"/><path d="m15.4 15.4 4.7 4.7"/>'),
+  people: svgIcon('<circle cx="12" cy="7.8" r="3"/><circle cx="5.5" cy="10" r="2.2"/><circle cx="18.5" cy="10" r="2.2"/><path d="M6.5 20c.6-4.6 2.4-6.8 5.5-6.8s4.9 2.2 5.5 6.8"/><path d="M1.5 19c.4-3.4 1.8-5 4.2-5 1.3 0 2.4.4 3.1 1.1M22.5 19c-.4-3.4-1.8-5-4.2-5-1.3 0-2.4.4-3.1 1.1"/>'),
   add: svgIcon('<path d="M12 5v14M5 12h14"/>'),
   tree: svgIcon('<circle cx="12" cy="5.2" r="2.2"/><circle cx="6" cy="17.8" r="2.2"/><circle cx="18" cy="17.8" r="2.2"/><path d="M12 7.4v4.1M6 15.6v-2.2h12v2.2"/>'),
   admin: svgIcon('<rect x="4" y="4" width="6" height="6" rx="1.4"/><rect x="14" y="4" width="6" height="6" rx="1.4"/><rect x="4" y="14" width="6" height="6" rx="1.4"/><rect x="14" y="14" width="6" height="6" rx="1.4"/>'),
@@ -39,7 +39,7 @@ function enhanceMobileNavigation(): void {
     const label = button.textContent?.trim() ?? ''
     let markup = icons.account
     if (label.includes('الرئيسية')) markup = icons.home
-    else if (label.includes('الدليل')) markup = icons.search
+    else if (label.includes('الأفراد') || label.includes('الدليل')) markup = icons.people
     else if (label.includes('إضافة')) markup = icons.add
     else if (label.includes('الشجرة')) markup = icons.tree
     else if (label.includes('الإدارة')) markup = icons.admin

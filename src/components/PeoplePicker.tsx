@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import VerifiedBadge from './VerifiedBadge'
+import '../people-picker-scroll.css'
 
 type PersonOption = {
   id: string
@@ -208,10 +209,6 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
               <button
                 type="button"
                 key={person.id}
-                onPointerDown={(event) => {
-                  event.preventDefault()
-                  choose(person)
-                }}
                 onClick={() => choose(person)}
               >
                 <span className="people-picker-avatar">{person.full_name.charAt(0)}</span>

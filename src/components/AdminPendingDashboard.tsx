@@ -45,7 +45,7 @@ export function openAdminModeration(tab: 'requests' | 'edits' = 'requests') {
   const navigationButton = findAdminNavigationButton()
   navigationButton?.click()
 
-  window.setTimeout(() => {
+  window.setTimeout((): void => {
     const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.admin-console-tabs button'))
     const target = tabs[tab === 'edits' ? 1 : 0]
     target?.click()
@@ -112,8 +112,8 @@ export default function AdminPendingDashboard() {
   useEffect(() => {
     if (!canModerate) return
     void loadCounts()
-    const interval = window.setInterval(() => void loadCounts(), 45_000)
-    const refresh = () => void loadCounts()
+    const interval = window.setInterval((): void => { void loadCounts() }, 45_000)
+    const refresh = (): void => { void loadCounts() }
     window.addEventListener('sila:moderation-updated', refresh)
     return () => {
       window.clearInterval(interval)
@@ -122,7 +122,7 @@ export default function AdminPendingDashboard() {
   }, [canModerate, loadCounts])
 
   useEffect(() => {
-    const placeMount = () => {
+    const placeMount = (): void => {
       const consoleElement = document.querySelector<HTMLElement>('.admin-console')
       const tabs = consoleElement?.querySelector<HTMLElement>('.admin-console-tabs')
       if (!consoleElement || !tabs) {
@@ -146,7 +146,7 @@ export default function AdminPendingDashboard() {
   }, [])
 
   useEffect(() => {
-    const handleOpen = (event: Event) => {
+    const handleOpen = (event: Event): void => {
       const detail = (event as CustomEvent<{ tab?: 'requests' | 'edits' }>).detail
       openAdminModeration(detail?.tab || 'requests')
     }
@@ -159,9 +159,9 @@ export default function AdminPendingDashboard() {
     let timer = 0
     const panel = portalTarget.closest('.admin-console')?.querySelector('.admin-console-panel')
     if (!panel) return
-    const observer = new MutationObserver(() => {
+    const observer = new MutationObserver((): void => {
       window.clearTimeout(timer)
-      timer = window.setTimeout(() => void loadCounts(), 280)
+      timer = window.setTimeout((): void => { void loadCounts() }, 280)
     })
     observer.observe(panel, { childList: true, subtree: true })
     return () => {

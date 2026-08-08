@@ -79,6 +79,8 @@ export default function PersonFamilyMemberships({ personId, recordCreatedBy, ses
   const visible = useMemo(() => memberships.filter((item) => item.status === 'approved' || item.created_by === sessionUserId), [memberships, sessionUserId])
   const hasPrimary = approved.some((item) => item.is_primary)
   const canChangePrimary = Boolean(sessionUserId && (isAdmin || isLinkedPerson || recordCreatedBy === sessionUserId))
+  const primaryMembership = approved.find((item) => item.is_primary)
+  const primaryName = primaryMembership ? familyName(primaryMembership.families) : ''
 
   function canManageMembership(item: Membership) {
     if (!sessionUserId) return false
@@ -202,61 +204,67 @@ export default function PersonFamilyMemberships({ personId, recordCreatedBy, ses
   }
 
   return (
-    <section className="detail-section family-memberships-section">
-      <div className="section-title">
-        <div><span className="eyebrow">الانتماء العائلي</span><h2>العائلات والفروع المرتبطة</h2><p className="membership-section-help">أضف أكثر من عائلة أو فرع للشخص، وعدّل الارتباط أو احذفه من نفس البطاقة.</p></div>
-        {sessionUserId && <button className="text-link membership-add-link" type="button" onClick={() => { setMessage(''); setOpen((value) => !value) }}>{open ? 'إلغاء' : '＋ إضافة عائلة أو فرع'}</button>}
-      </div>
-
-      {visible.length ? (
-        <div className="membership-list">
-          {visible.map((item) => {
-            const name = familyName(item.families) || 'عائلة'
-            const manageable = canManageMembership(item)
-            const editing = editingId === item.id
-            return (
-              <article className={`membership-card ${item.is_primary ? 'primary-membership' : ''} ${editing ? 'is-editing' : ''}`} key={item.id}>
-                <span className="membership-family-avatar">{name[0]}</span>
-                <div className="membership-card-copy">
-                  <span className="membership-title-line"><strong>{name}</strong>{item.is_primary && <span className="primary-family-badge">الأساسية</span>}</span>
-                  <small>{membershipLabels[item.membership_type] || item.membership_type}</small>
-                  {item.notes && <p>{item.notes}</p>}
-                </div>
-                <div className="membership-card-actions">
-                  {item.status === 'pending' && <span className="membership-status pending">بانتظار الاعتماد</span>}
-                  {item.status === 'approved' && !item.is_primary && approved.length > 1 && canChangePrimary && <button type="button" className="make-primary-family" disabled={primaryBusyId === item.id} onClick={() => void makePrimary(item)}>{primaryBusyId === item.id ? 'جارٍ الحفظ…' : 'جعلها الأساسية'}</button>}
-                  {manageable && <div className="membership-inline-actions">
-                    <button type="button" className="membership-edit-action" disabled={deleteBusyId === item.id} onClick={() => editing ? cancelEdit() : startEdit(item)}>{editing ? 'إلغاء التعديل' : 'تعديل'}</button>
-                    <button type="button" className="membership-delete-action" disabled={deleteBusyId === item.id || editBusy} onClick={() => void removeMembership(item)}>{deleteBusyId === item.id ? 'جارٍ الحذف…' : 'حذف'}</button>
-                  </div>}
-                </div>
-
-                {editing && <form className="membership-card-editor" onSubmit={(event) => void saveEdit(event, item)}>
-                  <div className="membership-editor-title"><strong>تعديل ارتباط العائلة</strong><small>{item.status === 'approved' ? 'سيُحفظ مباشرة بصلاحية الإدارة.' : 'هذا الطلب ما زال بانتظار الاعتماد.'}</small></div>
-                  <FamilyPicker label="العائلة أو الفرع" value={editForm.family_id} onChange={(familyId) => setEditForm((current) => ({ ...current, family_id: familyId }))} required />
-                  <label><span>نوع الانتماء</span><select value={editForm.membership_type} onChange={(e) => setEditForm((current) => ({ ...current, membership_type: e.target.value }))}>{Object.entries(membershipLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-                  <label><span>ملاحظة توضيحية</span><textarea rows={2} value={editForm.notes} onChange={(e) => setEditForm((current) => ({ ...current, notes: e.target.value }))} /></label>
-                  <div className="membership-editor-actions"><button className="primary" type="submit" disabled={editBusy}>{editBusy ? 'جارٍ الحفظ…' : 'حفظ التعديل'}</button><button className="secondary" type="button" disabled={editBusy} onClick={cancelEdit}>إلغاء</button></div>
-                </form>}
-              </article>
-            )
-          })}
+    <details className="detail-section family-memberships-section family-memberships-collapsible">
+      <summary>
+        <span><b>العائلات والانتماءات</b><small>{primaryName || 'إدارة الارتباطات الثانوية'}</small></span>
+        <em>{visible.length}</em>
+      </summary>
+      <div className="family-memberships-collapsible-body">
+        <div className="section-title">
+          <div><span className="eyebrow">إدارة متقدمة</span><h2>العائلات والفروع المرتبطة</h2><p className="membership-section-help">هذه الارتباطات مستقلة عن مسار النسب؛ استخدمها للزواج أو الارتباطات الإدارية والتاريخية.</p></div>
+          {sessionUserId && <button className="text-link membership-add-link" type="button" onClick={() => { setMessage(''); setOpen((value) => !value) }}>{open ? 'إلغاء' : '＋ إضافة عائلة أو فرع'}</button>}
         </div>
-      ) : <div className="empty-state compact">لا توجد انتماءات عائلية معتمدة لهذا الشخص بعد.</div>}
 
-      {message && <div className="record-edit-message membership-inline-message" role="status">{message}</div>}
+        {visible.length ? (
+          <div className="membership-list">
+            {visible.map((item) => {
+              const name = familyName(item.families) || 'عائلة'
+              const manageable = canManageMembership(item)
+              const editing = editingId === item.id
+              return (
+                <article className={`membership-card ${item.is_primary ? 'primary-membership' : ''} ${editing ? 'is-editing' : ''}`} key={item.id}>
+                  <span className="membership-family-avatar">{name[0]}</span>
+                  <div className="membership-card-copy">
+                    <span className="membership-title-line"><strong>{name}</strong>{item.is_primary && <span className="primary-family-badge">الأساسية</span>}</span>
+                    <small>{membershipLabels[item.membership_type] || item.membership_type}</small>
+                    {item.notes && <p>{item.notes}</p>}
+                  </div>
+                  <div className="membership-card-actions">
+                    {item.status === 'pending' && <span className="membership-status pending">بانتظار الاعتماد</span>}
+                    {item.status === 'approved' && !item.is_primary && approved.length > 1 && canChangePrimary && <button type="button" className="make-primary-family" disabled={primaryBusyId === item.id} onClick={() => void makePrimary(item)}>{primaryBusyId === item.id ? 'جارٍ الحفظ…' : 'جعلها الأساسية'}</button>}
+                    {manageable && <div className="membership-inline-actions">
+                      <button type="button" className="membership-edit-action" disabled={deleteBusyId === item.id} onClick={() => editing ? cancelEdit() : startEdit(item)}>{editing ? 'إلغاء التعديل' : 'تعديل'}</button>
+                      <button type="button" className="membership-delete-action" disabled={deleteBusyId === item.id || editBusy} onClick={() => void removeMembership(item)}>{deleteBusyId === item.id ? 'جارٍ الحذف…' : 'حذف'}</button>
+                    </div>}
+                  </div>
 
-      {open && sessionUserId && (
-        <form className="membership-form membership-add-form" onSubmit={submit}>
-          <div className="membership-form-heading"><strong>إضافة عائلة أو فرع</strong><small>اختر العائلة الموجودة في الدليل وحدد سبب ارتباطها بهذا الشخص.</small></div>
-          <FamilyPicker label="العائلة أو الفرع" value={form.family_id} onChange={(familyId) => setForm((current) => ({ ...current, family_id: familyId }))} required />
-          <label><span>نوع الانتماء</span><select value={form.membership_type} onChange={(e) => setForm((current) => ({ ...current, membership_type: e.target.value }))}>{Object.entries(membershipLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-          {!hasPrimary && <label className="edit-check"><input type="checkbox" checked={form.is_primary} onChange={(e) => setForm((current) => ({ ...current, is_primary: e.target.checked }))} /><span>اعتبارها العائلة الأساسية</span></label>}
-          <label><span>ملاحظة توضيحية</span><textarea rows={3} value={form.notes} placeholder="مثال: زوجة أحد أفراد العائلة" onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></label>
-          <button className="primary" type="submit" disabled={busy}>{busy ? 'جارٍ الإرسال…' : isAdmin ? 'إضافة واعتماد' : 'إرسال للمراجعة'}</button>
-        </form>
-      )}
-    </section>
+                  {editing && <form className="membership-card-editor" onSubmit={(event) => void saveEdit(event, item)}>
+                    <div className="membership-editor-title"><strong>تعديل ارتباط العائلة</strong><small>{item.status === 'approved' ? 'سيُحفظ مباشرة بصلاحية الإدارة.' : 'هذا الطلب ما زال بانتظار الاعتماد.'}</small></div>
+                    <FamilyPicker label="العائلة أو الفرع" value={editForm.family_id} onChange={(familyId) => setEditForm((current) => ({ ...current, family_id: familyId }))} required />
+                    <label><span>نوع الانتماء</span><select value={editForm.membership_type} onChange={(e) => setEditForm((current) => ({ ...current, membership_type: e.target.value }))}>{Object.entries(membershipLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+                    <label><span>ملاحظة توضيحية</span><textarea rows={2} value={editForm.notes} onChange={(e) => setEditForm((current) => ({ ...current, notes: e.target.value }))} /></label>
+                    <div className="membership-editor-actions"><button className="primary" type="submit" disabled={editBusy}>{editBusy ? 'جارٍ الحفظ…' : 'حفظ التعديل'}</button><button className="secondary" type="button" disabled={editBusy} onClick={cancelEdit}>إلغاء</button></div>
+                  </form>}
+                </article>
+              )
+            })}
+          </div>
+        ) : <div className="empty-state compact">لا توجد انتماءات عائلية معتمدة لهذا الشخص بعد.</div>}
+
+        {message && <div className="record-edit-message membership-inline-message" role="status">{message}</div>}
+
+        {open && sessionUserId && (
+          <form className="membership-form membership-add-form" onSubmit={submit}>
+            <div className="membership-form-heading"><strong>إضافة عائلة أو فرع</strong><small>اختر العائلة الموجودة في الدليل وحدد سبب ارتباطها بهذا الشخص.</small></div>
+            <FamilyPicker label="العائلة أو الفرع" value={form.family_id} onChange={(familyId) => setForm((current) => ({ ...current, family_id: familyId }))} required />
+            <label><span>نوع الانتماء</span><select value={form.membership_type} onChange={(e) => setForm((current) => ({ ...current, membership_type: e.target.value }))}>{Object.entries(membershipLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+            {!hasPrimary && <label className="edit-check"><input type="checkbox" checked={form.is_primary} onChange={(e) => setForm((current) => ({ ...current, is_primary: e.target.checked }))} /><span>اعتبارها العائلة الأساسية</span></label>}
+            <label><span>ملاحظة توضيحية</span><textarea rows={3} value={form.notes} placeholder="مثال: زوجة أحد أفراد العائلة" onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} /></label>
+            <button className="primary" type="submit" disabled={busy}>{busy ? 'جارٍ الإرسال…' : isAdmin ? 'إضافة واعتماد' : 'إرسال للمراجعة'}</button>
+          </form>
+        )}
+      </div>
+    </details>
   )
 }
 

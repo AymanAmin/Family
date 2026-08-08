@@ -48,6 +48,13 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat('ar-SA', { dateStyle: 'medium' }).format(new Date(value))
 }
 
+function familyScopeCountLabel(count: number) {
+  if (count === 1) return 'عائلة واحدة'
+  if (count === 2) return 'عائلتان'
+  if (count >= 3 && count <= 10) return `${count} عائلات`
+  return `${count} عائلة`
+}
+
 export default function AdminUserRoles({ active, currentUserId }: Props) {
   const [query, setQuery] = useState('')
   const [rows, setRows] = useState<ManagedUser[]>([])
@@ -61,6 +68,7 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
   const [scopeFamilyId, setScopeFamilyId] = useState('')
   const [scopes, setScopes] = useState<FamilyScope[]>([])
   const [scopesLoading, setScopesLoading] = useState(false)
+  const [confirmFamilyScopeFor, setConfirmFamilyScopeFor] = useState<string | null>(null)
   const timerRef = useRef<number | null>(null)
   const requestRef = useRef(0)
 
@@ -120,6 +128,7 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
     setExpandedUserId(next)
     setPendingRole(null)
     setScopeFamilyId('')
+    setConfirmFamilyScopeFor(null)
     setScopes([])
     if (next) void loadScopes(user.user_id)
   }
@@ -144,11 +153,20 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
     setRows((current) => current.map((item) => item.user_id === user.user_id ? { ...item, role: actualRole } : item))
     setScopes([])
     setScopeFamilyId('')
+    setConfirmFamilyScopeFor(null)
     setMessage(`تم تحديث الصلاحية إلى «${roleLabels[actualRole] || actualRole}».`)
   }
 
   async function addFamilyScope(user: ManagedUser) {
     if (!supabase || !scopeFamilyId || user.is_primary_admin) return
+
+    if (user.role === 'admin' || user.role === 'content_moderator') {
+      if (confirmFamilyScopeFor !== user.user_id) {
+        setConfirmFamilyScopeFor(user.user_id)
+        return
+      }
+    }
+
     setBusyUserId(user.user_id)
     setMessage('')
     const { data, error } = await supabase.rpc('set_family_moderator_assignment', {
@@ -157,6 +175,7 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
       p_enabled: true,
     })
     setBusyUserId(null)
+    setConfirmFamilyScopeFor(null)
 
     if (error) {
       setMessage(error.message.toLowerCase().includes('does not exist') ? 'شغّل migration رقم 017 أولًا في Supabase.' : error.message)
@@ -167,7 +186,7 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
     setRows((current) => current.map((item) => item.user_id === user.user_id ? { ...item, role: actualRole } : item))
     setScopeFamilyId('')
     await loadScopes(user.user_id)
-    setMessage('تم تعيين نطاق مسؤول العائلة.')
+    setMessage('تم تغيير الدور إلى «مسؤول عائلة» وتعيين نطاق العائلة.')
   }
 
   async function removeFamilyScope(user: ManagedUser, familyId: string) {
@@ -189,7 +208,9 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
     const actualRole = typeof data === 'string' && data ? data : 'member'
     setRows((current) => current.map((item) => item.user_id === user.user_id ? { ...item, role: actualRole } : item))
     await loadScopes(user.user_id)
-    setMessage('تمت إزالة نطاق العائلة.')
+    setMessage(actualRole === 'family_moderator'
+      ? 'تمت إزالة نطاق العائلة.'
+      : `تمت إزالة آخر عائلة، وعاد الدور تلقائيًا إلى «${roleLabels[actualRole] || actualRole}».`)
   }
 
   if (!active) return null
@@ -200,7 +221,7 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
         <div>
           <span className="eyebrow">إدارة الصلاحيات</span>
           <h2>المستخدمون والأدوار</h2>
-          <p>الأدوار الحساسة تُدار من هنا فقط. مسؤول العائلة مقيد بنطاق عائلاته، ومشرف المحتوى مقيد بالمناسبات، والمدير لا يستطيع إدارة الأدوار.</p>
+          <p>الدور يحدد ما يستطيع المستخدم فعله. «مسؤول عائلة» دور مستقل ومقيد بالعائلات المعيّنة له، ومشرف المحتوى مقيد بالمناسبات، والمدير لا يستطيع إدارة الأدوار.</p>
         </div>
         <span className="primary-admin-lock">◆ المدير الأعلى فقط</span>
       </header>
@@ -228,6 +249,9 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
                   <div className="admin-user-name-line">
                     <strong>{user.display_name || 'مستخدم بدون اسم'}</strong>
                     <span className={`role-badge ${user.is_primary_admin ? 'primary' : role}`}>{user.is_primary_admin ? 'مدير أعلى' : roleLabels[role] || role}</span>
+                    {role === 'family_moderator' && expanded && !scopesLoading && scopes.length > 0 && (
+                      <span className="role-scope-count">{familyScopeCountLabel(scopes.length)}</span>
+                    )}
                   </div>
                   <small dir="ltr">{user.email || '—'}</small>
                   <p>آخر دخول: {formatDate(user.last_sign_in_at)}{isSelf ? ' · حسابك' : ''}</p>
@@ -263,7 +287,10 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
 
                     {pendingRole && (
                       <div className="rbac-confirm-strip">
-                        <span>تغيير الدور إلى «{pendingRole === 'member' ? 'عضو' : roleLabels[pendingRole]}»؟</span>
+                        <span>
+                          تغيير الدور إلى «{pendingRole === 'member' ? 'عضو' : roleLabels[pendingRole]}»؟
+                          {role === 'family_moderator' && scopes.length > 0 ? ' سيتم أيضًا إزالة جميع نطاقات العائلات الحالية.' : ''}
+                        </span>
                         <button type="button" className="confirm" disabled={busyUserId === user.user_id} onClick={() => void changeRole(user, pendingRole as 'member' | 'content_moderator' | 'admin')}>{busyUserId === user.user_id ? '…' : 'تأكيد'}</button>
                         <button type="button" onClick={() => setPendingRole(null)}>إلغاء</button>
                       </div>
@@ -271,8 +298,11 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
 
                     <div className="family-scope-manager">
                       <div className="family-scope-heading">
-                        <div><strong>مسؤول عائلة أو فرع</strong><small>يمكن تعيين أكثر من عائلة لنفس المسؤول. لن يرى أو يعتمد خارج هذه النطاقات.</small></div>
-                        {role === 'family_moderator' && <span>مفعّل</span>}
+                        <div>
+                          <strong>مسؤول عائلة</strong>
+                          <small>هذا دور مستقل وليس صلاحية إضافية. يمكن تعيين أكثر من عائلة لنفس المسؤول، ولن يرى أو يعتمد خارج نطاقاته.</small>
+                        </div>
+                        {role === 'family_moderator' && <span>مفعّل{!scopesLoading && scopes.length ? ` · ${familyScopeCountLabel(scopes.length)}` : ''}</span>}
                       </div>
 
                       {scopesLoading ? <div className="picker-skeleton compact">جارٍ تحميل النطاقات…</div> : scopes.length ? (
@@ -284,8 +314,34 @@ export default function AdminUserRoles({ active, currentUserId }: Props) {
                       ) : <p className="family-scope-empty">لم يتم تعيين عائلة لهذا المستخدم.</p>}
 
                       <div className="family-scope-add">
-                        <FamilyPicker label="اختر عائلة لإضافتها إلى نطاقه" value={scopeFamilyId} onChange={setScopeFamilyId} required approvedOnly />
-                        <button type="button" className="primary" disabled={!scopeFamilyId || busyUserId === user.user_id} onClick={() => void addFamilyScope(user)}>{busyUserId === user.user_id ? 'جارٍ الحفظ…' : 'تعيين مسؤول عائلة'}</button>
+                        <FamilyPicker label="اختر عائلة لتعيينه مسؤولًا عنها" value={scopeFamilyId} onChange={(value) => { setScopeFamilyId(value); setConfirmFamilyScopeFor(null) }} required approvedOnly />
+
+                        {(role === 'member' || role === 'verified_member') && scopeFamilyId && (
+                          <div className="rbac-scope-warning">سيتم تغيير دور المستخدم من «{roleLabels[role]}» إلى «مسؤول عائلة» عند التأكيد.</div>
+                        )}
+
+                        {(role === 'admin' || role === 'content_moderator') && scopeFamilyId && (
+                          <div className="rbac-scope-warning danger">
+                            تعيين هذه العائلة سيستبدل دور «{roleLabels[role]}» بدور «مسؤول عائلة»، وبالتالي سيفقد صلاحيات دوره الحالي.
+                          </div>
+                        )}
+
+                        {confirmFamilyScopeFor === user.user_id && (
+                          <div className="rbac-confirm-strip warning">
+                            <span>هل تريد بالتأكيد استبدال دور «{roleLabels[role]}» بدور «مسؤول عائلة»؟</span>
+                            <button type="button" className="confirm" disabled={busyUserId === user.user_id} onClick={() => void addFamilyScope(user)}>{busyUserId === user.user_id ? '…' : 'نعم، تغيير الدور'}</button>
+                            <button type="button" onClick={() => setConfirmFamilyScopeFor(null)}>إلغاء</button>
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          className="primary"
+                          disabled={!scopeFamilyId || busyUserId === user.user_id || confirmFamilyScopeFor === user.user_id}
+                          onClick={() => void addFamilyScope(user)}
+                        >
+                          {busyUserId === user.user_id ? 'جارٍ الحفظ…' : role === 'family_moderator' ? 'إضافة العائلة إلى النطاق' : 'تعيين مسؤول عائلة'}
+                        </button>
                       </div>
                     </div>
                   </div>

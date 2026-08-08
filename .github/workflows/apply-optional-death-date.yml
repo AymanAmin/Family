@@ -1,0 +1,42 @@
+name: Apply optional death date
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply-optional-death-date.mjs'
+      - '.github/workflows/apply-optional-death-date.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Integrate optional death date behavior
+        run: node scripts/apply-optional-death-date.mjs
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify TypeScript and production build
+        run: npm run build
+      - name: Commit integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/components/RecordEditButton.tsx supabase/SETUP.sql
+          if git diff --cached --quiet; then
+            echo "Optional death date behavior already integrated."
+            exit 0
+          fi
+          git commit -m "Make death date optional for deceased people"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main

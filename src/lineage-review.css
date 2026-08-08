@@ -1,0 +1,156 @@
+/* Admin lineage review: one task per card, mobile first, no destructive bulk actions. */
+.lineage-review-admin-tab > span {
+  display: inline-grid;
+  min-width: 23px;
+  height: 23px;
+  place-items: center;
+  margin-inline-start: 5px;
+  padding-inline: 6px;
+  border-radius: 999px;
+  background: rgb(43 132 119 / 12%);
+  font-size: .62rem;
+  font-weight: 900;
+}
+
+.lineage-review-overlay {
+  position: fixed;
+  z-index: 5200;
+  inset: 0;
+  display: grid;
+  background: rgb(18 36 51 / 48%);
+  backdrop-filter: blur(5px);
+}
+
+.lineage-review-screen {
+  width: min(100%, 1080px);
+  height: 100dvh;
+  margin-inline: auto;
+  overflow: hidden;
+  background: #f7faf9;
+  box-shadow: 0 0 80px rgb(10 27 39 / 28%);
+}
+
+.lineage-review-header {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: max(16px, env(safe-area-inset-top)) 18px 15px;
+  border-bottom: 1px solid #dde6e4;
+  background: rgb(255 255 255 / 96%);
+  backdrop-filter: blur(14px);
+}
+.lineage-review-header h1 { margin: 2px 0 4px; color: var(--brand-navy-950); font-family: 'Noto Kufi Arabic'; font-size: 1.2rem; }
+.lineage-review-header p { max-width: 700px; margin: 0; color: var(--muted); font-size: .7rem; line-height: 1.7; }
+.lineage-review-close { display: grid; flex: 0 0 44px; width: 44px; height: 44px; place-items: center; border: 1px solid #e4d5d5; border-radius: 50%; color: #a54b53; background: #fff; font-size: 1.4rem; }
+
+.lineage-review-body {
+  height: calc(100dvh - 91px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 14px 14px calc(30px + env(safe-area-inset-bottom));
+}
+
+.lineage-review-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.lineage-review-stats article { display: grid; gap: 3px; min-width: 0; padding: 12px; border: 1px solid #dfe8e6; border-radius: 16px; background: #fff; }
+.lineage-review-stats article.safe { border-color: #c9e5dc; background: #f5fbf8; }
+.lineage-review-stats small { color: var(--muted); font-size: .6rem; font-weight: 850; }
+.lineage-review-stats strong { color: var(--brand-navy-950); font-size: 1.35rem; line-height: 1.1; }
+.lineage-review-stats span { color: #718489; font-size: .57rem; line-height: 1.55; }
+
+.lineage-review-tools { display: grid; grid-template-columns: minmax(0, 1fr) minmax(190px, 280px) auto; align-items: end; gap: 9px; margin-top: 12px; }
+.lineage-review-filters { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
+.lineage-review-filters::-webkit-scrollbar { display: none; }
+.lineage-review-filters button { flex: 0 0 auto; min-height: 40px; padding: 7px 10px; border: 1px solid #dbe5e3; border-radius: 12px; color: #657b80; background: #fff; font-size: .65rem; font-weight: 850; }
+.lineage-review-filters button.active { border-color: #90c0b9; color: var(--brand-navy-900); background: var(--brand-teal-100); }
+.lineage-review-filters button span { margin-inline-start: 4px; font-size: .58rem; }
+.lineage-review-search { display: grid; gap: 5px; }
+.lineage-review-search > span { color: var(--muted); font-size: .6rem; font-weight: 850; }
+.lineage-review-search input { min-height: 42px; padding: 8px 11px; border: 1px solid #d8e3e1; border-radius: 12px; background: #fff; font: inherit; font-size: .72rem; }
+.lineage-review-search input:focus { border-color: var(--brand-teal-600); outline: none; box-shadow: 0 0 0 3px rgb(102 185 177 / 13%); }
+.lineage-review-refresh { min-height: 42px; padding: 8px 11px; border: 1px solid #cfe0dd; border-radius: 12px; color: var(--brand-navy-900); background: #fff; font-size: .65rem; font-weight: 900; }
+
+.lineage-review-message { margin-top: 10px; padding: 10px 12px; border: 1px solid #bfddd7; border-radius: 13px; color: #347267; background: #eff9f6; font-size: .67rem; font-weight: 800; }
+.lineage-review-loading, .lineage-review-empty { min-height: 170px; display: grid; place-items: center; align-content: center; gap: 5px; margin-top: 12px; border: 1px dashed #ccd9d7; border-radius: 18px; color: var(--muted); background: #fff; font-size: .72rem; }
+.lineage-review-empty strong { color: var(--brand-navy-950); }
+.lineage-review-empty span { font-size: .64rem; }
+
+.lineage-review-list { display: grid; gap: 10px; margin-top: 12px; }
+.lineage-review-card { display: grid; gap: 10px; padding: 13px; border: 1px solid #dce6e4; border-radius: 18px; background: #fff; box-shadow: 0 7px 22px rgb(25 53 67 / 5%); }
+.lineage-review-card.conflict { border-inline-start: 4px solid #bf5360; }
+.lineage-review-card.duplicate { border-inline-start: 4px solid #cf9852; }
+.lineage-review-card.unknown { border-inline-start: 4px solid #7893a0; }
+.lineage-review-card.incomplete { border-inline-start: 4px solid #5a9c8e; }
+.lineage-review-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.lineage-review-card > header h2 { margin: 5px 0 0; color: var(--brand-navy-950); font-size: .84rem; line-height: 1.55; }
+.lineage-issue-badge { display: inline-flex; padding: 4px 8px; border-radius: 999px; color: #5f7479; background: #edf3f2; font-size: .56rem; font-weight: 900; }
+.lineage-issue-badge.high { color: #a4434d; background: #fff0f2; }
+.lineage-issue-badge.medium { color: #8a632f; background: #fff6e7; }
+.lineage-issue-badge.low { color: #35756b; background: #edf8f5; }
+.lineage-open-person { flex: 0 0 auto; min-height: 36px; padding: 6px 9px; border: 1px solid #dce5e3; border-radius: 10px; color: #526b72; background: #fafcfc; font-size: .61rem; font-weight: 850; }
+
+.lineage-known-parents { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.lineage-known-parents > span { display: grid; gap: 3px; min-width: 0; padding: 9px 10px; border-radius: 12px; background: #f7faf9; }
+.lineage-known-parents small { color: var(--muted); font-size: .57rem; }
+.lineage-known-parents strong { color: var(--brand-navy-950); font-size: .68rem; line-height: 1.55; }
+
+.lineage-suggestion-box { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 11px; border: 1px solid #bfe0d9; border-radius: 14px; background: #eff9f6; }
+.lineage-suggestion-box > div { display: grid; gap: 2px; min-width: 0; }
+.lineage-suggestion-box small { color: #5f817a; font-size: .56rem; font-weight: 800; }
+.lineage-suggestion-box strong { color: #235f58; font-size: .72rem; }
+.lineage-suggestion-box span { color: #728984; font-size: .55rem; }
+.lineage-suggestion-box button { flex: 0 0 auto; min-height: 38px; padding: 7px 10px; border: 0; border-radius: 11px; color: #fff; background: var(--brand-teal-600); font-size: .62rem; font-weight: 900; }
+.lineage-suggestion-box button:disabled { opacity: .6; }
+
+.lineage-review-note { padding: 9px 10px; border: 1px solid #e6dfd0; border-radius: 12px; color: #7b6c50; background: #fffaf0; font-size: .62rem; line-height: 1.65; }
+.lineage-review-note.important { border-color: #e2d8d9; color: #80565b; background: #fff7f8; }
+.lineage-manual-fix { min-height: 40px; border: 1px dashed #8fbdb6; border-radius: 12px; color: var(--brand-navy-900); background: #f6fbfa; font-size: .65rem; font-weight: 900; }
+
+.lineage-fix-editor { display: grid; gap: 10px; padding: 11px; border: 1px solid #bcdad5; border-radius: 15px; background: #f7fbfa; }
+.lineage-fix-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: #e9f1f0; }
+.lineage-fix-mode button { min-height: 38px; border: 0; border-radius: 9px; color: #697d82; background: transparent; font-size: .62rem; font-weight: 900; }
+.lineage-fix-mode button.active { color: var(--brand-navy-950); background: #fff; box-shadow: 0 4px 12px rgb(32 61 69 / 7%); }
+.lineage-new-parent-name { display: grid; gap: 5px; }
+.lineage-new-parent-name span { color: var(--brand-navy-950); font-size: .64rem; font-weight: 850; }
+.lineage-new-parent-name input { min-height: 45px; padding: 8px 11px; border: 1px solid #d4e1df; border-radius: 12px; background: #fff; font: inherit; }
+.lineage-fix-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.lineage-fix-actions button { min-height: 40px; padding: 7px 12px; border: 1px solid #d5e1df; border-radius: 11px; background: #fff; font-size: .63rem; font-weight: 900; }
+.lineage-fix-actions .primary { border-color: transparent; color: #fff; background: var(--brand-navy-900); }
+
+.lineage-duplicate-records { display: grid; gap: 7px; }
+.lineage-duplicate-records > p { margin: 0 0 2px; color: var(--muted); font-size: .62rem; line-height: 1.7; }
+.lineage-duplicate-records > button { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 52px; padding: 7px 9px; border: 1px solid #e1e7e5; border-radius: 12px; color: inherit; background: #fbfcfc; text-align: right; }
+.lineage-duplicate-records > button > span { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 10px; color: #715a40; background: #f5ead8; font-size: .7rem; font-weight: 900; }
+.lineage-duplicate-records > button > div { display: grid; gap: 2px; min-width: 0; }
+.lineage-duplicate-records strong { color: var(--brand-navy-950); font-size: .68rem; }
+.lineage-duplicate-records small { color: var(--muted); font-size: .56rem; }
+.lineage-duplicate-records b { color: #8a6d47; font-size: .58rem; }
+
+.lineage-review-more { width: 100%; min-height: 44px; margin-top: 10px; border: 1px solid #cfdedb; border-radius: 13px; color: var(--brand-navy-900); background: #fff; font-size: .66rem; font-weight: 900; }
+
+@media (max-width: 760px) {
+  .lineage-review-overlay { background: #f7faf9; backdrop-filter: none; }
+  .lineage-review-screen { width: 100%; box-shadow: none; }
+  .lineage-review-header { padding-inline: 13px; }
+  .lineage-review-header p { font-size: .63rem; }
+  .lineage-review-body { padding-inline: 10px; }
+  .lineage-review-stats { grid-template-columns: 1fr 1fr; }
+  .lineage-review-tools { grid-template-columns: 1fr auto; }
+  .lineage-review-filters { grid-column: 1 / -1; }
+  .lineage-review-search { min-width: 0; }
+  .lineage-known-parents { grid-template-columns: 1fr; }
+  .lineage-suggestion-box { display: grid; }
+  .lineage-suggestion-box button { width: 100%; }
+  .lineage-review-card > header h2 { font-size: .78rem; }
+}
+
+@media (max-width: 390px) {
+  .lineage-review-header h1 { font-size: 1.05rem; }
+  .lineage-review-stats article { padding: 10px; }
+  .lineage-review-tools { grid-template-columns: 1fr; }
+  .lineage-review-filters { grid-column: auto; }
+  .lineage-review-refresh { width: 100%; }
+}

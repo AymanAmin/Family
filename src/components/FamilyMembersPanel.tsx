@@ -14,7 +14,10 @@ const labels: Record<string, string> = {
   birth: 'بالنسب / عائلة الأصل', marriage: 'بالزواج', paternal: 'من جهة الأب', maternal: 'من جهة الأم', guardian: 'وصاية أو كفالة', other: 'انتماء آخر',
 }
 
-const PAGE_SIZE = 10
+// A family profile should feel complete on first open. Fifty members keeps the
+// initial request bounded while covering normal/medium families without forcing
+// the user to repeatedly tap "load more".
+const PAGE_SIZE = 50
 
 type Membership = {
   id: string
@@ -42,9 +45,9 @@ export default function FamilyMembersPanel({ familyId, onOpenPerson }: Props) {
     async function load() {
       if (!supabase) { setLoading(false); return }
       setLoading(true)
-      const { data, error, count: estimatedCount } = await supabase
+      const { data, error, count: exactCount } = await supabase
         .from('person_family_memberships')
-        .select('id,person_id,membership_type,is_primary,person:people!person_family_memberships_person_id_fkey(id,full_name,birth_year,is_deceased)', { count: 'planned' })
+        .select('id,person_id,membership_type,is_primary,person:people!person_family_memberships_person_id_fkey(id,full_name,birth_year,is_deceased)', { count: 'exact' })
         .eq('family_id', familyId)
         .eq('status', 'approved')
         .order('is_primary', { ascending: false })
@@ -55,8 +58,8 @@ export default function FamilyMembersPanel({ familyId, onOpenPerson }: Props) {
       if (!error) {
         const items = (data ?? []) as Membership[]
         setRows(items)
-        setCount(estimatedCount ?? null)
-        setHasMore(items.length === PAGE_SIZE && (estimatedCount == null || items.length < estimatedCount))
+        setCount(exactCount ?? null)
+        setHasMore(items.length === PAGE_SIZE && (exactCount == null || items.length < exactCount))
         setPage(0)
       }
       setLoading(false)
@@ -72,9 +75,9 @@ export default function FamilyMembersPanel({ familyId, onOpenPerson }: Props) {
     const nextPage = page + 1
     const from = nextPage * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
-    const { data, error, count: estimatedCount } = await supabase
+    const { data, error, count: exactCount } = await supabase
       .from('person_family_memberships')
-      .select('id,person_id,membership_type,is_primary,person:people!person_family_memberships_person_id_fkey(id,full_name,birth_year,is_deceased)', { count: 'planned' })
+      .select('id,person_id,membership_type,is_primary,person:people!person_family_memberships_person_id_fkey(id,full_name,birth_year,is_deceased)', { count: 'exact' })
       .eq('family_id', familyId)
       .eq('status', 'approved')
       .order('is_primary', { ascending: false })
@@ -85,8 +88,8 @@ export default function FamilyMembersPanel({ familyId, onOpenPerson }: Props) {
     if (!error) {
       const items = (data ?? []) as Membership[]
       setRows((current) => [...current, ...items.filter((item) => !current.some((old) => old.id === item.id))])
-      setCount(estimatedCount ?? count)
-      setHasMore(items.length === PAGE_SIZE && (estimatedCount == null || to + 1 < estimatedCount))
+      setCount(exactCount ?? count)
+      setHasMore(items.length === PAGE_SIZE && (exactCount == null || to + 1 < exactCount))
       setPage(nextPage)
     }
     setLoading(false)
@@ -94,8 +97,8 @@ export default function FamilyMembersPanel({ familyId, onOpenPerson }: Props) {
 
   return <div className="detail-section family-members-panel">
     <div className="section-title family-members-title">
-      <div><span className="eyebrow">دليل العائلة</span><h2>الأفراد حسب النسب والزواج والفروع</h2><p>يتم تحميل الأعضاء على دفعات صغيرة للحفاظ على سرعة التطبيق.</p></div>
-      {count != null && <span className="family-members-count" title="عدد تقديري سريع"><b>≈{count}</b><small>عضو</small></span>}
+      <div><span className="eyebrow">دليل العائلة</span><h2>الأفراد حسب النسب والزواج والفروع</h2><p>يعرض ملف العائلة أعضاءها المعتمدين، بما في ذلك العضويات الإضافية، مع تحميل المزيد فقط للعائلات الكبيرة.</p></div>
+      {count != null && <span className="family-members-count" title="عدد أفراد العائلة"><b>{count}</b><small>عضو</small></span>}
     </div>
     <div className="detail-list family-member-list">
       {rows.length ? rows.map((membership) => {
@@ -108,6 +111,6 @@ export default function FamilyMembersPanel({ familyId, onOpenPerson }: Props) {
         </button>
       }) : <div className="empty-state compact">{loading ? 'جارٍ تحميل أفراد العائلة…' : 'لا توجد عضويات عائلية معتمدة لهذه العائلة بعد.'}</div>}
     </div>
-    {hasMore && <button className="directory-more" type="button" disabled={loading} onClick={() => void loadMore()}>{loading ? 'جارٍ التحميل…' : 'عرض 10 أعضاء إضافيين'}</button>}
+    {hasMore && <button className="directory-more" type="button" disabled={loading} onClick={() => void loadMore()}>{loading ? 'جارٍ التحميل…' : `عرض ${PAGE_SIZE} عضوًا إضافيًا`}</button>}
   </div>
 }

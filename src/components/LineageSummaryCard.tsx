@@ -36,11 +36,29 @@ type DescendantRow = {
   parent_person_id: string | null
 }
 
-type FamilyUnit = {
+type FamilyUnitRow = {
   id: string
   display_name: string
   husband_person_id: string
   wife_person_id: string
+}
+
+type FamilyUnit = FamilyUnitRow & {
+  spouse_person_id: string
+  spouse_name: string
+  spouse_gender: Gender
+}
+
+type PersonLookup = {
+  id: string
+  full_name: string
+  gender: Gender
+}
+
+type FamilyGroup = {
+  husbandPersonId: string
+  displayName: string
+  units: FamilyUnit[]
 }
 
 type Props = {
@@ -110,7 +128,39 @@ export default function LineageSummaryCard({ personId, personName, onOpenPerson,
         setContext(null)
       }
 
-      if (!unitsResult.error) setFamilyUnits((unitsResult.data ?? []) as FamilyUnit[])
+      if (!unitsResult.error) {
+        const units = (unitsResult.data ?? []) as FamilyUnitRow[]
+        const spouseIds = [...new Set(units.map((unit) => (
+          unit.husband_person_id === personId ? unit.wife_person_id : unit.husband_person_id
+        )))]
+
+        let peopleById = new Map<string, PersonLookup>()
+        if (spouseIds.length) {
+          const peopleResult = await supabase
+            .from('people')
+            .select('id,full_name,gender')
+            .in('id', spouseIds)
+            .eq('status', 'approved')
+
+          if (cancelled) return
+          if (!peopleResult.error) {
+            peopleById = new Map(((peopleResult.data ?? []) as PersonLookup[]).map((person) => [person.id, person]))
+          }
+        }
+
+        setFamilyUnits(units.map((unit) => {
+          const spousePersonId = unit.husband_person_id === personId ? unit.wife_person_id : unit.husband_person_id
+          const spouse = peopleById.get(spousePersonId)
+          return {
+            ...unit,
+            spouse_person_id: spousePersonId,
+            spouse_name: spouse?.full_name || 'زوج/زوجة',
+            spouse_gender: spouse?.gender ?? null,
+          }
+        }))
+      } else {
+        setFamilyUnits([])
+      }
       setLoading(false)
     }
 
@@ -126,6 +176,23 @@ export default function LineageSummaryCard({ personId, personName, onOpenPerson,
   }, [personId])
 
   const ancestryPath = useMemo(() => asPath(context?.ancestry_path), [context])
+
+  const familyGroups = useMemo<FamilyGroup[]>(() => {
+    const groups = new Map<string, FamilyGroup>()
+    familyUnits.forEach((unit) => {
+      const current = groups.get(unit.husband_person_id)
+      if (current) {
+        current.units.push(unit)
+        return
+      }
+      groups.set(unit.husband_person_id, {
+        husbandPersonId: unit.husband_person_id,
+        displayName: unit.display_name,
+        units: [unit],
+      })
+    })
+    return [...groups.values()]
+  }, [familyUnits])
 
   const groupedAncestors = useMemo(() => {
     const groups = new Map<number, AncestorRow[]>()
@@ -209,10 +276,35 @@ export default function LineageSummaryCard({ personId, personName, onOpenPerson,
             <div className="lineage-empty-note">لم يُحدد جد أعلى لهذا المسار بعد. يمكن الاستمرار بإضافة الوالدين والأبناء بصورة طبيعية.</div>
           )}
 
-          {familyUnits.length > 0 && (
+          {familyGroups.length > 0 && (
             <div className="lineage-family-units">
               <small>الأسرة الزوجية</small>
-              <div>{familyUnits.map((unit) => <span key={unit.id}>{unit.display_name}</span>)}</div>
+              <div className="lineage-family-groups">
+                {familyGroups.map((group) => {
+                  const currentIsHusband = group.husbandPersonId === personId
+                  return (
+                    <article className="lineage-family-group" key={group.husbandPersonId}>
+                      <strong>{group.displayName}</strong>
+                      <div className="lineage-family-spouses">
+                        <small>{currentIsHusband ? (group.units.length > 1 ? `الزوجات (${group.units.length})` : 'الزوجة') : 'الزوج'}</small>
+                        <div>
+                          {group.units.map((unit) => (
+                            <button
+                              type="button"
+                              key={unit.id}
+                              onClick={() => onOpenPerson?.(unit.spouse_person_id)}
+                              disabled={!onOpenPerson}
+                            >
+                              <span className={unit.spouse_gender === 'female' ? 'female' : ''}>{unit.spouse_name.trim().charAt(0) || '؟'}</span>
+                              <b>{unit.spouse_name}</b>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
             </div>
           )}
 

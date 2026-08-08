@@ -121,7 +121,7 @@ export default function PushNotificationSettings() {
     }
 
     void loadPendingCounts()
-    const interval = window.setInterval(() => void loadPendingCounts(), 45_000)
+    const interval = window.setInterval((): void => { void loadPendingCounts() }, 45_000)
     return () => window.clearInterval(interval)
   }, [canModerate, session])
 

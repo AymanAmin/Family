@@ -32,6 +32,14 @@ const labels: Record<string, string> = {
   other: 'صلة أخرى',
 }
 
+const genericRelationshipNotes: Record<string, Set<string>> = {
+  parent: new Set(['والد', 'والده', 'والدان', 'والدين', 'اب', 'ام']),
+  child: new Set(['ابن', 'ابنه', 'ابناء', 'الابناء']),
+  spouse: new Set(['زوج', 'زوجه', 'زوجان']),
+  sibling: new Set(['اخ', 'اخت', 'اخوه', 'اخوات', 'اخوه واخوات']),
+  guardian: new Set(['وصايه', 'ولي', 'وصي']),
+}
+
 function related(value: RelatedPerson) {
   if (!value) return null
   return Array.isArray(value) ? value[0] ?? null : value
@@ -42,6 +50,24 @@ function relationTypeFromCurrentPerson(item: Relationship, personId: string) {
   if (item.relation_type === 'parent') return currentIsSource ? 'child' : 'parent'
   if (item.relation_type === 'child') return currentIsSource ? 'parent' : 'child'
   return item.relation_type
+}
+
+function normalizeRelationshipNote(value: string) {
+  return value
+    .trim()
+    .replace(/[إأآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/[ًٌٍَُِّْـ]/g, '')
+    .replace(/[\/،,.؛:()\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+}
+
+function displayRelationshipNote(note: string | null, relationType: string) {
+  if (!note?.trim()) return ''
+  const normalized = normalizeRelationshipNote(note)
+  if (genericRelationshipNotes[relationType]?.has(normalized)) return ''
+  return note.trim()
 }
 
 export default function DirectRelationshipManager({ personId, sessionUserId, isAdmin = false, onOpenPerson, onChanged }: Props) {
@@ -122,14 +148,20 @@ export default function DirectRelationshipManager({ personId, sessionUserId, isA
           const other = item.source_person_id === personId ? target : source
           const contextualRelationType = relationTypeFromCurrentPerson(item, personId)
           const contextualLabel = labels[contextualRelationType] || contextualRelationType
+          const note = displayRelationshipNote(item.notes, contextualRelationType)
           return (
             <article className="direct-relation-card" key={item.id}>
-              <button className="direct-relation-person" type="button" onClick={() => other?.id && onOpenPerson?.(other.id)}>
-                <span>{other?.full_name?.charAt(0) || '؟'}</span>
-                <div><strong>{other?.full_name || 'شخص'}</strong><small>{contextualLabel}{item.status === 'pending' ? ' · معلقة' : ''}</small></div>
-              </button>
-              {item.notes && <p>{item.notes}</p>}
-              <div className="direct-relation-actions"><button type="button" onClick={() => startEdit(item)}>تعديل</button><button className="danger" type="button" onClick={() => { setEditingId(''); setConfirmDeleteId(item.id) }}>حذف</button></div>
+              <div className="direct-relation-main">
+                <button className="direct-relation-person" type="button" onClick={() => other?.id && onOpenPerson?.(other.id)}>
+                  <span>{other?.full_name?.charAt(0) || '؟'}</span>
+                  <div className="direct-relation-copy">
+                    <strong>{other?.full_name || 'شخص'}</strong>
+                    <small className="direct-relation-type">{contextualLabel}{item.status === 'pending' ? ' · معلقة' : ''}</small>
+                    {note && <small className="direct-relation-note">{note}</small>}
+                  </div>
+                </button>
+                <div className="direct-relation-actions"><button type="button" onClick={() => startEdit(item)}>تعديل</button><button className="danger" type="button" onClick={() => { setEditingId(''); setConfirmDeleteId(item.id) }}>حذف</button></div>
+              </div>
 
               {editingId === item.id && <div className="direct-relation-edit">
                 <label><span>نوع الصلة</span><select value={form.relation_type} onChange={(e) => setForm((current) => ({ ...current, relation_type: e.target.value }))}>{Object.entries(labels).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label>

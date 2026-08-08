@@ -45,6 +45,65 @@ import './home-news-preview.css'
 import './family-context-ux.css'
 import './home-stats-rtl-fix.css'
 
+type FamilyHistoryState = Record<string, unknown> & {
+  __familyApp?: boolean
+  __familyDepth?: number
+}
+
+function historyState(value: unknown): FamilyHistoryState {
+  return value && typeof value === 'object' ? value as FamilyHistoryState : {}
+}
+
+function installAppNavigationHistory() {
+  const nativeReplaceState = window.history.replaceState.bind(window.history)
+  const nativePushState = window.history.pushState.bind(window.history)
+
+  const initialState = historyState(window.history.state)
+  if (!initialState.__familyApp) {
+    nativeReplaceState({ ...initialState, __familyApp: true, __familyDepth: 0 }, document.title, window.location.href)
+  }
+
+  window.history.replaceState = ((state: unknown, unused: string, url?: string | URL | null) => {
+    const isAppRoute = typeof url === 'string' && url.startsWith('#/')
+    if (!isAppRoute) {
+      nativeReplaceState(state, unused, url)
+      return
+    }
+
+    const current = historyState(window.history.state)
+    const incoming = historyState(state)
+    const currentDepth = typeof current.__familyDepth === 'number' ? current.__familyDepth : 0
+
+    if (window.location.hash === url) {
+      nativeReplaceState({ ...incoming, __familyApp: true, __familyDepth: currentDepth }, unused, url)
+      return
+    }
+
+    nativePushState({ ...incoming, __familyApp: true, __familyDepth: currentDepth + 1 }, unused, url)
+  }) as History['replaceState']
+
+  window.addEventListener('popstate', () => {
+    // App.tsx restores a screen from #/route when it starts. Reloading only on
+    // an in-app history traversal keeps Android/PWA Back in sync with React state.
+    if (window.location.hash.startsWith('#/')) window.location.reload()
+  })
+
+  document.addEventListener('click', (event) => {
+    const target = event.target
+    if (!(target instanceof Element)) return
+    const backButton = target.closest('.back-button')
+    if (!backButton) return
+
+    const state = historyState(window.history.state)
+    const depth = typeof state.__familyDepth === 'number' ? state.__familyDepth : 0
+    if (depth <= 0) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    window.history.back()
+  }, true)
+}
+
 function disablePageZoom() {
   document.documentElement.style.touchAction = 'pan-x pan-y'
   document.body.style.touchAction = 'pan-x pan-y'
@@ -79,6 +138,7 @@ function registerServiceWorker() {
   })
 }
 
+installAppNavigationHistory()
 disablePageZoom()
 registerServiceWorker()
 

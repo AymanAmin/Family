@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import DuplicatePersonCheck from './DuplicatePersonCheck'
-import FamilyPicker from './FamilyPicker'
 import PeoplePicker from './PeoplePicker'
 import LineageSummaryCard from './LineageSummaryCard'
 
@@ -16,14 +15,11 @@ type KinshipRow = {
   is_inferred: boolean
 }
 
-type MembershipFamily = { id?: string; name?: string } | { id?: string; name?: string }[] | null
-type Membership = { id: string; family_id: string; membership_type: string; is_primary: boolean; families?: MembershipFamily }
-
 type Props = {
   personId: string
   personName: string
   personGender: Gender
-  primaryFamilyId: string | null
+  primaryFamilyId?: string | null
   sessionUserId?: string | null
   isAdmin?: boolean
   onOpenPerson: (personId: string) => void
@@ -41,48 +37,26 @@ const slotConfig: Record<RelationSlot, { label: string; gender: Exclude<Gender, 
   sister: { label: 'إضافة أخت', gender: 'female', relationLabel: 'الأخت' },
 }
 
-function oneFamily(value: MembershipFamily) {
-  if (!value) return null
-  return Array.isArray(value) ? value[0] ?? null : value
-}
-
 function fallbackRelationType(type: string, currentIsSource: boolean) {
   if (type === 'parent') return currentIsSource ? 'child' : 'parent'
   if (type === 'child') return currentIsSource ? 'parent' : 'child'
   return type
 }
 
-function familyDefaultForSlot(slot: RelationSlot, primaryFamilyId: string | null) {
-  if (!primaryFamilyId) return ''
-  return ['father', 'son', 'daughter', 'brother', 'sister'].includes(slot) ? primaryFamilyId : ''
-}
-
-export default function PersonFamilyOverview({ personId, personName, personGender, primaryFamilyId, sessionUserId, isAdmin = false, onOpenPerson, onChanged }: Props) {
+export default function PersonFamilyOverview({ personId, personName, personGender, sessionUserId, isAdmin = false, onOpenPerson, onChanged }: Props) {
   const [rows, setRows] = useState<KinshipRow[]>([])
-  const [memberships, setMemberships] = useState<Membership[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [activeSlot, setActiveSlot] = useState<RelationSlot | null>(null)
   const [mode, setMode] = useState<'new' | 'existing'>('new')
   const [name, setName] = useState('')
   const [existingId, setExistingId] = useState('')
-  const [familyId, setFamilyId] = useState('')
-  const [advanced, setAdvanced] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
     if (!supabase) return
     setLoading(true)
-    const [kinship, membershipResult] = await Promise.all([
-      supabase.rpc('get_person_kinship', { p_person_id: personId }),
-      supabase.from('person_family_memberships')
-        .select('id,family_id,membership_type,is_primary,families(id,name)')
-        .eq('person_id', personId)
-        .eq('status', 'approved')
-        .order('is_primary', { ascending: false }),
-    ])
-
-    if (!membershipResult.error) setMemberships((membershipResult.data ?? []) as Membership[])
+    const kinship = await supabase.rpc('get_person_kinship', { p_person_id: personId })
 
     if (!kinship.error) {
       const direct = ((kinship.data ?? []) as KinshipRow[]).filter((row) => ['parent', 'spouse', 'child', 'sibling'].includes(row.relation_type))
@@ -143,8 +117,6 @@ export default function PersonFamilyOverview({ personId, personName, personGende
     setMode('new')
     setName('')
     setExistingId('')
-    setAdvanced(false)
-    setFamilyId(familyDefaultForSlot(slot, primaryFamilyId))
     setMessage('')
   }
 
@@ -158,7 +130,6 @@ export default function PersonFamilyOverview({ personId, personName, personGende
   function selectExistingPerson(selectedPersonId: string) {
     setExistingId(selectedPersonId)
     setMode('existing')
-    setAdvanced(false)
     setMessage('تم اختيار الشخص الموجود في الدليل. يمكنك الآن إضافته مباشرة بهذه الصلة.')
   }
 
@@ -196,7 +167,7 @@ export default function PersonFamilyOverview({ personId, personName, personGende
     const { error } = await supabase.rpc('create_person_in_context', {
       p_full_name: name.trim(),
       p_gender: config.gender,
-      p_family_id: familyId || null,
+      p_family_id: null,
       p_anchor_person_id: personId,
       p_relation_slot: activeSlot,
     })
@@ -219,19 +190,11 @@ export default function PersonFamilyOverview({ personId, personName, personGende
 
   return <section className="family-overview-card detail-section" aria-label={`الأسرة المباشرة لـ ${personName}`}>
     <header className="family-overview-heading">
-      <div><span className="eyebrow">العائلة في لمحة</span><h2>الأسرة المباشرة</h2><p>أهم معلومات النسب والعلاقات في شاشة واحدة. اضغط الاسم لفتح ملفه أو أضف الشخص من مكانه الصحيح.</p></div>
+      <div><span className="eyebrow">الأسرة والنسب</span><h2>الأسرة المباشرة</h2><p>أهم معلومات النسب والعلاقات في شاشة واحدة. الأسرة تتكون تلقائيًا من الزواج وعلاقات الأب والأم المعتمدة.</p></div>
       <span className="family-overview-count">{rows.length}</span>
     </header>
 
     <LineageSummaryCard personId={personId} personName={personName} onOpenPerson={onOpenPerson} />
-
-    {memberships.length > 0 && <div className="family-overview-affiliations">
-      <span>ارتباطات العائلة الحالية</span>
-      <div>{memberships.slice(0, 4).map((membership) => {
-        const family = oneFamily(membership.families ?? null)
-        return family?.name ? <span className={membership.is_primary ? 'primary' : ''} key={membership.id}>{family.name}{membership.is_primary ? ' · أساسية' : ''}</span> : null
-      })}</div>
-    </div>}
 
     {message && <div className="family-overview-message" role="status">{message}</div>}
 
@@ -269,9 +232,7 @@ export default function PersonFamilyOverview({ personId, personName, personGende
           {mode === 'new' ? <>
             <label><span>الاسم الكامل *</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="اكتب الاسم فقط" required /></label>
             <DuplicatePersonCheck name={name} onOpenPerson={selectExistingPerson} />
-            <div className="context-auto-note"><b>{slotConfig[activeSlot].relationLabel}</b><span>سيتم تحديد الجنس والصلة تلقائيًا ولن تحتاج لإعادة اختيارهما.</span></div>
-            <button className="context-advanced-toggle" type="button" onClick={() => setAdvanced((value) => !value)}>{advanced ? 'إخفاء الخيارات الإضافية' : 'خيارات إضافية · تغيير العائلة'}</button>
-            {advanced && <FamilyPicker label="العائلة الأساسية" value={familyId} onChange={setFamilyId} emptyLabel="بدون عائلة الآن" />}
+            <div className="context-auto-note"><b>{slotConfig[activeSlot].relationLabel}</b><span>سيتم تحديد الجنس والصلة تلقائيًا، ثم يُحدّث النسب والأسرة من العلاقات المعتمدة دون اختيار عائلة يدويًا.</span></div>
           </> : <PeoplePicker label={`اختر ${slotConfig[activeSlot].relationLabel} من الدليل`} value={existingId} onChange={setExistingId} excludeId={personId} required />}
           {message && <div className="context-sheet-error">{message}</div>}
           <button className="primary context-sheet-submit" type="submit" disabled={busy}>{busy ? 'جارٍ الحفظ…' : isAdmin ? 'إضافة مباشرة' : 'إرسال للمراجعة'}</button>

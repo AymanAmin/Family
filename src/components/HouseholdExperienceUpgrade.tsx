@@ -335,17 +335,12 @@ export default function HouseholdExperienceUpgrade() {
 
   useEffect(() => {
     let host: HTMLElement | null = null
-    let hiddenLegacy: HTMLElement | null = null
-
     const apply = () => {
-      const sections = [...document.querySelectorAll<HTMLElement>('.section-block')]
-      const legacy = sections.find((section) => section.querySelector('h2')?.textContent?.includes('العائلات المعتمدة'))
-      if (legacy && !document.querySelector('.household-home-portal-host')) {
-        legacy.style.display = 'none'
-        hiddenLegacy = legacy
+      const anchor = document.querySelector<HTMLElement>('.household-home-anchor')
+      if (anchor && !document.querySelector('.household-home-portal-host')) {
         host = document.createElement('div')
         host.className = 'household-home-portal-host'
-        legacy.after(host)
+        anchor.replaceChildren(host)
         setHomeHost(host)
       }
 
@@ -387,7 +382,6 @@ export default function HouseholdExperienceUpgrade() {
     return () => {
       observer.disconnect()
       if (host) host.remove()
-      if (hiddenLegacy) hiddenLegacy.style.display = ''
     }
   }, [householdCount])
 

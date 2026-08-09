@@ -107,7 +107,7 @@ export default function TreeImageShare() {
       if (preview?.url) URL.revokeObjectURL(preview.url)
       const url = URL.createObjectURL(image.blob)
       setPreview({ ...image, url, mode, personName })
-      setMessage('')
+      setMessage(image.format === 'svg' ? 'استخدم النظام صيغة SVG تلقائيًا لأن المتصفح منع تصدير Canvas إلى PNG. الجودة ستبقى كاملة.' : '')
     } catch (error) {
       console.error('tree image generation failed', error)
       setMessage(error instanceof Error ? error.message : 'تعذر إنشاء صورة الشجرة على هذا الجهاز.')
@@ -122,11 +122,11 @@ export default function TreeImageShare() {
     try {
       const title = preview.mode === 'lineage' ? `هيكل نسب ${preview.personName}` : `شبكة علاقات ${preview.personName}`
       const shared = await shareTreeImage(preview.blob, preview.fileName, title)
-      if (!shared) setMessage('المشاركة المباشرة للملفات غير مدعومة في هذا المتصفح. استخدم «تنزيل PNG» ثم شارك الصورة من الجهاز.')
+      if (!shared) setMessage(`المشاركة المباشرة لملف ${preview.format.toUpperCase()} غير مدعومة في هذا المتصفح. استخدم زر التنزيل ثم شارك الملف من الجهاز.`)
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
       console.error('tree image share failed', error)
-      setMessage('تعذر فتح نافذة المشاركة. يمكنك تنزيل الصورة ومشاركتها من معرض الصور.')
+      setMessage('تعذر فتح نافذة المشاركة. يمكنك تنزيل الصورة ثم مشاركتها من الجهاز.')
     }
   }
 
@@ -154,7 +154,7 @@ export default function TreeImageShare() {
             <div>
               <span>جاهزة للمشاركة</span>
               <h2 id="tree-share-preview-title">{preview.mode === 'lineage' ? 'صورة هيكل النسب' : 'صورة شبكة العلاقات'}</h2>
-              <p>{preview.personName} · PNG بجودة {preview.width.toLocaleString('ar-SA')} × {preview.height.toLocaleString('ar-SA')}</p>
+              <p>{preview.personName} · {preview.format.toUpperCase()} بجودة {preview.width.toLocaleString('ar-SA')} × {preview.height.toLocaleString('ar-SA')}</p>
             </div>
             <button type="button" className="tree-image-share-close" onClick={closePreview} aria-label="إغلاق">×</button>
           </header>
@@ -167,9 +167,9 @@ export default function TreeImageShare() {
 
           <footer>
             <button type="button" className="primary" onClick={() => void sharePreview()}><span aria-hidden="true">↗</span> مشاركة</button>
-            <button type="button" onClick={() => downloadTreeImage(preview.blob, preview.fileName)}><span aria-hidden="true">↓</span> تنزيل PNG</button>
+            <button type="button" onClick={() => downloadTreeImage(preview.blob, preview.fileName)}><span aria-hidden="true">↓</span> تنزيل {preview.format.toUpperCase()}</button>
           </footer>
-          <small className="tree-image-share-note">الصورة تمثل البيانات والجزء المفتوح حاليًا من الشجرة. افتح الأجيال التي تريد إظهارها في هيكل النسب قبل إنشاء الصورة.</small>
+          <small className="tree-image-share-note">الصورة تمثل البيانات والجزء المفتوح حاليًا من الشجرة. افتح الأجيال التي تريد إظهارها في هيكل النسب قبل إنشاء الصورة. عند تعذر PNG يستخدم النظام SVG تلقائيًا بدل إيقاف العملية.</small>
         </section>
       </div>,
       document.body,

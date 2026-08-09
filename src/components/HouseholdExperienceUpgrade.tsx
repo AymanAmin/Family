@@ -239,18 +239,18 @@ function HouseholdProfile({ householdId, onClose }: { householdId: string; onClo
         <section className="household-profile-hero">
           <div className="household-profile-avatar">{husband.full_name.trim().charAt(0) || 'أ'}</div>
           <div className="household-profile-title">
-            <span>ملف أسرة يتحدث تلقائيًا من النسب والزواج</span>
+            <span>ملف الأسرة</span>
             <h1>{householdName}</h1>
             <p>{context ? `${lineageName}${branchName ? ` · ${branchName}` : ''}` : 'يتحدث النسب تلقائيًا عند اكتمال بيانات الآباء.'}</p>
           </div>
-          <button className="household-open-husband" type="button" onClick={() => openPerson(husband.id)}>ملف الزوج</button>
+          <button className="household-open-husband" type="button" onClick={() => openPerson(husband.id)}><span>الزوج</span><strong>{husband.full_name}</strong><i>‹</i></button>
         </section>
 
         <section className="household-profile-stats" aria-label="إحصائيات الأسرة">
           <article><strong>{spouseGroups.length}</strong><span>{spouseGroups.length === 1 ? 'زوجة' : 'زوجات'}</span></article>
-          <article><strong>{directChildrenCount}</strong><span>أبناء مباشرين</span></article>
-          <article><strong>{descendantCount}</strong><span>من الذرية</span></article>
-          <article><strong>{generationDepth}</strong><span>أجيال معروفة</span></article>
+          <article><strong>{directChildrenCount}</strong><span>أبناء</span></article>
+          <article><strong>{descendantCount}</strong><span>الذرية</span></article>
+          <article><strong>{generationDepth}</strong><span>أجيال</span></article>
         </section>
 
         <HouseholdShareTools
@@ -266,20 +266,23 @@ function HouseholdProfile({ householdId, onClose }: { householdId: string; onClo
           groups={groups.map((group) => ({ spouseName: group.spouseName, children: group.children.map((child) => ({ name: child.name })), unassigned: group.unassigned }))}
         />
 
-        <section className="household-profile-origin">
-          <div><small>الزوج ورأس ملف الأسرة</small><button type="button" onClick={() => openPerson(husband.id)}>{husband.full_name}</button></div>
-          <div><small>النسب</small><strong>{lineageName || 'غير محدد بعد'}</strong></div>
-          <div><small>الفرع</small><strong>{branchName || 'غير محدد بعد'}</strong></div>
+        <section className="household-profile-context" aria-label="الأسرة والنسب">
+          <header><span>الأسرة والنسب</span><strong>موقع الأسرة داخل النسب</strong></header>
+          <div className="household-profile-context-grid">
+            <div><small>النسب</small><strong>{lineageName || 'غير محدد بعد'}</strong></div>
+            <div><small>الفرع</small><strong>{branchName || 'غير محدد بعد'}</strong></div>
+          </div>
         </section>
 
         <section className="household-marriages-section">
-          <header><div><span>الزواج والأبناء</span><h2>تكوين الأسرة</h2></div><b>{spouseGroups.length}</b></header>
+          <header><div><span>الزوجات والأبناء</span><h2>تكوين الأسرة</h2></div><b>{spouseGroups.length}</b></header>
           <div className="household-marriage-list">
             {spouseGroups.map((group, index) => <article className="household-marriage-card" key={group.key}>
               <div className="household-spouse-heading">
                 <button type="button" className={group.spouseGender === 'female' ? 'female' : ''} onClick={() => group.spouseId && openPerson(group.spouseId)}>
                   <span>{group.spouseName?.trim().charAt(0) || '؟'}</span>
                   <span><small>الزوجة {spouseGroups.length > 1 ? index + 1 : ''}</small><strong>{group.spouseName}</strong></span>
+                  <i>‹</i>
                 </button>
                 <em>{group.children.length} أبناء</em>
               </div>
@@ -297,7 +300,7 @@ function HouseholdProfile({ householdId, onClose }: { householdId: string; onClo
           <div className="household-child-grid">{unassignedGroup.children.map((child) => <button type="button" key={child.id} onClick={() => openPerson(child.id)}><span>{child.name.trim().charAt(0) || '؟'}</span><span><strong>{child.name}</strong><small>بحاجة لاستكمال الوالدين</small></span><i>‹</i></button>)}</div>
         </section>}
 
-        <section className="household-profile-note">هذه الأسرة لا تُنشأ يدويًا؛ يتحدث ملفها تلقائيًا من الزواج وعلاقات الأب والأم والنسب المعتمدة.</section>
+        <section className="household-profile-note">يُحدّث ملف الأسرة تلقائيًا من الزواج وعلاقات الأب والأم والنسب المعتمدة.</section>
       </>}
     </div>
   </div>

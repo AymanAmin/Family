@@ -14,6 +14,7 @@ import AdminLineageReview from './components/AdminLineageReview'
 import AdminLineageStructure from './components/AdminLineageStructure'
 import AdminLineageSyncStatus from './components/AdminLineageSyncStatus'
 import HouseholdExperienceUpgrade from './components/HouseholdExperienceUpgrade'
+import HouseholdPortalLifecycleFix from './components/HouseholdPortalLifecycleFix'
 import StructuredScopeExperience from './components/StructuredScopeExperience'
 import AdminScopeAssignments from './components/AdminScopeAssignments'
 import './styles.css'
@@ -158,6 +159,7 @@ createRoot(rootElement).render(
   <StrictMode>
     <App />
     <HouseholdExperienceUpgrade />
+    <HouseholdPortalLifecycleFix />
     <StructuredScopeExperience />
     <AdminScopeAssignments />
     <InstallPrompt />

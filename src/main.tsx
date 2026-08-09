@@ -14,6 +14,7 @@ import AdminLineageReview from './components/AdminLineageReview'
 import AdminLineageStructure from './components/AdminLineageStructure'
 import AdminLineageSyncStatus from './components/AdminLineageSyncStatus'
 import AdminActivityAccess from './components/AdminActivityAccess'
+import TreeImageShare from './components/TreeImageShare'
 import HouseholdExperienceUpgrade from './components/HouseholdExperienceUpgrade'
 import HouseholdPortalLifecycleFix from './components/HouseholdPortalLifecycleFix'
 import StructuredScopeExperience from './components/StructuredScopeExperience'
@@ -171,6 +172,7 @@ createRoot(rootElement).render(
     <AdminLineageStructure />
     <AdminLineageSyncStatus />
     <AdminActivityAccess />
+    <TreeImageShare />
     <AdminVisitorStat />
   </StrictMode>,
 )

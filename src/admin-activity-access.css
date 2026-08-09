@@ -1,0 +1,3 @@
+.admin-activity-all-tab{min-height:44px;padding:10px 14px;border:0;border-radius:14px;color:#5f746e;background:transparent;font:inherit;font-size:.66rem;font-weight:900;white-space:nowrap}.admin-activity-all-tab.active{color:var(--brand-navy-950);background:#fff;box-shadow:0 8px 22px rgb(20 63 55 / 8%)}
+.admin-console-panel.external-activity-active>*:not(.admin-activity-external-host){display:none!important}.admin-activity-external-host{display:block;width:100%}.admin-activity-readonly .admin-backup-panel{display:none!important}
+@media(max-width:760px){.admin-activity-all-tab{min-height:52px;padding:10px 9px;font-size:.61rem;white-space:normal;line-height:1.5}}

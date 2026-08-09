@@ -1,0 +1,137 @@
+/* Automatic kinship result: concise enough for phones, explicit about incomplete data. */
+.kinship-engine-card {
+  display: grid;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid #cfe1dc;
+  border-radius: 19px;
+  background: linear-gradient(145deg, #f5fbf8, #fff);
+  box-shadow: 0 8px 24px rgb(16 70 57 / 5%);
+}
+
+.kinship-engine-card.insufficient {
+  border-color: #e6dcc7;
+  background: linear-gradient(145deg, #fffaf0, #fff);
+}
+
+.kinship-engine-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kinship-engine-head > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.kinship-engine-head small {
+  color: #668078;
+  font-size: .58rem;
+  font-weight: 900;
+}
+
+.kinship-engine-head strong {
+  overflow-wrap: anywhere;
+  color: var(--green-950);
+  font-family: 'Noto Kufi Arabic';
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.kinship-engine-direction {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: #41675f;
+  background: #e9f3ef;
+  font-size: .55rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.kinship-engine-card.insufficient .kinship-engine-direction {
+  color: #806a48;
+  background: #f7eedc;
+}
+
+.kinship-engine-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.kinship-engine-badges span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 4px 8px;
+  border: 1px solid #d8e6e1;
+  border-radius: 999px;
+  color: #57736b;
+  background: #fff;
+  font-size: .54rem;
+  font-weight: 850;
+}
+
+.kinship-engine-badges span.primary {
+  border-color: #b8d8ce;
+  color: #236355;
+  background: #eaf6f1;
+}
+
+.kinship-engine-detail {
+  margin: 0;
+  padding: 10px 11px;
+  border-radius: 13px;
+  color: #60756e;
+  background: #fff;
+  font-size: .66rem;
+  line-height: 1.9;
+}
+
+.kinship-engine-incomplete-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.kinship-engine-incomplete-grid > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #eadfca;
+  border-radius: 13px;
+  background: #fffdf8;
+}
+
+.kinship-engine-incomplete-grid small {
+  overflow: hidden;
+  color: #806f54;
+  font-size: .55rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kinship-engine-incomplete-grid strong {
+  color: #66563e;
+  font-size: .7rem;
+}
+
+.kinship-engine-hint {
+  margin: 0;
+  color: #7c705c;
+  font-size: .58rem;
+  line-height: 1.75;
+}
+
+@media (max-width: 480px) {
+  .kinship-engine-card { padding: 11px; border-radius: 16px; }
+  .kinship-engine-head { display: grid; }
+  .kinship-engine-direction { width: max-content; }
+  .kinship-engine-incomplete-grid { grid-template-columns: 1fr; }
+}

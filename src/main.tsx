@@ -13,6 +13,7 @@ import AdminPendingDashboard from './components/AdminPendingDashboard'
 import AdminLineageReview from './components/AdminLineageReview'
 import AdminLineageStructure from './components/AdminLineageStructure'
 import AdminLineageSyncStatus from './components/AdminLineageSyncStatus'
+import AdminActivityAccess from './components/AdminActivityAccess'
 import HouseholdExperienceUpgrade from './components/HouseholdExperienceUpgrade'
 import HouseholdPortalLifecycleFix from './components/HouseholdPortalLifecycleFix'
 import StructuredScopeExperience from './components/StructuredScopeExperience'
@@ -169,6 +170,7 @@ createRoot(rootElement).render(
     <AdminLineageReview />
     <AdminLineageStructure />
     <AdminLineageSyncStatus />
+    <AdminActivityAccess />
     <AdminVisitorStat />
   </StrictMode>,
 )

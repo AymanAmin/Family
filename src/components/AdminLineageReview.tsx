@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
+import { normalizeArabicSearch } from '../lib/arabicSearch'
 import PeoplePicker from './PeoplePicker'
 import DuplicatePersonCheck from './DuplicatePersonCheck'
 import '../lineage-review.css'
@@ -195,7 +196,7 @@ export default function AdminLineageReview() {
   }), [issues])
 
   const filtered = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase('ar')
+    const term = normalizeArabicSearch(search)
     return issues.filter((item) => {
       if (filter !== 'all' && item.category !== filter) return false
       if (!term) return true
@@ -205,7 +206,7 @@ export default function AdminLineageReview() {
         ...safeArray(item.detail?.suggestions).map((entry) => entry.full_name),
         ...safeArray(item.detail?.records).map((entry) => entry.full_name),
       ].join(' ')
-      return `${item.person_name} ${detailText}`.toLocaleLowerCase('ar').includes(term)
+      return normalizeArabicSearch(`${item.person_name} ${detailText}`).includes(term)
     })
   }, [issues, filter, search])
 

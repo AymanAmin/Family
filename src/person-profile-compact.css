@@ -1,0 +1,128 @@
+/* Compact person profile header/actions on mobile. Loaded last on purpose. */
+@media (max-width: 760px) {
+  .detail-page {
+    padding-top: 10px !important;
+  }
+
+  .detail-page > .back-button {
+    min-height: 36px !important;
+    margin-bottom: 12px !important;
+    padding: 5px 10px !important;
+    border-radius: 10px !important;
+    font-size: .68rem !important;
+  }
+
+  .detail-hero {
+    grid-template-columns: 56px minmax(0, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+    padding: 14px 12px !important;
+    border-radius: 20px !important;
+  }
+
+  .detail-avatar {
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 18px !important;
+    font-size: 1.22rem !important;
+  }
+
+  .detail-hero h1 {
+    margin: 4px 0 4px !important;
+    font-size: 1.24rem !important;
+    line-height: 1.45 !important;
+  }
+
+  .detail-hero p {
+    font-size: .68rem !important;
+    line-height: 1.6 !important;
+  }
+
+  .detail-hero .eyebrow {
+    font-size: .64rem !important;
+  }
+
+  .detail-hero > .record-action-group {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(86px, 1fr)) !important;
+    gap: 6px !important;
+    margin-top: 2px !important;
+  }
+
+  .record-action-group .record-share-wrap {
+    grid-column: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .record-share-trigger,
+  .record-edit-trigger,
+  .record-archive-trigger {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    padding: 5px 8px !important;
+    border-radius: 11px !important;
+    font-size: .66rem !important;
+    line-height: 1.15 !important;
+    box-shadow: none !important;
+  }
+
+  .record-share-trigger {
+    gap: 5px !important;
+  }
+
+  .record-share-icon {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 8px !important;
+    font-size: .8rem !important;
+  }
+
+  .record-share-message {
+    grid-column: 1 / -1;
+    padding: 2px 0 0 !important;
+    font-size: .58rem !important;
+  }
+
+  .detail-facts {
+    gap: 6px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .detail-facts article {
+    min-height: 64px !important;
+    gap: 4px !important;
+    padding: 10px 12px !important;
+    border-radius: 15px !important;
+  }
+
+  .detail-facts span {
+    font-size: .62rem !important;
+  }
+
+  .detail-facts strong {
+    font-size: .82rem !important;
+  }
+
+  .detail-section {
+    margin-top: 14px !important;
+    padding: 13px !important;
+    border-radius: 18px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .detail-hero > .record-action-group {
+    grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  .record-share-trigger,
+  .record-edit-trigger,
+  .record-archive-trigger {
+    padding-inline: 5px !important;
+    font-size: .61rem !important;
+  }
+}

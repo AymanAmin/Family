@@ -97,7 +97,10 @@
 }
 
 .backup-format-grid button:focus-visible,
-.backup-download-button:focus-visible {
+.backup-download-button:focus-visible,
+.backup-file-picker:focus-within,
+.backup-restore-confirm input:focus-visible,
+.backup-restore-button:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--primary, #184f34) 35%, transparent);
   outline-offset: 3px;
 }
@@ -141,6 +144,152 @@
   font-weight: 700;
 }
 
+.backup-restore-section {
+  margin-block-start: 28px;
+  padding-block-start: 24px;
+  border-block-start: 1px solid var(--border, #d8ded8);
+  display: grid;
+  gap: 16px;
+}
+
+.backup-restore-heading {
+  display: grid;
+  gap: 14px;
+  align-items: start;
+}
+
+.backup-restore-heading h3 {
+  margin: 4px 0 7px;
+  font-size: clamp(1.15rem, 3vw, 1.45rem);
+}
+
+.backup-restore-heading p {
+  margin: 0;
+  color: var(--muted, #657267);
+  line-height: 1.75;
+  max-width: 72ch;
+}
+
+.backup-file-picker {
+  position: relative;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid color-mix(in srgb, var(--primary, #184f34) 45%, var(--border, #d8ded8));
+  border-radius: 14px;
+  background: var(--surface, #fff);
+  color: var(--primary, #184f34);
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.backup-file-picker input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.backup-file-picker:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.backup-restore-preview {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--border, #d8ded8) 90%, transparent);
+  border-radius: 18px;
+  background: var(--surface, #fff);
+}
+
+.backup-restore-summary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.backup-restore-summary > div {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--primary, #184f34) 5%, #fff);
+  display: grid;
+  gap: 3px;
+}
+
+.backup-restore-summary span {
+  color: var(--muted, #657267);
+  font-size: 0.8rem;
+}
+
+.backup-restore-summary strong {
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+}
+
+.backup-restore-warning {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+  border: 1px solid #e2b7b2;
+  border-radius: 14px;
+  background: #fff2f0;
+  color: #6e2d27;
+}
+
+.backup-restore-warning span {
+  line-height: 1.65;
+  font-size: 0.88rem;
+}
+
+.backup-restore-confirm {
+  display: grid;
+  gap: 7px;
+}
+
+.backup-restore-confirm > span {
+  font-size: 0.88rem;
+  color: var(--muted, #657267);
+}
+
+.backup-restore-confirm input {
+  min-height: 46px;
+  width: 100%;
+  padding-inline: 13px;
+  border: 1px solid var(--border, #d8ded8);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+  color: inherit;
+  font: inherit;
+}
+
+.backup-restore-button {
+  min-height: 48px;
+  width: 100%;
+  border: 1px solid #9d3a31;
+  border-radius: 13px;
+  background: #8c3129;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.backup-restore-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.backup-restore-result {
+  min-height: 0;
+}
+
 @media (min-width: 620px) {
   .backup-format-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -149,6 +298,20 @@
   .backup-actions {
     grid-template-columns: minmax(210px, 0.34fr) 1fr;
     align-items: center;
+  }
+
+  .backup-restore-heading {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .backup-restore-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .backup-restore-button {
+    width: auto;
+    justify-self: start;
+    min-width: 230px;
   }
 }
 
@@ -160,12 +323,24 @@
   .backup-format-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
+  .backup-restore-summary {
+    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(130px, 1fr));
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {
   .backup-format-grid button:hover {
     transform: translateY(-2px);
     border-color: color-mix(in srgb, var(--primary, #184f34) 45%, var(--border, #d8ded8));
+  }
+
+  .backup-file-picker:hover {
+    background: color-mix(in srgb, var(--primary, #184f34) 5%, #fff);
+  }
+
+  .backup-restore-button:not(:disabled):hover {
+    filter: brightness(0.94);
   }
 }
 

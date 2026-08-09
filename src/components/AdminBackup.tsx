@@ -39,6 +39,12 @@ function downloadBlob(blob: Blob, fileName: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength)
+  new Uint8Array(buffer).set(bytes)
+  return buffer
+}
+
 function sqlIdentifier(value: string) {
   return `"${value.replace(/"/g, '""')}"`
 }
@@ -177,7 +183,7 @@ export default function AdminBackup() {
         files['_manifest.csv'] = strToU8(buildCsv(manifestRows))
         for (const table of snapshot.table_order) files[`${table}.csv`] = strToU8(buildCsv(snapshot.tables[table] || []))
         const zipped = zipSync(files, { level: 6 })
-        downloadBlob(new Blob([zipped], { type: 'application/zip' }), `${baseName}_csv.zip`)
+        downloadBlob(new Blob([toArrayBuffer(zipped)], { type: 'application/zip' }), `${baseName}_csv.zip`)
       }
 
       localStorage.setItem(LAST_BACKUP_KEY, snapshot.generated_at)

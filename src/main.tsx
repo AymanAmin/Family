@@ -5,6 +5,7 @@ import './detail-avatar-icons'
 import './brand-identity'
 import './stats-swipe-fix'
 import './home-occasion-greetings'
+import './household-terminology'
 import InstallPrompt from './components/InstallPrompt'
 import PushNotificationSettings from './components/PushNotificationSettings'
 import AdminVisitorStat from './components/AdminVisitorStat'
@@ -88,8 +89,6 @@ function installAppNavigationHistory() {
   }) as History['replaceState']
 
   window.addEventListener('popstate', () => {
-    // App.tsx restores a screen from #/route when it starts. Reloading only on
-    // an in-app history traversal keeps Android/PWA Back in sync with React state.
     if (window.location.hash.startsWith('#/')) window.location.reload()
   })
 

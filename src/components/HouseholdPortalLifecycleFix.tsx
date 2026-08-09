@@ -1,20 +1,20 @@
 import { useEffect } from 'react'
 
-function hasHomeHouseholdAnchor() {
+function hasHomeHouseholdAnchor(): boolean {
   return [...document.querySelectorAll<HTMLElement>('.section-block')]
     .some((section) => section.querySelector('h2')?.textContent?.includes('العائلات المعتمدة'))
 }
 
-function removeStaleHouseholdPreview() {
+function removeStaleHouseholdPreview(): void {
   if (hasHomeHouseholdAnchor()) return
   document.querySelectorAll<HTMLElement>('.household-home-portal-host').forEach((host) => host.remove())
 }
 
-export default function HouseholdPortalLifecycleFix() {
+export default function HouseholdPortalLifecycleFix(): null {
   useEffect(() => {
     let frame = 0
 
-    const scheduleCleanup = () => {
+    const scheduleCleanup = (): void => {
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(removeStaleHouseholdPreview)
     }

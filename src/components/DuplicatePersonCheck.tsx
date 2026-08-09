@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { normalizeArabicSearch } from '../lib/arabicSearch'
 
 type SimilarPerson = {
   id: string
@@ -22,16 +23,12 @@ const CACHE_TTL = 60_000
 const cache = new Map<string, { savedAt: number; rows: SimilarPerson[] }>()
 
 function normalizedKey(value: string) {
-  return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('ar')
+  return normalizeArabicSearch(value)
 }
 
 function hasCompletedFirstName(value: string) {
   const trimmedStart = value.replace(/^\s+/, '')
   return /\S+\s+/.test(trimmedStart)
-}
-
-function escapeLikePrefix(value: string) {
-  return value.replace(/([\\%_])/g, '\\$1')
 }
 
 function scoreLabel(score: number) {
@@ -72,52 +69,8 @@ export default function DuplicatePersonCheck({ name, onOpenPerson }: Props) {
       const requestId = ++requestRef.current
       setLoading(true)
 
-      // The duplicate check is intentionally prefix-only: typing "محمد الزبير"
-      // should return names that start with "محمد الزبير", not names that merely
-      // contain the same words later in the full name.
-      const prefixResult = await supabase
-        .from('people')
-        .select('id,full_name,gender,birth_year,family_id,status,families(name)')
-        .eq('status', 'approved')
-        .ilike('full_name', `${escapeLikePrefix(query)}%`)
-        .order('full_name')
-        .limit(6)
-
-      if (requestId !== requestRef.current) return
-
-      if (!prefixResult.error) {
-        const smart = await supabase.rpc('find_similar_people', { p_query: query, p_limit: 20 })
-        if (requestId !== requestRef.current) return
-
-        const smartScores = new Map<string, number>()
-        if (!smart.error) {
-          for (const item of (smart.data ?? []) as SimilarPerson[]) smartScores.set(item.id, item.match_score)
-        }
-
-        const mapped: SimilarPerson[] = (prefixResult.data ?? []).map((item) => {
-          const familyValue = item.families as { name?: string } | { name?: string }[] | null
-          const familyName = Array.isArray(familyValue) ? familyValue[0]?.name ?? null : familyValue?.name ?? null
-          const exact = normalizedKey(item.full_name) === key
-          return {
-            id: item.id,
-            full_name: item.full_name,
-            gender: item.gender,
-            birth_year: item.birth_year,
-            family_id: item.family_id,
-            family_name: familyName,
-            status: item.status,
-            match_score: smartScores.get(item.id) ?? (exact ? 1 : .86),
-          }
-        })
-
-        cache.set(key, { savedAt: Date.now(), rows: mapped })
-        setRows(mapped)
-        setAvailable(!smart.error)
-        setLoading(false)
-        return
-      }
-
-      // Compatibility fallback if the direct prefix query is unavailable.
+      // The server applies the same Arabic normalization used by the directory,
+      // including hamza variants and ة/ه, before doing a prefix match.
       const smart = await supabase.rpc('find_similar_people', { p_query: query, p_limit: 20 })
       if (requestId !== requestRef.current) return
 
@@ -176,7 +129,7 @@ export default function DuplicatePersonCheck({ name, onOpenPerson }: Props) {
         <div className="duplicate-clear-state"><span>✓</span><p><strong>لا يظهر سجل يبدأ بهذا الاسم حاليًا.</strong><small>يمكنك متابعة إدخال بقية البيانات.</small></p></div>
       )}
 
-      {!available && <p className="duplicate-migration-note">البحث الأساسي يعمل الآن. تشغيل migration 011 يفعّل تقييم التشابه المتقدم للنتائج التي تبدأ بالنص المكتوب.</p>}
+      {!available && <p className="duplicate-migration-note">تعذر تشغيل البحث الذكي حاليًا. أعد تحميل الصفحة بعد اكتمال تحديث النظام.</p>}
     </section>
   )
 }

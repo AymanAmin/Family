@@ -43,7 +43,7 @@ type Props = {
 const roleLabels: Record<string, string> = {
   member: 'عضو',
   verified_member: 'عضو موثّق',
-  family_moderator: 'مسؤول عائلة',
+  family_moderator: 'مسؤول نطاق',
   content_moderator: 'مشرف محتوى',
   admin: 'مدير',
   super_admin: 'المدير الأعلى',

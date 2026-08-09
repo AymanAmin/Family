@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import AdminBackup from './AdminBackup'
 
 type Period = '30' | 'all'
 
@@ -195,6 +196,8 @@ export default function AdminContributorStats({ active }: Props) {
       ) : <div className="empty-state compact"><strong>لا يوجد نشاط في هذه الفترة</strong><span>ستظهر المساهمات هنا بعد أن يبدأ الأعضاء بإضافة المعلومات.</span></div>}
 
       {hasMore && !loading && <button className="admin-load-more" type="button" disabled={loadingMore} onClick={() => void load(rows.length, true)}>{loadingMore ? 'جارٍ تحميل المزيد…' : 'عرض مساهمين إضافيين'}</button>}
+
+      <AdminBackup />
     </section>
   )
 }

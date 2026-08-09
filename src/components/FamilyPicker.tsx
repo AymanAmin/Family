@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { normalizeArabicSearch } from '../lib/arabicSearch'
 
 type FamilyOption = {
   id: string
@@ -52,7 +53,8 @@ export default function FamilyPicker({ label, value, onChange, required = false,
 
   async function runSearch(raw: string, immediate = false) {
     const term = raw.trim().replace(/\s+/g, ' ')
-    const key = `${approvedOnly ? 'approved' : 'visible'}:${term.toLocaleLowerCase('ar') || '__recent__'}`
+    const normalizedTerm = normalizeArabicSearch(term)
+    const key = `${approvedOnly ? 'approved' : 'visible'}:${normalizedTerm || '__recent__'}`
     const cached = cache.get(key)
     if (cached && Date.now() - cached.at < CACHE_TTL) {
       setResults(cached.rows)
@@ -64,14 +66,31 @@ export default function FamilyPicker({ label, value, onChange, required = false,
       if (!supabase) return
       const requestId = ++requestRef.current
       setLoading(true)
-      let request = supabase
-        .from('families')
-        .select('id,name,origin_place,status')
-      request = approvedOnly ? request.eq('status', 'approved') : request.in('status', ['approved', 'pending'])
-      if (term) request = request.ilike('name', `%${term}%`)
-      const { data } = await request.order(term ? 'name' : 'created_at', { ascending: Boolean(term) }).limit(7)
+      const { data, error } = await supabase.rpc('search_legacy_families_v1', {
+        p_query: term || null,
+        p_approved_only: approvedOnly,
+        p_limit: 7,
+      })
       if (requestId !== requestRef.current) return
-      const rows = (data ?? []) as FamilyOption[]
+
+      if (!error) {
+        const rows = (data ?? []) as FamilyOption[]
+        cache.set(key, { at: Date.now(), rows })
+        setResults(rows)
+        setLoading(false)
+        return
+      }
+
+      // Compatibility fallback: load a bounded visible set, then compare with the
+      // same Arabic normalizer used by the rest of the client.
+      let request = supabase.from('families').select('id,name,origin_place,status')
+      request = approvedOnly ? request.eq('status', 'approved') : request.in('status', ['approved', 'pending'])
+      const fallback = await request.order('created_at', { ascending: false }).limit(100)
+      if (requestId !== requestRef.current) return
+      const rows = ((fallback.data ?? []) as FamilyOption[])
+        .filter((family) => !normalizedTerm || normalizeArabicSearch(family.name).includes(normalizedTerm))
+        .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
+        .slice(0, 7)
       cache.set(key, { at: Date.now(), rows })
       setResults(rows)
       setLoading(false)

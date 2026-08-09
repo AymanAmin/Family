@@ -12,6 +12,7 @@ import AdminPendingDashboard from './components/AdminPendingDashboard'
 import AdminLineageReview from './components/AdminLineageReview'
 import AdminLineageStructure from './components/AdminLineageStructure'
 import AdminLineageSyncStatus from './components/AdminLineageSyncStatus'
+import HouseholdExperienceUpgrade from './components/HouseholdExperienceUpgrade'
 import './styles.css'
 import './mobile-app.css'
 import './mobile-fixes.css'
@@ -155,6 +156,7 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <App />
+    <HouseholdExperienceUpgrade />
     <InstallPrompt />
     <PushNotificationSettings />
     <AdminPendingDashboard />

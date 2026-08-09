@@ -6,12 +6,12 @@ import ModerationRequestDetails from './ModerationRequestDetails'
 const PAGE_SIZE = 12
 
 const membershipLabels: Record<string, string> = {
-  birth: 'بالنسب / عائلة الأصل',
-  marriage: 'بالزواج',
-  paternal: 'من جهة الأب',
-  maternal: 'من جهة الأم',
+  birth: 'أصل مسجل سابقًا',
+  marriage: 'بالزواج — سجل سابق',
+  paternal: 'من جهة الأب — سجل سابق',
+  maternal: 'من جهة الأم — سجل سابق',
   guardian: 'وصاية أو كفالة',
-  other: 'انتماء آخر',
+  other: 'ارتباط سابق',
 }
 
 type QueueItem = {
@@ -90,7 +90,7 @@ export default function Phase3AdminQueue({ active, isAdmin = false, onChanged }:
       setHasMore(false)
       setLoading(false)
       setLoadingMore(false)
-      setMessage(feedResult.error.message.toLowerCase().includes('does not exist') ? 'شغّل أحدث SETUP.sql لتفعيل نطاقات المراجعة.' : 'تعذر تحميل طلبات التعديل والانتماء الآن.')
+      setMessage(feedResult.error.message.toLowerCase().includes('does not exist') ? 'شغّل أحدث SETUP.sql لتفعيل نطاقات المراجعة.' : 'تعذر تحميل طلبات التعديل والارتباطات السابقة الآن.')
       return
     }
 
@@ -104,7 +104,7 @@ export default function Phase3AdminQueue({ active, isAdmin = false, onChanged }:
       setHasMore(false)
       setLoading(false)
       setLoadingMore(false)
-      setMessage('تعذر تحميل طلبات التعديل والانتماء الآن.')
+      setMessage('تعذر تحميل طلبات التعديل والارتباطات السابقة الآن.')
       return
     }
 
@@ -118,8 +118,8 @@ export default function Phase3AdminQueue({ active, isAdmin = false, onChanged }:
       fallbackRows.push({
         id: membership.id,
         request_type: 'membership',
-        title: `${personName(membership.people) || 'شخص'} ← ${relatedName(membership.families) || 'عائلة'}`,
-        subtitle: `${membershipLabels[membership.membership_type] || membership.membership_type}${membership.is_primary ? ' · عائلة أساسية' : ''}${membership.notes ? ` · ${membership.notes}` : ''}`,
+        title: `${personName(membership.people) || 'شخص'} ← ${relatedName(membership.families) || 'سجل سابق'}`,
+        subtitle: `${membershipLabels[membership.membership_type] || membership.membership_type}${membership.is_primary ? ' · كان أساسيًا في النظام السابق' : ''}${membership.notes ? ` · ${membership.notes}` : ''}`,
         created_at: membership.created_at,
       })
     }
@@ -172,7 +172,7 @@ export default function Phase3AdminQueue({ active, isAdmin = false, onChanged }:
 
   return (
     <section className="phase3-admin-queue">
-      <div className="section-title"><div><span className="eyebrow">مراجعات إضافية</span><h2>التعديلات والانتماءات العائلية</h2><p className="secondary-queue-note">يتم تحميل {PAGE_SIZE} طلبًا فقط في كل دفعة. تفاصيل المقارنة لا تُجلب إلا عند فتح الطلب.</p></div></div>
+      <div className="section-title"><div><span className="eyebrow">مراجعات إضافية</span><h2>التعديلات والارتباطات السابقة</h2><p className="secondary-queue-note">الارتباطات القديمة تظهر هنا فقط للتوافق أثناء الانتقال. النظام الجديد يعتمد على الأسرة والنسب والفرع تلقائيًا.</p></div></div>
 
       {message && <div className="admin-users-message">{message}</div>}
 
@@ -184,7 +184,7 @@ export default function Phase3AdminQueue({ active, isAdmin = false, onChanged }:
             const expanded = item.request_type === 'edit' && expandedDiffId === item.id
             return (
               <article className={`review-row secondary-review-row ${expanded ? 'has-details' : ''}`} key={`${item.request_type}-${item.id}`}>
-                <div className="secondary-review-copy"><span className="status pending">{item.request_type === 'edit' ? 'تعديل' : 'انتماء عائلي'}</span><h3>{item.title}</h3><p>{item.subtitle}</p></div>
+                <div className="secondary-review-copy"><span className="status pending">{item.request_type === 'edit' ? 'تعديل' : 'ارتباط سابق'}</span><h3>{item.title}</h3><p>{item.subtitle}</p></div>
                 <ModerationRequestDetails requestType={item.request_type} requestId={item.id} />
                 <div className="review-actions secondary-review-actions">
                   {item.request_type === 'edit' && <button className="review-detail-toggle" type="button" onClick={() => setExpandedDiffId(expanded ? null : item.id)}>{expanded ? 'إخفاء التفاصيل' : 'عرض التفاصيل'}</button>}
@@ -196,7 +196,7 @@ export default function Phase3AdminQueue({ active, isAdmin = false, onChanged }:
             )
           })}
         </div>
-      ) : <div className="empty-state compact"><strong>لا توجد مراجعات ضمن صلاحياتك</strong><span>لا توجد تعديلات أو انتماءات عائلية معلقة في نطاقك حاليًا.</span></div>}
+      ) : <div className="empty-state compact"><strong>لا توجد مراجعات ضمن صلاحياتك</strong><span>لا توجد تعديلات أو ارتباطات سابقة معلقة في نطاقك حاليًا.</span></div>}
 
       {hasMore && !loading && <button type="button" className="admin-load-more" disabled={loadingMore} onClick={() => void load(rows.length, true)}>{loadingMore ? 'جارٍ تحميل المزيد…' : 'عرض المزيد من المراجعات'}</button>}
     </section>
@@ -204,7 +204,7 @@ export default function Phase3AdminQueue({ active, isAdmin = false, onChanged }:
 }
 
 function entityLabel(type: EditRequest['entity_type']) {
-  if (type === 'families') return 'تعديل بيانات عائلة'
+  if (type === 'families') return 'تعديل سجل عائلي قديم'
   if (type === 'people') return 'تعديل بيانات شخص'
   if (type === 'person_relationships') return 'تعديل صلة قرابة'
   return 'تعديل مناسبة'
@@ -216,6 +216,6 @@ function summary(data: Record<string, unknown>) {
     const value = data[key]
     if (typeof value === 'string' && value.trim()) return value.trim()
   }
-  if (typeof data.family_id === 'string' && data.family_id) return 'تغيير العائلة الأساسية'
+  if (typeof data.family_id === 'string' && data.family_id) return 'تغيير ارتباط قديم'
   return 'راجع البيانات المقترحة ثم اعتمد أو ارفض.'
 }

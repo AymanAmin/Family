@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ChangeEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import '../admin-backup.css'
 
@@ -15,10 +15,38 @@ type BackupSnapshot = {
   tables: Record<string, BackupRow[]>
 }
 
+type RestoreSelection = {
+  fileName: string
+  snapshot: BackupSnapshot
+}
+
 const LAST_BACKUP_KEY = 'family:last-full-backup-at'
+const PROJECT_REF = 'rtmdaalabudycimnnena'
+const RESTORE_CONFIRMATION = 'استعادة'
+const BACKUP_TABLES = [
+  'families',
+  'people',
+  'person_relationships',
+  'person_family_memberships',
+  'family_units',
+  'lineages',
+  'lineage_branches',
+  'person_scope_affiliations',
+  'events',
+  'event_people',
+  'account_link_requests',
+  'content_edit_requests',
+  'relationship_change_requests',
+  'family_moderator_assignments',
+  'moderator_scope_assignments',
+  'profiles',
+  'push_subscriptions',
+  'platform_stats',
+  'site_visitors',
+] as const
 
 const formatLabels: Record<BackupFormat, { title: string; extension: string; hint: string }> = {
-  json: { title: 'JSON', extension: 'json', hint: 'الأفضل لحفظ نسخة كاملة قابلة للقراءة والمعالجة.' },
+  json: { title: 'JSON', extension: 'json', hint: 'الأفضل لحفظ نسخة كاملة قابلة للقراءة والمعالجة والاستعادة من داخل المنصة.' },
   sql: { title: 'SQL', extension: 'sql', hint: 'نسخة بيانات INSERT يمكن استخدامها عند الاسترجاع الفني.' },
   xlsx: { title: 'Excel', extension: 'xlsx', hint: 'ملف Excel؛ كل جدول في ورقة مستقلة مع Manifest.' },
   csv: { title: 'CSV ZIP', extension: 'zip', hint: 'ملف ZIP يحتوي CSV مستقلًا لكل جدول.' },
@@ -121,12 +149,50 @@ function formatLocalDate(value: string | null) {
   return new Intl.DateTimeFormat('ar-SA', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 }
 
+function validateBackupSnapshot(value: unknown): { snapshot?: BackupSnapshot; error?: string } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return { error: 'الملف لا يحتوي على نسخة Family صالحة.' }
+
+  const candidate = value as Partial<BackupSnapshot>
+  if (candidate.backup_version !== 1) return { error: 'إصدار النسخة غير مدعوم حاليًا.' }
+  if (candidate.project_ref !== PROJECT_REF) return { error: 'هذه النسخة تخص مشروع Supabase مختلفًا.' }
+  if (candidate.scope !== 'public_application_data') return { error: 'نطاق النسخة الاحتياطية غير متوافق.' }
+  if (!Array.isArray(candidate.table_order) || !candidate.tables || typeof candidate.tables !== 'object' || Array.isArray(candidate.tables)) {
+    return { error: 'بنية الجداول داخل النسخة غير صحيحة.' }
+  }
+
+  const uniqueOrder = new Set(candidate.table_order)
+  if (uniqueOrder.size !== BACKUP_TABLES.length || !BACKUP_TABLES.every((table) => uniqueOrder.has(table))) {
+    return { error: 'مجموعة الجداول لا تطابق إصدار قاعدة البيانات الحالي. لا يمكن الاستعادة بأمان.' }
+  }
+
+  let actualTotal = 0
+  for (const table of BACKUP_TABLES) {
+    const rows = candidate.tables[table]
+    if (!Array.isArray(rows)) return { error: `الجدول ${table} مفقود أو تالف داخل النسخة.` }
+    actualTotal += rows.length
+    const expected = candidate.row_counts?.[table]
+    if (typeof expected === 'number' && expected !== rows.length) return { error: `عدد الصفوف غير متطابق في الجدول ${table}.` }
+  }
+
+  if (typeof candidate.total_rows !== 'number' || candidate.total_rows !== actualTotal) {
+    return { error: 'إجمالي الصفوف داخل النسخة لا يطابق محتواها.' }
+  }
+
+  if (!candidate.generated_at || Number.isNaN(new Date(candidate.generated_at).getTime())) return { error: 'تاريخ إنشاء النسخة غير صالح.' }
+
+  return { snapshot: candidate as BackupSnapshot }
+}
+
 export default function AdminBackup() {
   const [format, setFormat] = useState<BackupFormat>('json')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(() => localStorage.getItem(LAST_BACKUP_KEY))
   const [lastSummary, setLastSummary] = useState<{ tables: number; rows: number } | null>(null)
+  const [restoreSelection, setRestoreSelection] = useState<RestoreSelection | null>(null)
+  const [restoreConfirm, setRestoreConfirm] = useState('')
+  const [restoreBusy, setRestoreBusy] = useState(false)
+  const [restoreMessage, setRestoreMessage] = useState('')
 
   const backupAgeDays = useMemo(() => {
     if (!lastBackupAt) return null
@@ -134,7 +200,7 @@ export default function AdminBackup() {
   }, [lastBackupAt])
 
   async function exportBackup() {
-    if (!supabase || busy) return
+    if (!supabase || busy || restoreBusy) return
     setBusy(true)
     setMessage('جارٍ جمع جميع جداول المنصة والتحقق من النسخة…')
 
@@ -198,6 +264,73 @@ export default function AdminBackup() {
     }
   }
 
+  async function chooseRestoreFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    setRestoreSelection(null)
+    setRestoreConfirm('')
+    setRestoreMessage('')
+    if (!file) return
+
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      setRestoreMessage('الاستعادة من داخل المنصة تقبل ملف JSON الذي تم إنشاؤه من خيار النسخة الاحتياطية فقط.')
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(await file.text()) as unknown
+      const validation = validateBackupSnapshot(parsed)
+      if (!validation.snapshot) {
+        setRestoreMessage(validation.error || 'تعذر التحقق من ملف النسخة الاحتياطية.')
+        return
+      }
+
+      setRestoreSelection({ fileName: file.name, snapshot: validation.snapshot })
+      setRestoreMessage('تم فحص الملف بنجاح. راجع الملخص ثم أكّد الاستعادة.')
+    } catch (error) {
+      console.error('restore file parsing failed', error)
+      setRestoreMessage('تعذر قراءة ملف JSON. قد يكون الملف تالفًا أو ليس نسخة Family.')
+    }
+  }
+
+  async function restoreBackup() {
+    if (!supabase || !restoreSelection || restoreBusy || busy || restoreConfirm.trim() !== RESTORE_CONFIRMATION) return
+    setRestoreBusy(true)
+    setRestoreMessage('جارٍ إنشاء نسخة أمان تلقائية للحالة الحالية قبل الاستعادة…')
+
+    try {
+      const { data: safetyData, error: safetyError } = await supabase.functions.invoke('admin-backup', { body: {} })
+      if (safetyError || !safetyData || safetyData.error) {
+        setRestoreMessage('تم إيقاف الاستعادة لأن إنشاء نسخة الأمان الحالية فشل. لن يتم تعديل أي بيانات.')
+        return
+      }
+
+      const safetySnapshot = safetyData as BackupSnapshot
+      const safetyName = `family-pre-restore-safety_${safeDateForFile(safetySnapshot.generated_at)}.json`
+      downloadBlob(new Blob([JSON.stringify(safetySnapshot, null, 2)], { type: 'application/json;charset=utf-8' }), safetyName)
+
+      setRestoreMessage('تم تنزيل نسخة الأمان. جارٍ استعادة النسخة المختارة والتحقق من العلاقات…')
+      const { data, error } = await supabase.functions.invoke('admin-restore', {
+        body: { snapshot: restoreSelection.snapshot },
+      })
+
+      if (error || !data || data.error) {
+        setRestoreMessage(String(data?.error || error?.message || 'فشلت الاستعادة. لم تُترك قاعدة البيانات في حالة جزئية.'))
+        return
+      }
+
+      const restoredRows = Number(data.total_rows || restoreSelection.snapshot.total_rows)
+      setRestoreMessage(`تمت الاستعادة بنجاح: ${Number(data.table_count || BACKUP_TABLES.length).toLocaleString('ar-SA')} جدولًا و${restoredRows.toLocaleString('ar-SA')} صفًا. يوصى بإعادة تحميل الصفحة.`)
+      setRestoreSelection(null)
+      setRestoreConfirm('')
+    } catch (error) {
+      console.error('backup restore failed', error)
+      setRestoreMessage('حدث خطأ أثناء الاستعادة. العملية الخادمة ذرّية، لذلك لا يتم اعتماد استعادة جزئية عند الفشل.')
+    } finally {
+      setRestoreBusy(false)
+    }
+  }
+
   return (
     <section className="admin-backup-panel" aria-labelledby="admin-backup-title">
       <header className="admin-backup-heading">
@@ -232,12 +365,55 @@ export default function AdminBackup() {
       </div>
 
       <div className="backup-actions">
-        <button type="button" className="primary backup-download-button" disabled={busy} onClick={() => void exportBackup()}>
+        <button type="button" className="primary backup-download-button" disabled={busy || restoreBusy} onClick={() => void exportBackup()}>
           {busy ? 'جارٍ إنشاء النسخة…' : `تنزيل نسخة ${formatLabels[format].title}`}
         </button>
         <div className="backup-result" aria-live="polite">
-          {message || 'يوصى بحفظ نسخة خارجية دورية، وJSON أو SQL هما الأنسب للاسترجاع الكامل.'}
+          {message || 'يوصى بحفظ نسخة خارجية دورية. صيغة JSON هي الصيغة المعتمدة للاستعادة من داخل المنصة.'}
           {lastSummary && <small>آخر ملف: {lastSummary.tables} جدولًا · {lastSummary.rows.toLocaleString('ar-SA')} صفًا</small>}
+        </div>
+      </div>
+
+      <div className="backup-restore-section" aria-labelledby="backup-restore-title">
+        <div className="backup-restore-heading">
+          <div>
+            <span className="eyebrow">الاسترجاع عند الطوارئ</span>
+            <h3 id="backup-restore-title">استعادة نسخة من الجهاز</h3>
+            <p>اختر ملف JSON سبق تنزيله من Family. سيتم فحص الإصدار والجداول وعدد الصفوف قبل السماح بأي استعادة.</p>
+          </div>
+          <label className="backup-file-picker">
+            <input type="file" accept="application/json,.json" disabled={busy || restoreBusy} onChange={(event) => void chooseRestoreFile(event)} />
+            <span>{restoreSelection ? 'اختيار ملف آخر' : 'اختيار ملف JSON'}</span>
+          </label>
+        </div>
+
+        {restoreSelection && (
+          <div className="backup-restore-preview">
+            <div className="backup-restore-summary">
+              <div><span>الملف</span><strong>{restoreSelection.fileName}</strong></div>
+              <div><span>تاريخ النسخة</span><strong>{formatLocalDate(restoreSelection.snapshot.generated_at)}</strong></div>
+              <div><span>الجداول</span><strong>{restoreSelection.snapshot.table_order.length.toLocaleString('ar-SA')}</strong></div>
+              <div><span>الصفوف</span><strong>{restoreSelection.snapshot.total_rows.toLocaleString('ar-SA')}</strong></div>
+            </div>
+
+            <div className="backup-restore-warning">
+              <strong>عملية استبدال كاملة للبيانات</strong>
+              <span>ستستبدل بيانات الجداول المشمولة بالحالة الموجودة في هذه النسخة. قبل التنفيذ سينزل النظام تلقائيًا نسخة أمان للحالة الحالية، وتتم الاستعادة داخل عملية واحدة مع إيقاف إشعارات ومزامنات الإدخال التاريخية أثناء الاسترجاع.</span>
+            </div>
+
+            <label className="backup-restore-confirm">
+              <span>للتأكيد اكتب كلمة <strong>{RESTORE_CONFIRMATION}</strong></span>
+              <input value={restoreConfirm} disabled={restoreBusy} onChange={(event) => setRestoreConfirm(event.target.value)} autoComplete="off" />
+            </label>
+
+            <button type="button" className="backup-restore-button" disabled={restoreBusy || busy || restoreConfirm.trim() !== RESTORE_CONFIRMATION} onClick={() => void restoreBackup()}>
+              {restoreBusy ? 'جارٍ تنفيذ الاستعادة الآمنة…' : 'استعادة البيانات من هذه النسخة'}
+            </button>
+          </div>
+        )}
+
+        <div className="backup-result backup-restore-result" aria-live="polite">
+          {restoreMessage || 'الاستعادة التلقائية تدعم JSON فقط. ملفات SQL تبقى للاسترجاع الفني اليدوي عند الحاجة.'}
         </div>
       </div>
     </section>

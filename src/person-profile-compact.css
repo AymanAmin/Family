@@ -106,6 +106,51 @@
     font-size: .82rem !important;
   }
 
+  /* Person facts: keep birth year and life status visually balanced. */
+  .detail-facts:has(> .deceased-fact),
+  .detail-facts:has(> .alive-fact) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 7px !important;
+  }
+
+  .detail-facts:has(> .deceased-fact) > article,
+  .detail-facts:has(> .alive-fact) > article {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 82px !important;
+    height: 100% !important;
+    align-content: center !important;
+    justify-items: start !important;
+    padding: 10px 12px !important;
+  }
+
+  .detail-facts .deceased-fact,
+  .detail-facts .alive-fact {
+    display: grid !important;
+    grid-template-rows: auto auto auto !important;
+    align-content: center !important;
+    gap: 2px !important;
+  }
+
+  .detail-facts .deceased-fact small,
+  .detail-facts .alive-fact small {
+    display: block !important;
+    max-width: 100% !important;
+    margin: 1px 0 0 !important;
+    overflow: hidden !important;
+    color: #806f62 !important;
+    font-size: .52rem !important;
+    line-height: 1.45 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .detail-facts .deceased-fact strong,
+  .detail-facts .alive-fact strong {
+    line-height: 1.35 !important;
+  }
+
   .detail-section {
     margin-top: 14px !important;
     padding: 13px !important;
@@ -124,5 +169,16 @@
   .record-archive-trigger {
     padding-inline: 5px !important;
     font-size: .61rem !important;
+  }
+
+  .detail-facts:has(> .deceased-fact),
+  .detail-facts:has(> .alive-fact) {
+    gap: 5px !important;
+  }
+
+  .detail-facts:has(> .deceased-fact) > article,
+  .detail-facts:has(> .alive-fact) > article {
+    min-height: 78px !important;
+    padding-inline: 9px !important;
   }
 }

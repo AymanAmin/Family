@@ -135,6 +135,27 @@ export default function StructuredScopeExperience() {
         setPersonHost(null)
       }
 
+      for (const fact of document.querySelectorAll<HTMLElement>('.detail-facts article')) {
+        const label = fact.querySelector(':scope > span')?.textContent?.trim() ?? ''
+        if (label === 'العائلة الأساسية') fact.style.display = 'none'
+      }
+
+      const personCreateForm = document.querySelector<HTMLFormElement>('form.person-create-form')
+      if (personCreateForm) {
+        for (const picker of personCreateForm.querySelectorAll<HTMLElement>('.family-picker-label')) picker.style.display = 'none'
+        if (!personCreateForm.querySelector('.person-auto-context-note')) {
+          const relationCard = personCreateForm.querySelector<HTMLElement>('.person-relation-card')
+          if (relationCard) {
+            const note = document.createElement('div')
+            note.className = 'event-auto-scope-note person-auto-context-note full'
+            note.innerHTML = '<strong>النسب والأسرة يُحددان تلقائيًا</strong><span>اربط الشخص بأبيه أو أمه أو زوجه متى توفرت البيانات، وسيحدد النظام النسب والفرع والأسرة تلقائيًا. لا تحتاج إلى اختيار عائلة.</span>'
+            relationCard.after(note)
+          }
+        }
+        const paternalNote = personCreateForm.querySelector<HTMLElement>('.paternal-inheritance-note')
+        if (paternalNote) paternalNote.innerHTML = '<strong>تحديث النسب تلقائيًا</strong><span>عند تسجيل الابن أو الابنة وربطه بالأب، سيعيد النظام حساب النسب والفرع تلقائيًا بعد اعتماد العلاقة.</span>'
+      }
+
       for (const label of document.querySelectorAll<HTMLElement>('form.data-form label')) {
         const title = label.querySelector(':scope > span')?.textContent?.trim() ?? ''
         if (title.includes('العائلة المرتبطة')) {

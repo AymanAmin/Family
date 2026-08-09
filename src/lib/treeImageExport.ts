@@ -177,11 +177,10 @@ async function loadSvgImage(svg: string) {
   const url = URL.createObjectURL(blob)
   const image = new Image()
   try {
-    image.src = url
-    if ('decode' in image) await image.decode()
-    else await new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       image.onload = () => resolve()
       image.onerror = () => reject(new Error('تعذر تجهيز صورة الشجرة.'))
+      image.src = url
     })
     return image
   } finally {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
+import { normalizeArabicSearch } from '../lib/arabicSearch'
 import '../lineage-structure.css'
 
 type Gender = 'male' | 'female' | null
@@ -138,7 +139,7 @@ export default function AdminLineageStructure() {
   }), [candidates])
 
   const visibleCandidates = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase('ar')
+    const term = normalizeArabicSearch(search)
     return candidates.filter((candidate) => {
       if (filter === 'ready' && !candidate.can_approve) return false
       if (filter === 'review' && candidate.can_approve) return false
@@ -147,8 +148,8 @@ export default function AdminLineageStructure() {
         candidate.root_name,
         ...safePeople(candidate.spouses).map((person) => person.full_name),
         ...safePeople(candidate.branches).map((person) => person.full_name),
-      ].join(' ').toLocaleLowerCase('ar')
-      return names.includes(term)
+      ].join(' ')
+      return normalizeArabicSearch(names).includes(term)
     })
   }, [candidates, filter, search])
 

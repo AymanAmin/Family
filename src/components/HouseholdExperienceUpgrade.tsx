@@ -1,0 +1,371 @@
+import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { supabase } from '../lib/supabase'
+import '../household-experience.css'
+
+type Gender = 'male' | 'female' | null
+
+type HouseholdListRow = {
+  household_id: string
+  display_name: string
+  husband_person_id: string
+  husband_name: string
+  spouse_count: number
+  child_count: number
+  spouse_names: string[]
+  lineage_name: string | null
+  branch_name: string | null
+  total_count: number
+}
+
+type Person = {
+  id: string
+  full_name: string
+  gender: Gender
+  birth_year: number | null
+  is_deceased: boolean
+  description: string | null
+}
+
+type LineageContext = {
+  lineage_name: string
+  root_person_id: string
+  root_name: string
+  generation: number
+  branch_person_id: string | null
+  branch_name: string | null
+}
+
+type HouseholdRpcRow = {
+  family_unit_id: string | null
+  family_display_name: string | null
+  spouse_person_id: string | null
+  spouse_name: string | null
+  spouse_gender: Gender
+  child_person_id: string | null
+  child_name: string | null
+  child_gender: Gender
+  child_direct_child_count: number
+  child_has_children: boolean
+  group_type: 'family_unit' | 'unassigned'
+}
+
+type Child = {
+  id: string
+  name: string
+  gender: Gender
+  childCount: number
+}
+
+type HouseholdGroup = {
+  key: string
+  familyUnitId: string | null
+  spouseId: string | null
+  spouseName: string | null
+  spouseGender: Gender
+  children: Child[]
+  unassigned: boolean
+}
+
+type HouseholdOpenEvent = CustomEvent<{ householdId?: string }>
+
+function numberValue(value: unknown) {
+  const parsed = Number(value ?? 0)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function normalizeHousehold(item: Record<string, unknown>): HouseholdListRow {
+  return {
+    household_id: String(item.household_id ?? ''),
+    display_name: String(item.display_name ?? ''),
+    husband_person_id: String(item.husband_person_id ?? ''),
+    husband_name: String(item.husband_name ?? ''),
+    spouse_count: numberValue(item.spouse_count),
+    child_count: numberValue(item.child_count),
+    spouse_names: Array.isArray(item.spouse_names) ? item.spouse_names.map(String) : [],
+    lineage_name: typeof item.lineage_name === 'string' ? item.lineage_name : null,
+    branch_name: typeof item.branch_name === 'string' ? item.branch_name : null,
+    total_count: numberValue(item.total_count),
+  }
+}
+
+function displayLineage(value: string | null | undefined) {
+  if (!value) return 'النسب غير مكتمل بعد'
+  return value.replace(/^عائلة\s+/, 'نسب ')
+}
+
+function groupRows(rows: HouseholdRpcRow[]) {
+  const groups = new Map<string, HouseholdGroup>()
+  for (const row of rows) {
+    const key = row.family_unit_id || '__unassigned__'
+    let group = groups.get(key)
+    if (!group) {
+      group = {
+        key,
+        familyUnitId: row.family_unit_id,
+        spouseId: row.spouse_person_id,
+        spouseName: row.spouse_name,
+        spouseGender: row.spouse_gender,
+        children: [],
+        unassigned: row.group_type === 'unassigned',
+      }
+      groups.set(key, group)
+    }
+    if (row.child_person_id && row.child_name && !group.children.some((child) => child.id === row.child_person_id)) {
+      group.children.push({
+        id: row.child_person_id,
+        name: row.child_name,
+        gender: row.child_gender,
+        childCount: numberValue(row.child_direct_child_count),
+      })
+    }
+  }
+  return [...groups.values()]
+}
+
+function openPerson(id: string) {
+  window.location.hash = `#/person/${id}`
+  window.location.reload()
+}
+
+function HouseholdHomePreview({ onOpen }: { onOpen: (id: string) => void }) {
+  const [rows, setRows] = useState<HouseholdListRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    void supabase.rpc('list_households_v1', { p_query: null, p_limit: 6, p_offset: 0 }).then(({ data }) => {
+      if (cancelled) return
+      setRows((data ?? []).map((item: unknown) => normalizeHousehold(item as Record<string, unknown>)))
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  return <section className="section-block household-home-block">
+    <div className="section-title">
+      <div><span className="eyebrow">دليل الأسر</span><h2>الأسر المنشأة تلقائيًا</h2></div>
+      <button className="text-link" type="button" onClick={() => {
+        const tab = [...document.querySelectorAll<HTMLButtonElement>('.directory-tabs button')].find((button) => button.textContent?.includes('الأسر'))
+        if (tab) tab.click()
+        else {
+          const searchButton = [...document.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === 'البحث')
+          searchButton?.click()
+          window.setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.directory-tabs button')].find((button) => button.textContent?.includes('الأسر'))?.click(), 150)
+        }
+      }}>عرض الكل</button>
+    </div>
+    {loading ? <div className="household-home-loading">جارٍ تحميل الأسر…</div> : rows.length ? <div className="cards-grid household-home-grid">
+      {rows.map((item) => <button className="data-card interactive-card household-home-card" type="button" key={item.household_id} onClick={() => onOpen(item.household_id)}>
+        <span className="card-symbol">{item.husband_name.trim().charAt(0) || 'أ'}</span>
+        <div><h3>{item.display_name}</h3><p>{item.spouse_count === 1 ? item.spouse_names[0] || 'زوجة واحدة' : `${item.spouse_count} زوجات`} · {item.child_count} أبناء</p></div>
+        <span className="card-chevron">‹</span>
+      </button>)}
+    </div> : <div className="empty-state"><strong>لا توجد أسر مكتملة بعد</strong><span>تظهر الأسرة تلقائيًا بمجرد اعتماد الزواج.</span></div>}
+  </section>
+}
+
+function HouseholdProfile({ householdId, onClose }: { householdId: string; onClose: () => void }) {
+  const [husband, setHusband] = useState<Person | null>(null)
+  const [context, setContext] = useState<LineageContext | null>(null)
+  const [groups, setGroups] = useState<HouseholdGroup[]>([])
+  const [descendantCount, setDescendantCount] = useState(0)
+  const [generationDepth, setGenerationDepth] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    document.body.classList.add('household-profile-open')
+    return () => document.body.classList.remove('household-profile-open')
+  }, [])
+
+  useEffect(() => {
+    if (!supabase) {
+      setError('تعذر الاتصال بقاعدة البيانات.')
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setError('')
+      const [personResult, householdResult, contextResult, descendantsResult] = await Promise.all([
+        supabase!.from('people').select('id,full_name,gender,birth_year,is_deceased,description').eq('id', householdId).maybeSingle(),
+        supabase!.rpc('get_lineage_households_v2', { p_person_id: householdId }),
+        supabase!.rpc('get_person_lineage_context', { p_person_id: householdId }),
+        supabase!.rpc('get_lineage_descendants', { p_ancestor_person_id: householdId, p_max_depth: 8 }),
+      ])
+      if (cancelled) return
+      if (personResult.error || !personResult.data || householdResult.error) {
+        setError('تعذر تحميل ملف الأسرة الآن.')
+        setLoading(false)
+        return
+      }
+      setHusband(personResult.data as Person)
+      setGroups(groupRows((householdResult.data ?? []) as HouseholdRpcRow[]))
+      setContext((((contextResult.data ?? []) as LineageContext[])[0] ?? null))
+      const descendants = (descendantsResult.data ?? []) as Array<{ generation?: number }>
+      const generations = descendants.map((row) => numberValue(row.generation))
+      setDescendantCount(descendants.filter((row) => numberValue(row.generation) > 0).length)
+      setGenerationDepth(generations.length ? Math.max(...generations) : 0)
+      setLoading(false)
+    }
+    void load()
+    return () => { cancelled = true }
+  }, [householdId])
+
+  const spouseGroups = useMemo(() => groups.filter((group) => !group.unassigned && group.spouseId), [groups])
+  const unassignedGroup = useMemo(() => groups.find((group) => group.unassigned) ?? null, [groups])
+  const directChildrenCount = useMemo(() => new Set(groups.flatMap((group) => group.children.map((child) => child.id))).size, [groups])
+
+  return <div className="household-profile-layer" role="dialog" aria-modal="true" aria-label="ملف الأسرة">
+    <div className="household-profile-page">
+      <header className="household-profile-topbar">
+        <button type="button" onClick={onClose} aria-label="إغلاق ملف الأسرة">×</button>
+        <div><small>صلة القرابة</small><strong>ملف الأسرة</strong></div>
+      </header>
+
+      {loading ? <div className="household-profile-state">جارٍ بناء ملف الأسرة…</div> : error || !husband ? <div className="household-profile-state error">{error || 'الأسرة غير موجودة.'}</div> : <>
+        <section className="household-profile-hero">
+          <div className="household-profile-avatar">{husband.full_name.trim().charAt(0) || 'أ'}</div>
+          <div className="household-profile-title">
+            <span>أسرة منشأة تلقائيًا من سجلات الزواج</span>
+            <h1>أسرة {husband.full_name}</h1>
+            <p>{context ? `${displayLineage(context.lineage_name)}${context.branch_name ? ` · ${context.branch_name}` : ''}` : 'يتحدث النسب تلقائيًا عند اكتمال بيانات الآباء.'}</p>
+          </div>
+          <button className="household-open-husband" type="button" onClick={() => openPerson(husband.id)}>ملف الزوج</button>
+        </section>
+
+        <section className="household-profile-stats" aria-label="إحصائيات الأسرة">
+          <article><strong>{spouseGroups.length}</strong><span>{spouseGroups.length === 1 ? 'زوجة' : 'زوجات'}</span></article>
+          <article><strong>{directChildrenCount}</strong><span>أبناء مباشرين</span></article>
+          <article><strong>{descendantCount}</strong><span>من الذرية</span></article>
+          <article><strong>{generationDepth}</strong><span>أجيال معروفة</span></article>
+        </section>
+
+        <section className="household-profile-origin">
+          <div><small>الزوج ورأس ملف الأسرة</small><button type="button" onClick={() => openPerson(husband.id)}>{husband.full_name}</button></div>
+          <div><small>النسب</small><strong>{displayLineage(context?.lineage_name)}</strong></div>
+          <div><small>الفرع</small><strong>{context?.branch_name || 'غير محدد بعد'}</strong></div>
+        </section>
+
+        <section className="household-marriages-section">
+          <header><div><span>الزواج والأبناء</span><h2>تكوين الأسرة</h2></div><b>{spouseGroups.length}</b></header>
+          <div className="household-marriage-list">
+            {spouseGroups.map((group, index) => <article className="household-marriage-card" key={group.key}>
+              <div className="household-spouse-heading">
+                <button type="button" className={group.spouseGender === 'female' ? 'female' : ''} onClick={() => group.spouseId && openPerson(group.spouseId)}>
+                  <span>{group.spouseName?.trim().charAt(0) || '؟'}</span>
+                  <span><small>الزوجة {spouseGroups.length > 1 ? index + 1 : ''}</small><strong>{group.spouseName}</strong></span>
+                </button>
+                <em>{group.children.length} أبناء</em>
+              </div>
+              {group.children.length ? <div className="household-child-grid">{group.children.map((child) => <button type="button" key={child.id} className={child.gender === 'female' ? 'female' : ''} onClick={() => openPerson(child.id)}>
+                <span>{child.name.trim().charAt(0) || '؟'}</span>
+                <span><strong>{child.name}</strong><small>{child.childCount ? `${child.childCount} أبناء` : 'لا أبناء مسجلون'}</small></span>
+                <i>‹</i>
+              </button>)}</div> : <div className="household-no-children">لا يوجد أبناء مشتركون مسجلون لهذه الزيجة.</div>}
+            </article>)}
+          </div>
+        </section>
+
+        {unassignedGroup && unassignedGroup.children.length > 0 && <section className="household-unassigned-section">
+          <div><span>بيانات غير مكتملة</span><h2>الوالدة الأخرى غير محددة</h2><p>هؤلاء الأبناء مرتبطون بالزوج، لكن البيانات الحالية لا تكفي لإسنادهم إلى إحدى الزوجات. لن يقوم النظام بالتخمين.</p></div>
+          <div className="household-child-grid">{unassignedGroup.children.map((child) => <button type="button" key={child.id} onClick={() => openPerson(child.id)}><span>{child.name.trim().charAt(0) || '؟'}</span><span><strong>{child.name}</strong><small>بحاجة لاستكمال الوالدين</small></span><i>‹</i></button>)}</div>
+        </section>}
+
+        <section className="household-profile-note">ملف الأسرة لا يُنشأ يدويًا؛ يتحدث تلقائيًا من الزواج وعلاقات الأب والأم المعتمدة.</section>
+      </>}
+    </div>
+  </div>
+}
+
+export default function HouseholdExperienceUpgrade() {
+  const [householdId, setHouseholdId] = useState('')
+  const [homeHost, setHomeHost] = useState<HTMLElement | null>(null)
+  const [householdCount, setHouseholdCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!supabase) return
+    void supabase.rpc('get_household_stats_v1').then(({ data }) => {
+      const row = ((data ?? []) as Array<{ household_count?: number }>)[0]
+      if (row) setHouseholdCount(numberValue(row.household_count))
+    })
+  }, [])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const id = (event as HouseholdOpenEvent).detail?.householdId
+      if (id) setHouseholdId(id)
+    }
+    window.addEventListener('sila:open-household', handler)
+    return () => window.removeEventListener('sila:open-household', handler)
+  }, [])
+
+  useEffect(() => {
+    let host: HTMLElement | null = null
+    let hiddenLegacy: HTMLElement | null = null
+
+    const apply = () => {
+      const sections = [...document.querySelectorAll<HTMLElement>('.section-block')]
+      const legacy = sections.find((section) => section.querySelector('h2')?.textContent?.includes('العائلات المعتمدة'))
+      if (legacy && !document.querySelector('.household-home-portal-host')) {
+        legacy.style.display = 'none'
+        hiddenLegacy = legacy
+        host = document.createElement('div')
+        host.className = 'household-home-portal-host'
+        legacy.after(host)
+        setHomeHost(host)
+      }
+
+      for (const button of document.querySelectorAll<HTMLButtonElement>('.segmented-control button')) {
+        if (button.textContent?.trim() === 'عائلة') {
+          button.style.display = 'none'
+          if (button.classList.contains('active')) {
+            const personButton = [...button.parentElement!.querySelectorAll<HTMLButtonElement>('button')].find((item) => item.textContent?.trim() === 'شخص')
+            personButton?.click()
+          }
+        }
+      }
+
+      for (const button of document.querySelectorAll<HTMLButtonElement>('.desktop-nav button, .service-tile, .home-section-heading button')) {
+        if (button.textContent?.trim() === 'شجرة العائلة') button.textContent = 'شجرة النسب'
+      }
+      for (const heading of document.querySelectorAll<HTMLElement>('.home-section-heading h2')) {
+        if (heading.textContent?.trim() === 'شجرة العائلة') heading.textContent = 'شجرة النسب'
+      }
+      for (const strong of document.querySelectorAll<HTMLElement>('.service-tile strong')) {
+        if (strong.textContent?.trim() === 'العائلات') {
+          strong.textContent = 'الأسر'
+          const tile = strong.closest<HTMLButtonElement>('.service-tile')
+          const small = tile?.querySelector('small')
+          const icon = tile?.querySelector<HTMLElement>('.service-icon')
+          if (small) small.textContent = 'الأسر المنشأة تلقائيًا'
+          if (icon && householdCount != null) icon.textContent = String(householdCount)
+        }
+      }
+      for (const input of document.querySelectorAll<HTMLInputElement>('input[placeholder*="عائلة"]')) {
+        input.placeholder = input.placeholder.replace('عائلة', 'أسرة')
+        input.setAttribute('aria-label', (input.getAttribute('aria-label') || '').replace('عائلة', 'أسرة'))
+      }
+    }
+
+    apply()
+    const observer = new MutationObserver(apply)
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => {
+      observer.disconnect()
+      if (host) host.remove()
+      if (hiddenLegacy) hiddenLegacy.style.display = ''
+    }
+  }, [householdCount])
+
+  return <>
+    {homeHost && createPortal(<HouseholdHomePreview onOpen={setHouseholdId} />, homeHost)}
+    {householdId && <HouseholdProfile householdId={householdId} onClose={() => setHouseholdId('')} />}
+  </>
+}

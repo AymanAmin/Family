@@ -19,8 +19,9 @@ type ShareNode = { name: string; detail: string; badge?: string }
 type ShareGroup = { title: string; nodes: ShareNode[] }
 type LineageRow = { name: string; detail: string; spouses: string[]; depth: number }
 
-const WIDTH = 1600
-const PADDING = 64
+const WIDTH = 1200
+const PADDING = 54
+const INNER = WIDTH - PADDING * 2
 const NAVY = '#203f68'
 const BLUE = '#3d7897'
 const TEAL = '#66b9b1'
@@ -28,8 +29,8 @@ const TEAL_LIGHT = '#e8f5f2'
 const PAPER = '#fffdf9'
 const MUTED = '#6b7e87'
 const BORDER = '#dce7e7'
-const SAND = '#f8efe3'
-const GOLD = '#b87935'
+const SOFT = '#f8fbfa'
+const SAND = '#fff8ee'
 
 function cleanFilePart(value: string) {
   return value.trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 70) || 'tree'
@@ -43,7 +44,7 @@ function text(root: ParentNode | null, selector: string) {
   return root?.querySelector<HTMLElement>(selector)?.textContent?.trim() || ''
 }
 
-function splitText(value: string, max = 32) {
+function splitText(value: string, max = 28) {
   const words = value.trim().split(/\s+/).filter(Boolean)
   if (!words.length) return ['']
   const lines: string[] = []
@@ -59,25 +60,24 @@ function splitText(value: string, max = 32) {
   return lines.slice(0, 2)
 }
 
-function svgText(x: number, y: number, value: string, size: number, fill: string, weight = 700, anchor: 'start' | 'middle' | 'end' = 'middle', max = 34) {
+function svgText(x: number, y: number, value: string, size: number, fill: string, weight = 700, max = 30) {
   const lines = splitText(value, max)
-  return `<text x="${x}" y="${y}" text-anchor="${anchor}" direction="rtl" unicode-bidi="plaintext" font-family="Tahoma,Arial,sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}">${lines.map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : size * 1.25}">${esc(line)}</tspan>`).join('')}</text>`
+  return `<text x="${x}" y="${y}" text-anchor="middle" direction="rtl" unicode-bidi="plaintext" font-family="Tahoma,Arial,sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}">${lines.map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : size * 1.22}">${esc(line)}</tspan>`).join('')}</text>`
 }
 
-function roundedRect(x: number, y: number, w: number, h: number, fill: string, stroke = BORDER, radius = 22) {
+function roundedRect(x: number, y: number, w: number, h: number, fill: string, stroke = BORDER, radius = 20) {
   return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`
 }
 
 function nodeCard(x: number, y: number, w: number, node: ShareNode, highlighted = false) {
-  const h = 88
-  const circleX = x + w - 48
-  const textX = x + w - 92
-  return `${roundedRect(x, y, w, h, highlighted ? TEAL_LIGHT : '#ffffff', highlighted ? '#b7ddd6' : BORDER, 18)}
-    <circle cx="${circleX}" cy="${y + 44}" r="25" fill="${highlighted ? NAVY : TEAL_LIGHT}"/>
-    ${svgText(circleX, y + 52, node.name.trim().charAt(0) || '؟', 20, highlighted ? '#fff' : NAVY, 900)}
-    ${svgText(textX, y + 34, node.name, 20, NAVY, 900, 'end', 29)}
-    ${node.detail ? svgText(textX, y + 61, node.detail, 15, MUTED, 700, 'end', 32) : ''}
-    ${node.badge ? `<rect x="${x + 14}" y="${y + 14}" width="84" height="28" rx="14" fill="#fff4d8" stroke="#ead7a1"/><text x="${x + 56}" y="${y + 34}" text-anchor="middle" direction="rtl" font-family="Tahoma,Arial,sans-serif" font-size="13" font-weight="800" fill="#80652d">${esc(node.badge)}</text>` : ''}`
+  const h = 92
+  const center = x + w / 2
+  const nameY = y + 35
+  const detailY = y + 66
+  return `${roundedRect(x, y, w, h, highlighted ? TEAL_LIGHT : '#fff', highlighted ? '#abd8d0' : BORDER, 18)}
+    ${svgText(center, nameY, node.name, 19, NAVY, 900, Math.max(18, Math.floor(w / 12)))}
+    ${node.detail ? svgText(center, detailY, node.detail, 14, MUTED, 700, Math.max(20, Math.floor(w / 10))) : ''}
+    ${node.badge ? `<rect x="${x + 14}" y="${y + 10}" width="70" height="24" rx="12" fill="#fff4d8" stroke="#ead7a1"/><text x="${x + 49}" y="${y + 27}" text-anchor="middle" direction="rtl" font-family="Tahoma,Arial,sans-serif" font-size="11" font-weight="800" fill="#80652d">${esc(node.badge.replace('✦', '').trim())}</text>` : ''}`
 }
 
 function parseKinNode(element: Element): ShareNode {
@@ -95,41 +95,39 @@ function parseGroup(element: Element | null): ShareGroup | null {
   return { title: text(element, '.kin-group-title span') || 'صلة قرابة', nodes }
 }
 
-function groupHeight(group: ShareGroup, width: number) {
-  const cols = width > 1200 ? 4 : width > 700 ? 3 : 2
-  return 76 + Math.ceil(group.nodes.length / cols) * 104 + 12
-}
-
-function renderGroup(group: ShareGroup, x: number, y: number, width: number) {
-  const cols = width > 1200 ? 4 : width > 700 ? 3 : 2
-  const gap = 16
-  const cardW = (width - 40 - gap * (cols - 1)) / cols
-  const h = groupHeight(group, width)
-  let out = `${roundedRect(x, y, width, h, '#fbfdfc', BORDER, 24)}${svgText(x + width - 26, y + 40, group.title, 22, NAVY, 900, 'end', 40)}`
-  group.nodes.forEach((node, index) => {
+function renderCardsSection(title: string, nodes: ShareNode[], y: number, accent = false, maxCols = 3) {
+  const cols = Math.max(1, Math.min(maxCols, nodes.length))
+  const gap = 14
+  const cardW = (INNER - 36 - gap * (cols - 1)) / cols
+  const rows = Math.ceil(nodes.length / cols)
+  const height = 62 + rows * 106 + 18
+  let svg = `${roundedRect(PADDING, y, INNER, height, accent ? '#f2faf8' : SOFT, accent ? '#c6e5df' : BORDER, 24)}${svgText(WIDTH / 2, y + 35, title, 21, NAVY, 900, 34)}`
+  nodes.forEach((node, index) => {
     const row = Math.floor(index / cols)
     const col = index % cols
-    const cardX = x + width - 20 - cardW - col * (cardW + gap)
-    const cardY = y + 62 + row * 104
-    out += nodeCard(cardX, cardY, cardW, node)
+    const rowCount = Math.min(cols, nodes.length - row * cols)
+    const rowWidth = rowCount * cardW + (rowCount - 1) * gap
+    const rowStart = (WIDTH - rowWidth) / 2
+    const x = rowStart + col * (cardW + gap)
+    const yy = y + 54 + row * 106
+    svg += nodeCard(x, yy, cardW, node)
   })
-  return { svg: out, height: h }
+  return { svg, height }
 }
 
-function svgShell(title: string, subtitle: string, subject: string, content: string, height: number) {
+function shell(subtitle: string, subject: string, content: string, height: number) {
   const date = new Intl.DateTimeFormat('ar-SA', { dateStyle: 'long' }).format(new Date())
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" viewBox="0 0 ${WIDTH} ${height}">
     <rect width="100%" height="100%" fill="${PAPER}"/>
-    <circle cx="${WIDTH - 116}" cy="92" r="44" fill="${TEAL_LIGHT}" stroke="#cce4df" stroke-width="2"/>
-    ${svgText(WIDTH - 116, 104, 'ص', 34, NAVY, 900)}
-    ${svgText(WIDTH - 190, 72, title, 34, NAVY, 900, 'end', 36)}
-    ${svgText(WIDTH - 190, 111, subtitle, 22, BLUE, 800, 'end', 36)}
-    ${svgText(WIDTH - 190, 146, subject, 18, MUTED, 700, 'end', 42)}
-    <line x1="${PADDING}" y1="178" x2="${WIDTH - PADDING}" y2="178" stroke="${BORDER}" stroke-width="2"/>
+    <circle cx="${WIDTH / 2}" cy="68" r="31" fill="${TEAL_LIGHT}" stroke="#cce4df" stroke-width="2"/>
+    ${svgText(WIDTH / 2, 78, 'ص', 25, NAVY, 900, 4)}
+    ${svgText(WIDTH / 2, 122, 'صلة القرابة', 29, NAVY, 900, 20)}
+    ${svgText(WIDTH / 2, 157, subtitle, 20, BLUE, 800, 24)}
+    ${svgText(WIDTH / 2, 187, subject, 16, MUTED, 700, 38)}
+    <line x1="${PADDING}" y1="210" x2="${WIDTH - PADDING}" y2="210" stroke="${BORDER}" stroke-width="2"/>
     ${content}
-    <line x1="${PADDING}" y1="${height - 74}" x2="${WIDTH - PADDING}" y2="${height - 74}" stroke="${BORDER}"/>
-    ${svgText(WIDTH - PADDING, height - 36, 'تم إنشاء الصورة من منصة صلة القرابة', 15, MUTED, 700, 'end', 44)}
-    ${svgText(PADDING, height - 36, date, 15, MUTED, 700, 'start', 30)}
+    <line x1="${PADDING}" y1="${height - 66}" x2="${WIDTH - PADDING}" y2="${height - 66}" stroke="${BORDER}"/>
+    ${svgText(WIDTH / 2, height - 36, `صلة القرابة · ${date}`, 13, MUTED, 700, 44)}
   </svg>`
 }
 
@@ -137,64 +135,52 @@ function buildNetworkSvg(options: CaptureOptions) {
   const map = options.elements.find((item) => item.classList.contains('kinship-map')) || options.elements[0]
   const extended = options.elements.find((item) => item.classList.contains('kin-extended-panel')) || null
   const selfName = text(map, '.kin-self strong') || options.personName
+  const groups: ShareGroup[] = []
   const parents = parseGroup(map?.querySelector('.kin-parent'))
   const siblings = parseGroup(map?.querySelector('.kin-sibling'))
   const spouses = parseGroup(map?.querySelector('.kin-spouse'))
   const children = parseGroup(map?.querySelector('.kin-child'))
-  const extendedGroups = extended ? Array.from(extended.querySelectorAll('.kin-group')).map(parseGroup).filter((item): item is ShareGroup => Boolean(item)) : []
+  if (parents) groups.push(parents)
+  if (siblings) groups.push(siblings)
+  if (spouses) groups.push(spouses)
+  if (children) groups.push(children)
 
-  let y = 216
+  let y = 242
   let content = ''
-  const inner = WIDTH - PADDING * 2
   if (parents) {
-    const rendered = renderGroup(parents, PADDING, y, inner)
+    const rendered = renderCardsSection(parents.title, parents.nodes, y, true)
     content += rendered.svg
-    y += rendered.height + 34
+    y += rendered.height + 24
+    groups.shift()
   }
 
-  const selfW = 560
-  const selfX = (WIDTH - selfW) / 2
-  content += `<line x1="${WIDTH / 2}" y1="${Math.max(190, y - 34)}" x2="${WIDTH / 2}" y2="${y}" stroke="#9bc9c1" stroke-width="4"/>`
-  content += nodeCard(selfX, y, selfW, { name: selfName, detail: 'الشخص الحالي' }, true)
-  const selfCenterY = y + 44
-  y += 124
+  content += `<line x1="${WIDTH / 2}" y1="${y - 20}" x2="${WIDTH / 2}" y2="${y + 5}" stroke="#9bc9c1" stroke-width="4"/>`
+  const selfW = 510
+  content += nodeCard((WIDTH - selfW) / 2, y, selfW, { name: selfName, detail: 'الشخص الحالي' }, true)
+  y += 122
 
-  if (siblings || spouses) {
-    const gap = 26
-    const sideW = (inner - gap) / 2
-    const left = siblings ? renderGroup(siblings, PADDING, y, sideW) : null
-    const right = spouses ? renderGroup(spouses, PADDING + sideW + gap, y, sideW) : null
-    if (left) content += left.svg
-    if (right) content += right.svg
-    const rowH = Math.max(left?.height || 0, right?.height || 0)
-    content += `<path d="M ${selfX} ${selfCenterY} H ${PADDING + sideW / 2}" stroke="#b8d8d2" stroke-width="3" fill="none"/><path d="M ${selfX + selfW} ${selfCenterY} H ${PADDING + sideW + gap + sideW / 2}" stroke="#b8d8d2" stroke-width="3" fill="none"/>`
-    y += rowH + 34
-  }
-
-  if (children) {
-    content += `<line x1="${WIDTH / 2}" y1="${y - 30}" x2="${WIDTH / 2}" y2="${y}" stroke="#9bc9c1" stroke-width="4"/>`
-    const rendered = renderGroup(children, PADDING, y, inner)
+  for (const group of groups) {
+    const rendered = renderCardsSection(group.title, group.nodes, y, group.title.includes('الأبناء'))
     content += rendered.svg
-    y += rendered.height + 42
+    y += rendered.height + 22
   }
 
-  if (extendedGroups.length) {
-    content += `${svgText(WIDTH - PADDING, y + 20, 'القرابة الممتدة', 28, NAVY, 900, 'end', 30)}${svgText(WIDTH - PADDING, y + 51, 'علاقات مستنتجة من شبكة النسب المسجلة', 16, MUTED, 700, 'end', 42)}`
-    y += 76
-    const gap = 24
-    const colW = (inner - gap) / 2
-    for (let i = 0; i < extendedGroups.length; i += 2) {
-      const first = renderGroup(extendedGroups[i], PADDING + colW + gap, y, colW)
-      content += first.svg
-      const secondGroup = extendedGroups[i + 1]
-      const second = secondGroup ? renderGroup(secondGroup, PADDING, y, colW) : null
-      if (second) content += second.svg
-      y += Math.max(first.height, second?.height || 0) + 24
+  if (extended) {
+    const extendedGroups = Array.from(extended.querySelectorAll('.kin-group')).map(parseGroup).filter((item): item is ShareGroup => Boolean(item))
+    if (extendedGroups.length) {
+      y += 8
+      content += `${svgText(WIDTH / 2, y + 24, 'القرابة الممتدة', 25, NAVY, 900, 28)}${svgText(WIDTH / 2, y + 52, 'علاقات مستنتجة من شبكة النسب المسجلة', 14, MUTED, 700, 42)}`
+      y += 74
+      for (const group of extendedGroups) {
+        const rendered = renderCardsSection(group.title, group.nodes, y, false)
+        content += rendered.svg
+        y += rendered.height + 18
+      }
     }
   }
 
-  const height = Math.max(980, y + 110)
-  return { svg: svgShell('صلة القرابة', 'شبكة العلاقات', options.personName, content, height), width: WIDTH, height }
+  const height = Math.max(900, y + 95)
+  return { svg: shell('شبكة العلاقات', options.personName, content, height), width: WIDTH, height }
 }
 
 function parseLineageRows(root: HTMLElement) {
@@ -205,12 +191,17 @@ function parseLineageRows(root: HTMLElement) {
     let depth = 0
     let parent = node.parentElement
     while (parent && !parent.classList.contains('lineage-expand-tree')) {
-      if (parent.classList.contains('lineage-expand-node')) depth += 1
+      if (parent.classList.contains('lineage-expand-households')) depth += 1
       parent = parent.parentElement
     }
     const spouses = card ? Array.from(card.querySelectorAll<HTMLElement>('.lineage-spouse-rail button strong')).map((item) => item.textContent?.trim() || '').filter(Boolean) : []
     return [{ name, detail: text(card, '.lineage-expand-copy small'), spouses, depth }]
   })
+}
+
+function lineageNode(row: LineageRow): ShareNode {
+  const spouse = row.spouses.length ? ` · زوج/زوجة: ${row.spouses.join('، ')}` : ''
+  return { name: row.name, detail: `${row.detail || ''}${spouse}`.trim() }
 }
 
 function buildLineageSvg(options: CaptureOptions) {
@@ -223,71 +214,59 @@ function buildLineageSvg(options: CaptureOptions) {
   const branches = Array.from(root.querySelectorAll<HTMLElement>('.lineage-branch-strip > button')).map((item) => ({ name: text(item, 'strong'), detail: text(item, 'small') })).filter((item) => item.name)
   const rows = parseLineageRows(root)
 
-  let y = 220
+  let y = 242
   let content = ''
-  const rootW = 700
+  const rootW = 620
   const rootX = (WIDTH - rootW) / 2
-  content += `${roundedRect(rootX, y, rootW, 142, TEAL_LIGHT, '#add8d0', 30)}${svgText(WIDTH / 2, y + 34, 'الجد الأعلى', 16, BLUE, 900)}${svgText(WIDTH / 2, y + 75, rootName, 28, NAVY, 900, 'middle', 34)}${lineageName ? svgText(WIDTH / 2, y + 111, lineageName, 17, MUTED, 700, 'middle', 40) : ''}`
-  if (rootSpouses.length) content += svgText(WIDTH / 2, y + 133, `الزوج/الزوجة: ${rootSpouses.join(' · ')}`, 14, MUTED, 700, 'middle', 70)
-  y += 176
+  content += `${roundedRect(rootX, y, rootW, 132, TEAL_LIGHT, '#add8d0', 26)}${svgText(WIDTH / 2, y + 31, 'الجد الأعلى', 15, BLUE, 900, 18)}${svgText(WIDTH / 2, y + 68, rootName, 25, NAVY, 900, 32)}${lineageName ? svgText(WIDTH / 2, y + 98, lineageName, 15, MUTED, 700, 38) : ''}${rootSpouses.length ? svgText(WIDTH / 2, y + 120, `الزوج/الزوجة: ${rootSpouses.join('، ')}`, 12, MUTED, 700, 58) : ''}`
+  y += 157
 
   if (stats.length) {
-    const statW = 250
-    const total = stats.length * statW + (stats.length - 1) * 18
-    let x = (WIDTH - total) / 2 + total - statW
-    stats.forEach((stat) => {
-      content += `${roundedRect(x, y, statW, 88, '#fff', BORDER, 18)}${svgText(x + statW / 2, y + 34, stat.value || '—', 26, NAVY, 900)}${svgText(x + statW / 2, y + 65, stat.label, 15, MUTED, 700)}`
-      x -= statW + 18
+    const gap = 14
+    const cols = Math.min(3, stats.length)
+    const cardW = (720 - gap * (cols - 1)) / cols
+    const startX = (WIDTH - (cardW * cols + gap * (cols - 1))) / 2
+    stats.slice(0, 3).forEach((stat, index) => {
+      const x = startX + index * (cardW + gap)
+      content += `${roundedRect(x, y, cardW, 78, '#fff', BORDER, 16)}${svgText(x + cardW / 2, y + 31, stat.value || '—', 23, NAVY, 900, 10)}${svgText(x + cardW / 2, y + 59, stat.label, 13, MUTED, 700, 18)}`
     })
-    y += 124
+    y += 104
   }
 
   if (path.length) {
-    content += svgText(WIDTH - PADDING, y + 18, 'مسار الشخص داخل النسب', 21, NAVY, 900, 'end', 35)
-    y += 38
-    const pillW = 300
-    const gap = 14
-    const perRow = 4
-    path.forEach((name, index) => {
-      const row = Math.floor(index / perRow)
-      const col = index % perRow
-      const x = WIDTH - PADDING - pillW - col * (pillW + gap)
-      const yy = y + row * 62
-      content += `${roundedRect(x, yy, pillW, 48, index === path.length - 1 ? TEAL_LIGHT : '#fff', BORDER, 24)}${svgText(x + pillW / 2, yy + 31, name, 15, NAVY, 800, 'middle', 29)}`
-    })
-    y += Math.ceil(path.length / perRow) * 62 + 24
+    const nodes = path.map((name, index) => ({ name, detail: index === path.length - 1 ? 'الشخص الحالي' : 'ضمن مسار النسب' }))
+    const rendered = renderCardsSection('مسار الشخص داخل النسب', nodes, y, true, 3)
+    content += rendered.svg
+    y += rendered.height + 22
   }
 
   if (branches.length) {
-    content += `<line x1="${WIDTH / 2}" y1="${y - 22}" x2="${WIDTH / 2}" y2="${y + 16}" stroke="#9bc9c1" stroke-width="4"/>${svgText(WIDTH - PADDING, y + 22, 'الفروع المباشرة', 24, NAVY, 900, 'end', 32)}`
-    y += 50
-    const gap = 18
-    const cardW = (WIDTH - PADDING * 2 - gap * 2) / 3
-    branches.forEach((branch, index) => {
-      const row = Math.floor(index / 3)
-      const col = index % 3
-      const x = WIDTH - PADDING - cardW - col * (cardW + gap)
-      const yy = y + row * 118
-      content += `${roundedRect(x, yy, cardW, 98, '#fff', BORDER, 20)}${svgText(x + cardW / 2, yy + 38, branch.name, 19, NAVY, 900, 'middle', 30)}${svgText(x + cardW / 2, yy + 70, branch.detail, 14, MUTED, 700, 'middle', 34)}`
-    })
-    y += Math.ceil(branches.length / 3) * 118 + 30
+    const rendered = renderCardsSection('الفروع المباشرة', branches.map((branch) => ({ name: branch.name, detail: branch.detail })), y, false, 3)
+    content += rendered.svg
+    y += rendered.height + 22
   }
 
   if (rows.length) {
-    content += `${svgText(WIDTH - PADDING, y + 18, 'الفرع المفتوح حاليًا', 24, NAVY, 900, 'end', 34)}${svgText(WIDTH - PADDING, y + 48, 'الأجيال المفتوحة في الشاشة وقت إنشاء الصورة', 15, MUTED, 700, 'end', 44)}`
-    y += 72
-    rows.forEach((row) => {
-      const indent = Math.min(row.depth, 7) * 62
-      const x = PADDING + indent
-      const w = WIDTH - PADDING * 2 - indent
-      content += `<line x1="${WIDTH - PADDING - indent + 22}" y1="${y - 14}" x2="${WIDTH - PADDING - indent + 22}" y2="${y + 82}" stroke="#c7ded9" stroke-width="3"/>`
-      content += `${roundedRect(x, y, w, 86, row.depth === 0 ? TEAL_LIGHT : '#fff', row.depth === 0 ? '#b7ddd6' : BORDER, 18)}${svgText(x + w - 32, y + 34, row.name, 20, NAVY, 900, 'end', 42)}${svgText(x + w - 32, y + 61, row.detail || (row.spouses.length ? `الزوج/الزوجة: ${row.spouses.join(' · ')}` : ''), 14, MUTED, 700, 'end', 60)}`
-      y += 102
-    })
+    content += `${svgText(WIDTH / 2, y + 24, 'الفرع المفتوح حاليًا', 25, NAVY, 900, 30)}${svgText(WIDTH / 2, y + 53, 'ترتيب الأفراد حسب الأجيال المفتوحة في الشاشة', 14, MUTED, 700, 44)}`
+    y += 76
+    const byDepth = new Map<number, LineageRow[]>()
+    for (const row of rows) {
+      const bucket = byDepth.get(row.depth) ?? []
+      bucket.push(row)
+      byDepth.set(row.depth, bucket)
+    }
+    const depths = [...byDepth.keys()].sort((a, b) => a - b)
+    for (const depth of depths) {
+      const generationRows = byDepth.get(depth) ?? []
+      const title = depth === 0 ? 'بداية الفرع' : `الجيل ${depth + 1}`
+      const rendered = renderCardsSection(title, generationRows.map(lineageNode), y, depth === 0, 3)
+      content += rendered.svg
+      y += rendered.height + 20
+    }
   }
 
-  const height = Math.max(980, y + 110)
-  return { svg: svgShell('صلة القرابة', 'هيكل النسب', options.personName, content, height), width: WIDTH, height }
+  const height = Math.max(900, y + 95)
+  return { svg: shell('هيكل النسب', options.personName, content, height), width: WIDTH, height }
 }
 
 async function loadSvgImage(svg: string) {
@@ -308,10 +287,9 @@ async function loadSvgImage(svg: string) {
 
 async function canvasToPng(canvas: HTMLCanvasElement) {
   try {
-    const blob = await new Promise<Blob>((resolve, reject) => {
+    return await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((value) => value ? resolve(value) : reject(new Error('تعذر إنشاء PNG.')), 'image/png', 0.96)
     })
-    return blob
   } catch {
     const dataUrl = canvas.toDataURL('image/png', 0.96)
     return await fetch(dataUrl).then((response) => response.blob())
@@ -322,7 +300,7 @@ export async function createTreeImage(options: CaptureOptions): Promise<TreeImag
   if (!options.elements.length) throw new Error('لا يوجد مخطط ظاهر يمكن تحويله إلى صورة.')
   const rendered = options.mode === 'network' ? buildNetworkSvg(options) : buildLineageSvg(options)
   const image = await loadSvgImage(rendered.svg)
-  const scale = Math.max(0.5, Math.min(2, 4096 / rendered.width, 8192 / rendered.height))
+  const scale = Math.min(1.6, 3600 / rendered.width, 12000 / rendered.height)
   const outputWidth = Math.max(1, Math.round(rendered.width * scale))
   const outputHeight = Math.max(1, Math.round(rendered.height * scale))
   const canvas = document.createElement('canvas')
@@ -346,7 +324,7 @@ export function downloadTreeImage(blob: Blob, fileName: string) {
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 1200)
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500)
 }
 
 export async function shareTreeImage(blob: Blob, fileName: string, title: string) {

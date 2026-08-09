@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import PeoplePicker from './PeoplePicker'
 import KinshipNetwork from './KinshipNetwork'
 import LineageSummaryCard from './LineageSummaryCard'
 import '../kinship-path-summary.css'
+import '../kinship-engine.css'
 
 type PersonSummary = {
   id: string
@@ -23,6 +24,30 @@ type PathRow = {
   is_inferred: boolean
 }
 
+type KinshipResult = {
+  from_person_id: string
+  from_name: string
+  to_person_id: string
+  to_name: string
+  relationship_code: string
+  relationship_label: string
+  relationship_detail: string
+  confidence: 'high' | 'medium' | 'unknown'
+  data_status: 'confirmed' | 'partial' | 'insufficient'
+  degree: number | null
+  is_blood_relation: boolean
+  via_marriage: boolean
+  common_ancestor_id: string | null
+  common_ancestor_name: string | null
+  from_common_depth: number | null
+  to_common_depth: number | null
+  missing_from_parent_slots: number
+  missing_to_parent_slots: number
+  from_known_ancestor_depth: number
+  to_known_ancestor_depth: number
+  path: PathRow[] | null
+}
+
 type Props = {
   initialPersonId?: string | null
   onOpenPerson: (personId: string) => void
@@ -32,13 +57,8 @@ type Props = {
 
 type Mode = 'tree' | 'path'
 
-const PATH_MAX_DEPTH = 6
-const PATH_CACHE_TTL = 5 * 60_000
-const pathResultCache = new Map<string, { savedAt: number; rows: PathRow[] }>()
-
-function pathCacheKey(fromId: string, toId: string) {
-  return `${fromId}>${toId}>${PATH_MAX_DEPTH}`
-}
+const ENGINE_MAX_DEPTH = 8
+const LEGACY_PATH_MAX_DEPTH = 6
 
 function familyName(value: PersonSummary['families']) {
   if (!value) return ''
@@ -55,141 +75,20 @@ function relationLabel(type: string, gender: string | null) {
   return 'صلة'
 }
 
-function shortPersonName(fullName: string) {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean)
-  if (parts.length <= 1) return parts[0] || fullName
-  const first = parts[0]
-  const second = parts[1]
-  const compoundFirst = new Set(['عبد', 'أبو', 'ابو', 'أم', 'ام'])
-  const compoundSecond = new Set(['الدين', 'الأمين', 'الامين', 'الرحمن', 'الرحيم', 'الحفيظ'])
-  return compoundFirst.has(first) || compoundSecond.has(second) ? `${first} ${second}` : first
+function confidenceLabel(value: KinshipResult['confidence']) {
+  if (value === 'high') return 'ثقة عالية'
+  if (value === 'medium') return 'ثقة متوسطة'
+  return 'غير محسوم'
 }
 
-function childWord(gender: PathRow['gender']) {
-  if (gender === 'female') return 'بنت'
-  if (gender === 'male') return 'ابن'
-  return 'ابن/بنت'
+function safePath(value: KinshipResult['path'] | unknown): PathRow[] {
+  return Array.isArray(value) ? value as PathRow[] : []
 }
 
-function personRelationWord(type: string, gender: PathRow['gender']) {
-  if (type === 'parent') return gender === 'female' ? 'أم' : gender === 'male' ? 'أب' : 'والد/والدة'
-  if (type === 'child') return childWord(gender)
-  if (type === 'sibling') return gender === 'female' ? 'أخت' : gender === 'male' ? 'أخ' : 'أخ/أخت'
-  if (type === 'spouse') return gender === 'female' ? 'زوجة' : gender === 'male' ? 'زوج' : 'زوج/زوجة'
-  if (type === 'guardian') return 'ولي/وصي'
-  return 'قريب'
-}
-
-function parentWord(gender: PathRow['gender']) {
-  return gender === 'female' ? 'أم' : gender === 'male' ? 'أب' : 'والد/والدة'
-}
-
-function siblingWord(gender: PathRow['gender']) {
-  return gender === 'female' ? 'أخت' : gender === 'male' ? 'أخ' : 'أخ/أخت'
-}
-
-function spouseWord(gender: PathRow['gender']) {
-  return gender === 'female' ? 'زوجة' : gender === 'male' ? 'زوج' : 'زوج/زوجة'
-}
-
-function targetKinshipTerm(path: PathRow[]) {
-  if (path.length < 2) return ''
-  const relations = path.slice(1).map((step) => step.relation_type)
-  const signature = relations.join('>')
-  const target = path[path.length - 1]
-
-  if (relations.length === 1) return personRelationWord(relations[0], target.gender)
-
-  if (signature === 'parent>parent') return target.gender === 'female' ? 'جدة' : target.gender === 'male' ? 'جد' : 'جد/جدة'
-  if (signature === 'child>child') return target.gender === 'female' ? 'حفيدة' : target.gender === 'male' ? 'حفيد' : 'حفيد/حفيدة'
-
-  if (signature === 'parent>sibling') {
-    const sourceParent = path[1]
-    if (sourceParent.gender === 'male') return target.gender === 'female' ? 'عمة' : target.gender === 'male' ? 'عم' : 'عم/عمة'
-    if (sourceParent.gender === 'female') return target.gender === 'female' ? 'خالة' : target.gender === 'male' ? 'خال' : 'خال/خالة'
-  }
-
-  if (signature === 'sibling>child') {
-    const sibling = path[1]
-    return `${childWord(target.gender)} ${siblingWord(sibling.gender)}`
-  }
-
-  if (signature === 'sibling>spouse') {
-    const sibling = path[1]
-    return `${spouseWord(target.gender)} ${siblingWord(sibling.gender)}`
-  }
-
-  if (signature === 'parent>spouse') {
-    const parent = path[1]
-    return `${spouseWord(target.gender)} ${parentWord(parent.gender)}`
-  }
-
-  if (signature === 'child>spouse') {
-    const child = path[1]
-    return `${spouseWord(target.gender)} ${childWord(child.gender)}`
-  }
-
-  if (signature === 'spouse>parent') {
-    const spouse = path[1]
-    return `${parentWord(target.gender)} ${spouseWord(spouse.gender)}`
-  }
-
-  if (signature === 'spouse>sibling') {
-    const spouse = path[1]
-    return `${siblingWord(target.gender)} ${spouseWord(spouse.gender)}`
-  }
-
-  if (signature === 'spouse>child') {
-    const spouse = path[1]
-    return `${childWord(target.gender)} ${spouseWord(spouse.gender)}`
-  }
-
-  if (signature === 'parent>sibling>child') {
-    const sourceParent = path[1]
-    const parentSibling = path[2]
-    let root = ''
-    if (sourceParent.gender === 'male') root = parentSibling.gender === 'female' ? 'عمة' : parentSibling.gender === 'male' ? 'عم' : ''
-    if (sourceParent.gender === 'female') root = parentSibling.gender === 'female' ? 'خالة' : parentSibling.gender === 'male' ? 'خال' : ''
-    return root ? `${childWord(target.gender)} ${root}` : ''
-  }
-
-  return ''
-}
-
-function directThirdDegreePhrase(path: PathRow[]) {
-  const degree = path.length - 1
-  if (degree < 1 || degree > 3) return ''
-  const sourceName = shortPersonName(path[0].full_name)
-  const targetName = shortPersonName(path[path.length - 1].full_name)
-  const parts = path.slice(1).reverse().map((step) => personRelationWord(step.relation_type, step.gender))
-  return `${targetName} ${parts.join(' ')} ${sourceName}`
-}
-
-function edgeExplanation(from: PathRow, to: PathRow) {
-  const fromName = shortPersonName(from.full_name)
-  const toName = shortPersonName(to.full_name)
-
-  if (to.relation_type === 'parent') return `${fromName} ${childWord(from.gender)} ${toName}`
-  if (to.relation_type === 'child') return `${fromName} ${from.gender === 'female' ? 'أم' : from.gender === 'male' ? 'أب' : 'والد/والدة'} ${toName}`
-  if (to.relation_type === 'sibling') return `${fromName} ${from.gender === 'female' ? 'أخت' : from.gender === 'male' ? 'أخ' : 'أخ/أخت'} ${toName}`
-  if (to.relation_type === 'spouse') return `${fromName} ${from.gender === 'female' ? 'زوجة' : from.gender === 'male' ? 'زوج' : 'زوج/زوجة'} ${toName}`
-  if (to.relation_type === 'guardian') return `${fromName} مرتبط بوصاية مع ${toName}`
-  return `${fromName} مرتبط بـ ${toName}`
-}
-
-function buildKinshipSummary(path: PathRow[]) {
-  if (path.length < 2) return null
-  const source = path[0]
-  const target = path[path.length - 1]
-  const sourceName = shortPersonName(source.full_name)
-  const targetName = shortPersonName(target.full_name)
-  const term = targetKinshipTerm(path)
-  const directPhrase = directThirdDegreePhrase(path)
-  const title = term
-    ? `${targetName} ${term} ${sourceName}`
-    : directPhrase || `${targetName} ${target.gender === 'female' ? 'قريبة من' : 'قريب من'} ${sourceName}`
-  const explanation = path.slice(1).map((step, index) => edgeExplanation(path[index], step)).join('، و')
-  return { title, explanation: `${explanation}.`, inferred: Boolean(term || directPhrase) }
+function missingParentsLabel(count: number) {
+  if (count <= 0) return 'الوالدان المباشران مسجلان'
+  if (count === 1) return 'ينقص أحد الوالدين'
+  return 'الوالدان غير مكتملين'
 }
 
 export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddPerson, onAddRelation }: Props) {
@@ -200,6 +99,7 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
   const [fromId, setFromId] = useState(initialPersonId ?? '')
   const [toId, setToId] = useState('')
   const [path, setPath] = useState<PathRow[]>([])
+  const [kinshipResult, setKinshipResult] = useState<KinshipResult | null>(null)
   const [pathLoading, setPathLoading] = useState(false)
   const [pathMessage, setPathMessage] = useState('')
   const pathRequestRef = useRef(0)
@@ -236,12 +136,33 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
     return () => { cancelled = true }
   }, [focusId])
 
-  const pathTitle = useMemo(() => {
-    if (path.length < 2) return ''
-    return `${path[0]?.full_name ?? ''} ← ${path[path.length - 1]?.full_name ?? ''}`
-  }, [path])
+  function clearPathResult() {
+    pathRequestRef.current += 1
+    setPathLoading(false)
+    setPath([])
+    setKinshipResult(null)
+    setPathMessage('')
+  }
 
-  const kinshipSummary = useMemo(() => buildKinshipSummary(path), [path])
+  async function discoverLegacyPath(requestId: number) {
+    if (!supabase) return
+    const { data, error } = await supabase.rpc('get_kinship_path', {
+      p_from_person_id: fromId,
+      p_to_person_id: toId,
+      p_max_depth: LEGACY_PATH_MAX_DEPTH,
+    })
+    if (requestId !== pathRequestRef.current) return
+    setPathLoading(false)
+    if (error) {
+      setPathMessage('تعذر حساب صلة القرابة الآن. أعد المحاولة.')
+      return
+    }
+    const rows = (data ?? []) as PathRow[]
+    setPath(rows)
+    setPathMessage(rows.length
+      ? 'تم عرض المسار المسجل، لكن المسمى الذكي غير متاح مؤقتًا.'
+      : 'البيانات الحالية غير كافية لإثبات مسار بين الشخصين.')
+  }
 
   async function discoverPath() {
     if (!supabase || !fromId || !toId) {
@@ -253,46 +174,50 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
       return
     }
 
-    const cacheKey = pathCacheKey(fromId, toId)
-    const cached = pathResultCache.get(cacheKey)
-    if (cached && Date.now() - cached.savedAt < PATH_CACHE_TTL) {
-      setPath(cached.rows)
-      setPathMessage(cached.rows.length ? '' : 'لم نجد مسار قرابة موثقًا بين الشخصين ضمن ست درجات.')
-      return
-    }
-
     const requestId = ++pathRequestRef.current
     setPathLoading(true)
     setPathMessage('')
+    setPath([])
+    setKinshipResult(null)
 
-    const { data, error } = await supabase.rpc('get_kinship_path', {
+    const { data, error } = await supabase.rpc('get_kinship_relationship', {
       p_from_person_id: fromId,
       p_to_person_id: toId,
-      p_max_depth: PATH_MAX_DEPTH,
+      p_max_depth: ENGINE_MAX_DEPTH,
     })
 
     if (requestId !== pathRequestRef.current) return
-    setPathLoading(false)
 
     if (error) {
       const lowered = error.message.toLowerCase()
-      const unavailable = lowered.includes('does not exist') || lowered.includes('schema cache')
+      const unavailable = lowered.includes('does not exist') || lowered.includes('schema cache') || lowered.includes('could not find the function')
+      if (unavailable) {
+        await discoverLegacyPath(requestId)
+        return
+      }
+      setPathLoading(false)
       const timedOut = lowered.includes('statement timeout') || lowered.includes('57014') || lowered.includes('canceling statement')
-      setPathMessage(
-        unavailable
-          ? 'خدمة مسار القرابة غير متاحة حاليًا.'
-          : timedOut
-            ? 'استغرق التحليل وقتًا أطول من المتوقع. أعد المحاولة بعد لحظة.'
-            : 'تعذر حساب مسار القرابة الآن. أعد المحاولة.',
-      )
+      setPathMessage(timedOut
+        ? 'استغرق تحليل القرابة وقتًا أطول من المتوقع. أعد المحاولة بعد لحظة.'
+        : 'تعذر تحليل صلة القرابة الآن. أعد المحاولة.')
       return
     }
 
-    const rows = (data ?? []) as PathRow[]
-    pathResultCache.set(cacheKey, { savedAt: Date.now(), rows })
+    setPathLoading(false)
+    const row = ((data ?? [])[0] ?? null) as KinshipResult | null
+    if (!row) {
+      setPathMessage('تعذر قراءة بيانات أحد الشخصين أو أن السجل غير متاح.')
+      return
+    }
+
+    const rows = safePath(row.path)
+    setKinshipResult({ ...row, path: rows })
     setPath(rows)
-    setPathMessage(rows.length ? '' : 'لم نجد مسار قرابة موثقًا بين الشخصين ضمن ست درجات.')
   }
+
+  const pathFromName = kinshipResult?.from_name || path[0]?.full_name || ''
+  const pathToName = kinshipResult?.to_name || path[path.length - 1]?.full_name || ''
+  const pathTitle = pathFromName && pathToName ? `${pathFromName} ← ${pathToName}` : ''
 
   return (
     <section className="family-tree-page">
@@ -309,7 +234,7 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
 
       <nav className="tree-mode-tabs" aria-label="أدوات شجرة العائلة">
         <button type="button" className={mode === 'tree' ? 'active' : ''} onClick={() => setMode('tree')}><span>⌘</span><b>الشجرة</b><small>العلاقات حول شخص</small></button>
-        <button type="button" className={mode === 'path' ? 'active' : ''} onClick={() => setMode('path')}><span>↝</span><b>مسار القرابة</b><small>ما صلة شخص بآخر؟</small></button>
+        <button type="button" className={mode === 'path' ? 'active' : ''} onClick={() => setMode('path')}><span>↝</span><b>صلة القرابة</b><small>ما صلة شخص بآخر؟</small></button>
       </nav>
 
       {mode === 'tree' ? (
@@ -345,23 +270,45 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
       ) : (
         <div className="kinship-path-workspace">
           <section className="path-picker-card">
-            <div className="tree-card-heading"><div><span>اكتشاف ذكي</span><h2>ما صلة فلان بفلان؟</h2></div></div>
+            <div className="tree-card-heading"><div><span>محرك القرابة</span><h2>ما صلة فلان بفلان؟</h2></div></div>
             <div className="path-pickers">
-              <PeoplePicker searchMode="broad" label="من" value={fromId} onChange={(id) => { pathRequestRef.current += 1; setPathLoading(false); setFromId(id); setPath([]); setPathMessage('') }} excludeId={toId || undefined} required />
+              <PeoplePicker searchMode="broad" label="من" value={fromId} onChange={(id) => { clearPathResult(); setFromId(id) }} excludeId={toId || undefined} required />
               <span className="path-switch" aria-hidden="true">↔</span>
-              <PeoplePicker searchMode="broad" label="إلى" value={toId} onChange={(id) => { pathRequestRef.current += 1; setPathLoading(false); setToId(id); setPath([]); setPathMessage('') }} excludeId={fromId || undefined} required />
+              <PeoplePicker searchMode="broad" label="إلى" value={toId} onChange={(id) => { clearPathResult(); setToId(id) }} excludeId={fromId || undefined} required />
             </div>
-            <button className="path-discover-button" type="button" disabled={pathLoading || !fromId || !toId} onClick={() => void discoverPath()}>{pathLoading ? 'جارٍ تحليل شجرة النسب…' : 'اكتشف صلة القرابة'}</button>
+            <button className="path-discover-button" type="button" disabled={pathLoading || !fromId || !toId} onClick={() => void discoverPath()}>{pathLoading ? 'جارٍ تحليل النسب والمصاهرة…' : 'اكتشف صلة القرابة'}</button>
           </section>
+
+          {kinshipResult && (
+            <section className={`kinship-engine-card ${kinshipResult.data_status}`} aria-label="نتيجة صلة القرابة">
+              <div className="kinship-engine-head">
+                <div><small>صلة {kinshipResult.to_name} بالنسبة إلى {kinshipResult.from_name}</small><strong>{kinshipResult.relationship_label}</strong></div>
+                <span className="kinship-engine-direction">{kinshipResult.data_status === 'insufficient' ? 'غير محسوم' : `${kinshipResult.degree ?? 0} درجات`}</span>
+              </div>
+
+              <div className="kinship-engine-badges">
+                <span className="primary">{kinshipResult.is_blood_relation ? 'نسب' : kinshipResult.via_marriage ? 'مصاهرة' : 'صلة مسجلة'}</span>
+                <span>{confidenceLabel(kinshipResult.confidence)}</span>
+                {kinshipResult.common_ancestor_name && <span>الجد المشترك: {kinshipResult.common_ancestor_name}</span>}
+              </div>
+
+              <p className="kinship-engine-detail">{kinshipResult.relationship_detail}</p>
+
+              {kinshipResult.data_status === 'insufficient' && (
+                <>
+                  <div className="kinship-engine-incomplete-grid">
+                    <div><small>{kinshipResult.from_name}</small><strong>{missingParentsLabel(kinshipResult.missing_from_parent_slots)}</strong><span>أعلى عمق معروف: {kinshipResult.from_known_ancestor_depth} جيل</span></div>
+                    <div><small>{kinshipResult.to_name}</small><strong>{missingParentsLabel(kinshipResult.missing_to_parent_slots)}</strong><span>أعلى عمق معروف: {kinshipResult.to_known_ancestor_depth} جيل</span></div>
+                  </div>
+                  <p className="kinship-engine-hint">يمكن مواصلة العمل وإضافة البيانات لاحقًا؛ سيعيد النظام حساب المسمى تلقائيًا عند اكتمال مسار جديد.</p>
+                </>
+              )}
+            </section>
+          )}
 
           {path.length > 0 && (
             <section className="path-result-card">
-              <header><div><span>أقصر مسار موثق</span><h3>{pathTitle}</h3></div><b>{Math.max(0, path.length - 1)} درجات</b></header>
-
-              {kinshipSummary && <section className="path-kinship-summary" aria-label="مسمى صلة القرابة">
-                <div className="path-kinship-label"><span aria-hidden="true">✦</span><div><small>مسمى القرابة</small><strong>{kinshipSummary.title}</strong></div></div>
-                <div className="path-kinship-explanation"><small>كيف وصلنا إليها؟</small><p>{kinshipSummary.explanation}</p></div>
-              </section>}
+              <header><div><span>{kinshipResult ? 'المسار الذي أثبت النتيجة' : 'أقصر مسار موثق'}</span><h3>{pathTitle}</h3></div><b>{Math.max(0, path.length - 1)} درجات</b></header>
 
               <div className="kinship-path-strip">
                 {path.map((step, index) => (
@@ -374,7 +321,7 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
                   </div>
                 ))}
               </div>
-              <p className="path-footnote">النتيجة تعتمد فقط على العلاقات المعتمدة في المنصة، وقد تتحسن تلقائيًا كلما اكتملت بيانات النسب.</p>
+              <p className="path-footnote">النتيجة مبنية على العلاقات المعتمدة حاليًا، وتتحدث تلقائيًا كلما أضيف أب أو أم أو زواج جديد.</p>
             </section>
           )}
 

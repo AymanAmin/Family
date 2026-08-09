@@ -116,6 +116,12 @@ export default function TreeImageShare() {
     }
   }
 
+  function downloadPreview() {
+    if (!preview) return
+    downloadTreeImage(preview.blob, preview.fileName)
+    setMessage('✓ تم تنزيل صورة PNG إلى الجهاز. يمكنك فتحها من التنزيلات أو معرض الصور.')
+  }
+
   async function sharePreview() {
     if (!preview) return
     setMessage('')
@@ -165,13 +171,13 @@ export default function TreeImageShare() {
             <img src={preview.url} alt={preview.mode === 'lineage' ? `هيكل نسب ${preview.personName}` : `شبكة علاقات ${preview.personName}`} />
           </div>
 
-          {message && <div className="tree-image-share-message" role="status">{message}</div>}
+          {message && <div className="tree-image-share-message" role="status" aria-live="polite">{message}</div>}
 
           <footer>
             <button type="button" className="primary" onClick={() => void sharePreview()}><span aria-hidden="true">↗</span> مشاركة</button>
-            <button type="button" onClick={() => downloadTreeImage(preview.blob, preview.fileName)}><span aria-hidden="true">↓</span> تنزيل PNG</button>
+            <button type="button" onClick={downloadPreview}><span aria-hidden="true">↓</span> تنزيل PNG</button>
           </footer>
-          <small className="tree-image-share-note">يُنشئ النظام PNG حقيقيًا من بيانات الشجرة نفسها، وليس لقطة SVG من الصفحة. في هيكل النسب تظهر الأجيال المفتوحة حاليًا؛ افتح ما تريد إظهاره قبل إنشاء الصورة.</small>
+          <small className="tree-image-share-note">يُرتب هيكل النسب حسب الأجيال في صفوف واضحة لتكون الصورة مقروءة عند المشاركة. في هيكل النسب تظهر الأجيال المفتوحة حاليًا؛ افتح ما تريد إظهاره قبل إنشاء الصورة.</small>
         </section>
       </div>,
       document.body,

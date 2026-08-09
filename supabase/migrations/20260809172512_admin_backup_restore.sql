@@ -72,7 +72,9 @@ begin
     raise exception 'Backup would remove the current primary administrator.';
   end if;
 
-  perform set_config('session_replication_role', 'replica', true);
+  foreach v_table in array v_required_tables loop
+    execute format('alter table public.%I disable trigger user', v_table);
+  end loop;
 
   delete from public.event_people;
   delete from public.account_link_requests;
@@ -132,7 +134,9 @@ begin
     raise exception 'Restored backup failed relationship integrity validation.';
   end if;
 
-  perform set_config('session_replication_role', 'origin', true);
+  foreach v_table in array v_required_tables loop
+    execute format('alter table public.%I enable trigger user', v_table);
+  end loop;
 
   return jsonb_build_object(
     'ok', true,
@@ -140,10 +144,6 @@ begin
     'table_count', array_length(v_required_tables, 1),
     'total_rows', v_actual_total
   );
-exception
-  when others then
-    perform set_config('session_replication_role', 'origin', true);
-    raise;
 end;
 $function$;
 

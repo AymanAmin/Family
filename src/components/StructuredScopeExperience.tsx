@@ -183,8 +183,9 @@ export default function StructuredScopeExperience() {
           badge.className = 'structured-event-scope'
           meta.append(badge)
         }
-        badge.innerHTML = `<b aria-hidden="true">⌘</b>${row.scope_name}`
-        badge.dataset.scopeType = row.scope_type
+        const nextHtml = `<b aria-hidden="true">⌘</b>${row.scope_name}`
+        if (badge.innerHTML !== nextHtml) badge.innerHTML = nextHtml
+        if (badge.dataset.scopeType !== row.scope_type) badge.dataset.scopeType = row.scope_type
         if (row.scope_type === 'household' && row.scope_id) {
           badge.classList.add('clickable')
           badge.onclick = () => window.dispatchEvent(new CustomEvent('sila:open-household', { detail: { householdId: row.scope_id } }))

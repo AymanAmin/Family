@@ -1,8 +1,7 @@
 import { useEffect } from 'react'
 
 function hasHomeHouseholdAnchor(): boolean {
-  return [...document.querySelectorAll<HTMLElement>('.section-block')]
-    .some((section) => section.querySelector('h2')?.textContent?.includes('العائلات المعتمدة'))
+  return Boolean(document.querySelector('.household-home-anchor'))
 }
 
 function removeStaleHouseholdPreview(): void {

@@ -21,18 +21,6 @@ export type DirectoryPerson = {
   created_at: string
 }
 
-// Kept only so older App.tsx callers remain source-compatible while the UI
-// has moved from manually-created families to system-generated households.
-export type DirectoryFamily = {
-  id: string
-  name: string
-  description: string | null
-  origin_place: string | null
-  status: 'pending' | 'approved' | 'rejected'
-  created_by: string
-  created_at: string
-}
-
 export type DirectoryHousehold = {
   household_id: string
   display_name: string
@@ -50,7 +38,6 @@ type Props = {
   initialTerm?: string
   initialTab?: 'all' | 'people' | 'families'
   onOpenPerson: (person: DirectoryPerson) => void
-  onOpenFamily: (family: DirectoryFamily) => void
 }
 
 type Tab = 'all' | 'people' | 'families'

@@ -11,6 +11,7 @@ import AdminVisitorStat from './components/AdminVisitorStat'
 import AdminPendingDashboard from './components/AdminPendingDashboard'
 import AdminLineageReview from './components/AdminLineageReview'
 import AdminLineageStructure from './components/AdminLineageStructure'
+import AdminLineageSyncStatus from './components/AdminLineageSyncStatus'
 import './styles.css'
 import './mobile-app.css'
 import './mobile-fixes.css'
@@ -159,6 +160,7 @@ createRoot(rootElement).render(
     <AdminPendingDashboard />
     <AdminLineageReview />
     <AdminLineageStructure />
+    <AdminLineageSyncStatus />
     <AdminVisitorStat />
   </StrictMode>,
 )

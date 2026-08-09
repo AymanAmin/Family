@@ -1,10 +1,12 @@
 type CaptureMode = 'network' | 'lineage'
+type ExportFormat = 'png' | 'svg'
 
 export type TreeImageExport = {
   blob: Blob
   fileName: string
   width: number
   height: number
+  format: ExportFormat
 }
 
 type CaptureOptions = {
@@ -31,10 +33,12 @@ function collectDocumentStyles() {
       for (const rule of Array.from(sheet.cssRules)) {
         const text = rule.cssText || ''
         if (!text || text.startsWith('@font-face') || text.startsWith('@import')) continue
+        const lowered = text.toLowerCase()
+        if (lowered.includes('url(') || lowered.includes('image-set(') || lowered.includes('cross-fade(')) continue
         css += `${text}\n`
       }
     } catch {
-      // Cross-origin styles are intentionally skipped. The capture has local fallback styles below.
+      // Cross-origin styles are intentionally skipped.
     }
   }
   return css
@@ -60,6 +64,13 @@ function captureOverrides(mode: CaptureMode) {
     .tree-share-sheet .lineage-focus-path > div { overflow: visible !important; flex-wrap: wrap !important; }
     .tree-share-sheet .lineage-expand-tree { overflow: visible !important; }
     .tree-share-sheet .lineage-expand-households { overflow: visible !important; }
+    .tree-share-sheet img,
+    .tree-share-sheet picture,
+    .tree-share-sheet video,
+    .tree-share-sheet canvas,
+    .tree-share-sheet iframe,
+    .tree-share-sheet object,
+    .tree-share-sheet embed { display: none !important; }
     ${mode === 'network' ? '.tree-share-sheet .kinship-map { padding: 30px !important; }' : ''}
   `
 }
@@ -70,6 +81,19 @@ function addText(parent: HTMLElement, className: string, text: string) {
   element.textContent = text
   parent.appendChild(element)
   return element
+}
+
+function sanitizeClone(root: HTMLElement) {
+  root.querySelectorAll('img,picture,video,canvas,iframe,object,embed,source').forEach((node) => node.remove())
+  root.querySelectorAll<HTMLElement>('[style]').forEach((node) => {
+    const inlineStyle = node.getAttribute('style') || ''
+    if (/\b(url|image-set|cross-fade)\s*\(/i.test(inlineStyle)) node.removeAttribute('style')
+  })
+  root.querySelectorAll('svg image,svg use').forEach((node) => {
+    const href = node.getAttribute('href') || node.getAttribute('xlink:href') || ''
+    if (href && !href.startsWith('#') && !href.startsWith('data:')) node.remove()
+  })
+  return root
 }
 
 function buildCaptureSheet(options: CaptureOptions) {
@@ -138,7 +162,7 @@ function buildCaptureSheet(options: CaptureOptions) {
   const content = document.createElement('main')
   content.className = 'tree-share-content'
   options.elements.forEach((element) => {
-    const clone = element.cloneNode(true) as HTMLElement
+    const clone = sanitizeClone(element.cloneNode(true) as HTMLElement)
     clone.removeAttribute('style')
     content.appendChild(clone)
   })
@@ -172,9 +196,8 @@ function waitForLayout() {
   })
 }
 
-async function loadSvgImage(svg: string) {
-  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
+async function loadSvgImage(svgBlob: Blob) {
+  const url = URL.createObjectURL(svgBlob)
   const image = new Image()
   try {
     await new Promise<void>((resolve, reject) => {
@@ -186,6 +209,16 @@ async function loadSvgImage(svg: string) {
   } finally {
     URL.revokeObjectURL(url)
   }
+}
+
+function canvasToPng(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    try {
+      canvas.toBlob((value) => value ? resolve(value) : reject(new Error('تعذر إنشاء ملف PNG.')), 'image/png', 0.96)
+    } catch (error) {
+      reject(error)
+    }
+  })
 }
 
 export async function createTreeImage(options: CaptureOptions): Promise<TreeImageExport> {
@@ -203,27 +236,29 @@ export async function createTreeImage(options: CaptureOptions): Promise<TreeImag
     const styles = collectDocumentStyles()
     const serialized = new XMLSerializer().serializeToString(sheet)
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>${styles}\n${captureOverrides(options.mode)}</style>${serialized}</div></foreignObject></svg>`
-
-    const image = await loadSvgImage(svg)
-    const scale = Math.min(2, 4096 / width, 8192 / height)
-    const outputWidth = Math.max(1, Math.round(width * scale))
-    const outputHeight = Math.max(1, Math.round(height * scale))
-    const canvas = document.createElement('canvas')
-    canvas.width = outputWidth
-    canvas.height = outputHeight
-    const context = canvas.getContext('2d')
-    if (!context) throw new Error('تعذر تهيئة محرك الصور في هذا الجهاز.')
-    context.fillStyle = '#fffdf9'
-    context.fillRect(0, 0, outputWidth, outputHeight)
-    context.drawImage(image, 0, 0, outputWidth, outputHeight)
-
-    const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((value) => value ? resolve(value) : reject(new Error('تعذر إنشاء ملف PNG.')), 'image/png', 0.96)
-    })
-
+    const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
     const kind = options.mode === 'network' ? 'relationship-network' : 'lineage-tree'
-    const fileName = `sila-${kind}-${cleanFilePart(options.personName)}.png`
-    return { blob, fileName, width: outputWidth, height: outputHeight }
+    const baseName = `sila-${kind}-${cleanFilePart(options.personName)}`
+
+    try {
+      const image = await loadSvgImage(svgBlob)
+      const scale = Math.min(2, 4096 / width, 8192 / height)
+      const outputWidth = Math.max(1, Math.round(width * scale))
+      const outputHeight = Math.max(1, Math.round(height * scale))
+      const canvas = document.createElement('canvas')
+      canvas.width = outputWidth
+      canvas.height = outputHeight
+      const context = canvas.getContext('2d')
+      if (!context) throw new Error('تعذر تهيئة محرك الصور في هذا الجهاز.')
+      context.fillStyle = '#fffdf9'
+      context.fillRect(0, 0, outputWidth, outputHeight)
+      context.drawImage(image, 0, 0, outputWidth, outputHeight)
+      const pngBlob = await canvasToPng(canvas)
+      return { blob: pngBlob, fileName: `${baseName}.png`, width: outputWidth, height: outputHeight, format: 'png' }
+    } catch (error) {
+      console.warn('PNG export was blocked; using SVG fallback.', error)
+      return { blob: svgBlob, fileName: `${baseName}.svg`, width, height, format: 'svg' }
+    }
   } finally {
     host.remove()
   }
@@ -241,7 +276,8 @@ export function downloadTreeImage(blob: Blob, fileName: string) {
 }
 
 export async function shareTreeImage(blob: Blob, fileName: string, title: string) {
-  const file = new File([blob], fileName, { type: 'image/png', lastModified: Date.now() })
+  const mime = blob.type || (fileName.toLowerCase().endsWith('.svg') ? 'image/svg+xml' : 'image/png')
+  const file = new File([blob], fileName, { type: mime, lastModified: Date.now() })
   const shareData: ShareData = { title, text: 'صورة من منصة صلة القرابة', files: [file] }
   const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean }
 

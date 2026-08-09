@@ -14,6 +14,8 @@ import AdminLineageReview from './components/AdminLineageReview'
 import AdminLineageStructure from './components/AdminLineageStructure'
 import AdminLineageSyncStatus from './components/AdminLineageSyncStatus'
 import HouseholdExperienceUpgrade from './components/HouseholdExperienceUpgrade'
+import StructuredScopeExperience from './components/StructuredScopeExperience'
+import AdminScopeAssignments from './components/AdminScopeAssignments'
 import './styles.css'
 import './mobile-app.css'
 import './mobile-fixes.css'
@@ -156,6 +158,8 @@ createRoot(rootElement).render(
   <StrictMode>
     <App />
     <HouseholdExperienceUpgrade />
+    <StructuredScopeExperience />
+    <AdminScopeAssignments />
     <InstallPrompt />
     <PushNotificationSettings />
     <AdminPendingDashboard />

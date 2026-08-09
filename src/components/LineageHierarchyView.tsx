@@ -118,8 +118,6 @@ export default function LineageHierarchyView({ personId, personName, onOpenPerso
         const cache: Record<string, ChildRow[]> = { [activeContext.root_person_id]: directBranches }
         const expanded = new Set<string>()
 
-        // Only preload the exact ancestry path of the selected person. Every other
-        // node remains lazy and is fetched only when the user expands it.
         const focusPath = safePath(activeContext.ancestry_path)
         if (initialBranchId) {
           const pathIds = focusPath.map((item) => item.person_id)
@@ -206,7 +204,7 @@ export default function LineageHierarchyView({ personId, personName, onOpenPerso
     setExpandedIds((current) => new Set(current).add(branch.person_id))
   }
 
-  function renderPersonNode(person: ChildRow, depth = 0, ancestry = new Set<string>()): JSX.Element {
+  function renderPersonNode(person: ChildRow, depth = 0, ancestry = new Set<string>()) {
     const isCurrent = person.person_id === personId
     const isExpanded = expandedIds.has(person.person_id)
     const isLoading = loadingIds.has(person.person_id)

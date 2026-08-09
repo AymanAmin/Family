@@ -78,7 +78,6 @@ function asPath(value: unknown): LineagePathItem[] {
 }
 
 function ancestorGenerationLabel(generation: number) {
-  if (generation === 1) return 'الوالدان'
   if (generation === 2) return 'الأجداد'
   return `الأصول · الجيل ${generation}`
 }
@@ -196,7 +195,9 @@ export default function LineageSummaryCard({ personId, personName, onOpenPerson,
 
   const groupedAncestors = useMemo(() => {
     const groups = new Map<number, AncestorRow[]>()
-    ancestors.forEach((row) => groups.set(row.generation, [...(groups.get(row.generation) ?? []), row]))
+    ancestors
+      .filter((row) => row.generation >= 2)
+      .forEach((row) => groups.set(row.generation, [...(groups.get(row.generation) ?? []), row]))
     return [...groups.entries()].sort(([a], [b]) => a - b)
   }, [ancestors])
 
@@ -323,7 +324,7 @@ export default function LineageSummaryCard({ personId, personName, onOpenPerson,
                   <header><strong>{ancestorGenerationLabel(generation)}</strong><small>{people.length}</small></header>
                   <div>{people.map((person) => <PersonButton id={person.ancestor_person_id} name={person.full_name} gender={person.gender} key={person.ancestor_person_id} />)}</div>
                 </section>
-              )) : <div className="lineage-empty-note small">لا توجد أصول مسجلة أعلى هذا الشخص.</div>}
+              )) : <div className="lineage-empty-note small">لا يوجد أجداد مسجلون أعلى الوالدين حاليًا.</div>}
             </div>
           )}
 

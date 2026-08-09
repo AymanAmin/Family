@@ -522,7 +522,6 @@ function App() {
   }, [routeReady, view, selectedPerson?.id, selectedFamily?.id])
 
   const visibleFamilies = useMemo(() => families.filter((item) => item.status === 'approved' || item.status === 'pending'), [families])
-  const approvedFamilies = useMemo(() => families.filter((item) => item.status === 'approved'), [families])
   const approvedPeople = useMemo(() => people.filter((item) => item.status === 'approved'), [people])
   const approvedEvents = useMemo(() => events.filter((item) => item.status === 'approved'), [events])
 
@@ -1047,7 +1046,7 @@ function App() {
             <section className="hero-panel home-search-hero" aria-label="البحث في دليل المنطقة">
               <div className="hero-copy">
                 <form className="search-bar home-search-bar" onSubmit={runSearch}>
-                  <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="ابحث باسم شخص أو عائلة" aria-label="ابحث باسم شخص أو عائلة" />
+                  <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="ابحث باسم شخص أو أسرة" aria-label="ابحث باسم شخص أو أسرة" />
                   <button className="primary" type="submit">بحث</button>
                 </form>
               </div>
@@ -1055,7 +1054,7 @@ function App() {
 
             <section className="nasab-dashboard">
               <div className="app-services unified-home-stats" aria-label="اختصارات وإحصائيات المنصة">
-                <button className="service-tile stat-service-tile" type="button" onClick={() => { setDirectoryInitialTab('families'); setView('search') }}><span className="service-icon">{platformStats?.approved_families ?? '—'}</span><span><strong>العائلات</strong><small>الأسر المعتمدة في الدليل</small></span></button>
+                <button className="service-tile stat-service-tile" type="button" onClick={() => { setDirectoryInitialTab('families'); setView('search') }}><span className="service-icon">{platformStats?.approved_families ?? '—'}</span><span><strong>الأسر</strong><small>الأسر المنشأة تلقائيًا</small></span></button>
                 <button className="service-tile stat-service-tile" type="button" onClick={() => { setDirectoryInitialTab('people'); setView('search') }}><span className="service-icon">{platformStats?.approved_people ?? '—'}</span><span><strong>الأفراد</strong><small>ملفات الأشخاص الموثقة</small></span></button>
                 <button className="service-tile stat-service-tile" type="button" onClick={() => setView('news')}><span className="service-icon">{platformStats?.approved_events ?? '—'}</span><span><strong>المناسبات</strong><small>الأخبار والمناسبات المنشورة</small></span></button>
                 <button className="service-tile" type="button" onClick={() => setView('tree')}><span className="service-icon">ش</span><span><strong>شجرة العائلة</strong><small>استكشف القرابة ومسارات النسب</small></span></button>
@@ -1100,20 +1099,7 @@ function App() {
               </article>
             </section>
 
-            <section className="section-block">
-              <div className="section-title"><div><span className="eyebrow">دليل الأسر</span><h2>العائلات المعتمدة</h2></div><button className="text-link" onClick={() => { setDirectoryInitialTab('families'); setView('search') }}>عرض الكل</button></div>
-              {dataLoading ? <div className="empty-state">جارٍ تحميل البيانات…</div> : approvedFamilies.length ? (
-                <div className="cards-grid">
-                  {approvedFamilies.slice(0, 6).map((family) => (
-                    <button className="data-card interactive-card" type="button" key={family.id} onClick={() => openFamily(family)}>
-                      <span className="card-symbol">{family.name.slice(0, 1)}</span>
-                      <div><h3>{family.name}</h3><p>{family.description || family.origin_place || 'لا توجد نبذة مضافة.'}</p></div>
-                      <span className="card-chevron">‹</span>
-                    </button>
-                  ))}
-                </div>
-              ) : <div className="empty-state"><strong>لا توجد عائلات معتمدة حتى الآن</strong><span>ابدأ بإضافة أول عائلة في المنطقة.</span></div>}
-            </section>
+            <div className="household-home-anchor" aria-label="الأسر المنشأة تلقائيًا" />
 
 
           </>
@@ -1135,7 +1121,6 @@ function App() {
               initialTerm={searchTerm}
               initialTab={directoryInitialTab}
               onOpenPerson={(item) => void openPersonById(item.id)}
-              onOpenFamily={(item) => openFamily(item as Family)}
             />
           </Suspense>
         )}

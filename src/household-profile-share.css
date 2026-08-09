@@ -1,14 +1,366 @@
-.household-profile-layer{background:linear-gradient(180deg,#edf8f5 0,#f7faf9 36%,#f2f6f5 100%)}
-.household-profile-page{width:min(100%,980px);padding-inline:14px}
-.household-profile-topbar{margin-inline:-2px;padding:12px 4px;background:rgb(237 248 245 / 92%);border-bottom:1px solid rgb(207 226 220 / 55%)}
-.household-profile-topbar>button{box-shadow:0 5px 18px rgb(35 76 67 / 8%)}
-.household-profile-hero{position:relative;overflow:hidden;grid-template-columns:82px minmax(0,1fr) auto;padding:22px;border:0;border-radius:30px;background:linear-gradient(135deg,#21486f 0%,#397f8e 56%,#70bbae 100%);box-shadow:0 18px 42px rgb(30 73 91 / 18%)}
-.household-profile-hero:before,.household-profile-hero:after{position:absolute;content:'';border:1px solid rgb(255 255 255 / 16%);border-radius:999px;pointer-events:none}.household-profile-hero:before{width:220px;height:220px;inset:-110px auto auto -55px}.household-profile-hero:after{width:130px;height:130px;inset:auto 36px -72px auto}.household-profile-avatar{position:relative;z-index:1;width:82px;height:82px;border:1px solid rgb(255 255 255 / 35%);border-radius:25px;color:#214d67;background:rgb(255 255 255 / 88%);box-shadow:inset 0 0 0 8px rgb(224 244 238 / 55%);font-size:1.5rem}.household-profile-title{position:relative;z-index:1}.household-profile-title>span{display:inline-flex;padding:5px 9px;border-radius:999px;color:#e9faf6;background:rgb(255 255 255 / 13%);font-size:.58rem}.household-profile-title h1{margin:7px 0 5px;color:#fff;font-size:1.48rem}.household-profile-title p{color:rgb(255 255 255 / 82%);font-size:.7rem}.household-open-husband{position:relative;z-index:1;min-width:104px;border-color:rgb(255 255 255 / 35%);color:#fff;background:rgb(255 255 255 / 12%);backdrop-filter:blur(8px)}
-.household-profile-stats{gap:10px;margin:13px 0}.household-profile-stats article{padding:14px 8px;border-color:#d7e7e2;border-radius:20px;background:rgb(255 255 255 / 88%);box-shadow:0 8px 22px rgb(43 82 72 / 5%)}.household-profile-stats strong{color:#245b70;font-size:1.18rem}.household-profile-stats span{font-size:.58rem}
-.household-profile-origin{gap:10px;margin-bottom:14px}.household-profile-origin>div{padding:13px 14px;border-color:#dce9e5;border-radius:18px;background:rgb(255 255 255 / 78%)}.household-profile-origin small{font-size:.54rem}.household-profile-origin strong,.household-profile-origin button{font-size:.66rem}
-.household-marriages-section{padding:14px;border:1px solid #d9e8e4;border-radius:25px;background:rgb(255 255 255 / 68%)}.household-marriages-section>header{padding:2px 2px 8px}.household-marriages-section>header h2{font-size:1.02rem}.household-marriage-list{gap:12px}.household-marriage-card{padding:13px;border-color:#d9e6e2;border-radius:22px;box-shadow:0 7px 20px rgb(38 81 70 / 4%)}.household-spouse-heading>button{padding:8px 10px;border:1px solid #f0e4ce;background:linear-gradient(135deg,#fffaf1,#fff)}.household-spouse-heading>button>span:first-child{width:44px;height:44px;border-radius:14px}.household-spouse-heading strong{font-size:.7rem}.household-spouse-heading em{padding:8px 11px}.household-child-grid{gap:8px}.household-child-grid>button{padding:9px;border-radius:16px;background:#fbfdfc}.household-child-grid strong{font-size:.61rem}.household-unassigned-section{border-radius:22px}.household-profile-note{margin-top:14px;padding:13px 15px;border:1px solid #d7e8e2;border-radius:18px;background:#eaf5f1}
-.household-share-panel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;margin:13px 0;padding:14px;border:1px solid #d4e6e0;border-radius:24px;background:linear-gradient(135deg,#ffffff 0%,#f2faf7 100%);box-shadow:0 10px 28px rgb(40 82 71 / 6%);direction:rtl}.household-share-copy{display:grid;align-content:center;min-width:0}.household-share-copy>span{color:#779089;font-size:.53rem;font-weight:850}.household-share-copy>strong{margin:2px 0 4px;color:#2b5952;font-size:.78rem}.household-share-copy>small{overflow:hidden;max-width:100%;color:#56808a;font-size:.5rem;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:right}.household-share-actions{display:flex;align-items:stretch;gap:8px}.household-share-actions button{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;align-items:center;gap:0 7px;min-width:142px;padding:10px 12px;border-radius:17px;font-family:inherit;text-align:right}.household-share-actions button>span{grid-row:1/3;display:grid;width:34px;height:34px;place-items:center;border-radius:12px;font-size:.9rem}.household-share-actions b{font-size:.6rem}.household-share-actions small{font-size:.43rem;font-weight:700;opacity:.75}.household-share-image{border:1px solid #2f7784;color:#fff;background:linear-gradient(135deg,#245c79,#3e8992)}.household-share-image>span{background:rgb(255 255 255 / 14%)}.household-share-link{border:1px solid #cfe1dc;color:#35675e;background:#fff}.household-share-link>span{background:#e7f3ef}.household-share-actions button:disabled{opacity:.62}.household-share-message{grid-column:1/-1;padding:8px 10px;border-radius:12px;color:#52736b;background:#edf6f3;font-size:.5rem;font-weight:750;text-align:center}
+.household-profile-layer{
+  background:linear-gradient(180deg,#f5faf8 0,#f8faf9 42%,#f2f6f5 100%);
+}
+
+.household-profile-page{
+  width:min(100%,820px);
+  padding-inline:14px;
+}
+
+.household-profile-topbar{
+  min-height:58px;
+  margin-inline:-2px;
+  padding:8px 4px;
+  border-bottom:1px solid rgb(207 226 220 / 62%);
+  background:rgb(247 250 249 / 94%);
+  backdrop-filter:blur(16px);
+}
+
+.household-profile-topbar>button{
+  width:40px;
+  height:40px;
+  border-radius:13px;
+  box-shadow:0 5px 16px rgb(35 76 67 / 7%);
+}
+
+.household-profile-topbar small{font-size:.55rem}
+.household-profile-topbar strong{font-size:.82rem}
+
+.household-profile-hero{
+  position:relative;
+  overflow:hidden;
+  grid-template-columns:68px minmax(0,1fr) auto;
+  gap:12px;
+  padding:16px;
+  border:1px solid #d9e7e3;
+  border-radius:24px;
+  background:linear-gradient(145deg,#fff,#f0f8f5);
+  box-shadow:0 12px 30px rgb(29 77 65 / 7%);
+}
+
+.household-profile-hero:before{
+  position:absolute;
+  width:170px;
+  height:170px;
+  inset:-110px auto auto -50px;
+  border:1px solid rgb(74 169 155 / 12%);
+  border-radius:999px;
+  content:'';
+  pointer-events:none;
+}
+
+.household-profile-avatar{
+  position:relative;
+  z-index:1;
+  width:68px;
+  height:68px;
+  border:0;
+  border-radius:21px;
+  color:#fff;
+  background:linear-gradient(145deg,#24577d,#42a79d);
+  box-shadow:0 10px 22px rgb(35 101 100 / 16%);
+  font-size:1.24rem;
+}
+
+.household-profile-title{
+  position:relative;
+  z-index:1;
+  align-self:center;
+}
+
+.household-profile-title>span{
+  display:inline-flex;
+  padding:3px 7px;
+  border-radius:999px;
+  color:#4f8177;
+  background:#e8f4f0;
+  font-size:.52rem;
+  font-weight:850;
+}
+
+.household-profile-title h1{
+  margin:4px 0 3px;
+  color:#244d47;
+  font-size:1.2rem;
+  line-height:1.5;
+}
+
+.household-profile-title p{
+  margin:0;
+  color:#71857f;
+  font-size:.61rem;
+  line-height:1.6;
+}
+
+.household-open-husband{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  grid-template-rows:auto auto;
+  align-items:center;
+  gap:0 7px;
+  min-width:142px;
+  min-height:48px;
+  align-self:center;
+  padding:7px 10px;
+  border:1px solid #d5e5e0;
+  border-radius:14px;
+  color:#315f56;
+  background:#fff;
+  text-align:right;
+}
+
+.household-open-husband>span{
+  grid-column:1;
+  color:#879993;
+  font-size:.48rem;
+  font-weight:800;
+}
+
+.household-open-husband>strong{
+  grid-column:1/3;
+  overflow:hidden;
+  font-size:.59rem;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.household-open-husband>i{
+  grid-column:3;
+  grid-row:1/3;
+  color:#4c857a;
+  font-size:1rem;
+  font-style:normal;
+}
+
+/* One compact segmented information bar instead of four large cards. */
+.household-profile-stats{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:0;
+  overflow:hidden;
+  margin:10px 0;
+  border:1px solid #d9e7e2;
+  border-radius:17px;
+  background:#fff;
+  box-shadow:0 7px 20px rgb(38 81 70 / 4%);
+}
+
+.household-profile-stats article{
+  position:relative;
+  display:grid;
+  gap:1px;
+  min-width:0;
+  min-height:58px;
+  place-content:center;
+  padding:7px 3px;
+  border:0;
+  border-inline-end:1px solid #edf2f0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  text-align:center;
+}
+
+.household-profile-stats article:last-child{border-inline-end:0}
+.household-profile-stats strong{color:#285e57;font-size:.92rem;line-height:1.25}
+.household-profile-stats span{color:#7d908a;font-size:.46rem;font-weight:800;white-space:nowrap}
+
+/* Sharing is an action bar, not another content card. */
+.household-share-panel{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:10px;
+  margin:10px 0;
+  padding:10px;
+  border:1px solid #dae8e3;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 7px 20px rgb(40 82 71 / 4%);
+  direction:rtl;
+}
+
+.household-share-copy{display:grid;align-content:center;min-width:0;padding-inline:2px}
+.household-share-copy>span{color:#83958f;font-size:.48rem;font-weight:850}
+.household-share-copy>strong{margin:1px 0;color:#315f57;font-size:.66rem}
+.household-share-copy>small{overflow:hidden;max-width:100%;color:#6e8b91;font-size:.43rem;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:right}
+.household-share-actions{display:flex;align-items:stretch;gap:6px}
+.household-share-actions button{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  grid-template-rows:auto auto;
+  align-items:center;
+  gap:0 6px;
+  min-width:118px;
+  min-height:44px;
+  padding:6px 8px;
+  border-radius:13px;
+  font-family:inherit;
+  text-align:right;
+}
+.household-share-actions button>span{grid-row:1/3;display:grid;width:28px;height:28px;place-items:center;border-radius:9px;font-size:.72rem}
+.household-share-actions b{font-size:.52rem}
+.household-share-actions small{font-size:.38rem;font-weight:700;opacity:.72}
+.household-share-image{border:1px solid #2f7784;color:#fff;background:linear-gradient(135deg,#245c79,#3e8992)}
+.household-share-image>span{background:rgb(255 255 255 / 14%)}
+.household-share-link{border:1px solid #cfe1dc;color:#35675e;background:#fff}
+.household-share-link>span{background:#e7f3ef}
+.household-share-actions button:disabled{opacity:.62}
+.household-share-message{grid-column:1/-1;padding:6px 8px;border-radius:10px;color:#52736b;background:#edf6f3;font-size:.46rem;font-weight:750;text-align:center}
+
+/* Family and lineage context now lives in one card. */
+.household-profile-context{
+  display:grid;
+  gap:9px;
+  margin:10px 0;
+  padding:12px;
+  border:1px solid #dce8e4;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 7px 20px rgb(38 81 70 / 4%);
+}
+
+.household-profile-context>header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.household-profile-context>header span{
+  color:#477a70;
+  font-size:.55rem;
+  font-weight:900;
+}
+
+.household-profile-context>header strong{
+  color:#81938d;
+  font-size:.48rem;
+  font-weight:700;
+}
+
+.household-profile-context-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+
+.household-profile-context-grid>div{
+  display:grid;
+  gap:2px;
+  min-width:0;
+  padding:8px 10px;
+  border-radius:12px;
+  background:#f5f9f7;
+}
+
+.household-profile-context-grid small{color:#8b9b96;font-size:.46rem}
+.household-profile-context-grid strong{overflow:hidden;color:#3b655d;font-size:.59rem;text-overflow:ellipsis;white-space:nowrap}
+
+.household-marriages-section{
+  padding:12px;
+  border:1px solid #d9e8e4;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 7px 22px rgb(38 81 70 / 4%);
+}
+
+.household-marriages-section>header{padding:0 1px 8px}
+.household-marriages-section>header h2{font-size:.9rem}
+.household-marriages-section>header span{font-size:.49rem}
+.household-marriages-section>header b{min-width:30px;height:30px;border-radius:10px;font-size:.62rem}
+.household-marriage-list{gap:9px}
+.household-marriage-card{padding:9px;border-color:#dde8e4;border-radius:17px;box-shadow:none;background:#fbfdfc}
+.household-spouse-heading>button{grid-template-columns:38px minmax(0,1fr) auto;padding:6px 7px;border:1px solid #f0e4ce;background:#fffaf3}
+.household-spouse-heading>button>span:first-child{width:38px;height:38px;border-radius:12px}
+.household-spouse-heading>button>span:last-child{min-width:0}
+.household-spouse-heading>button>i{color:#aa8a56;font-size:.9rem;font-style:normal}
+.household-spouse-heading strong{font-size:.62rem}
+.household-spouse-heading em{padding:6px 8px;font-size:.47rem}
+.household-child-grid{gap:6px}
+.household-child-grid>button{padding:7px;border-radius:13px;background:#fff}
+.household-child-grid strong{font-size:.56rem}
+.household-unassigned-section{border-radius:18px}
+.household-profile-note{margin-top:9px;padding:9px 11px;border:0;border-radius:13px;background:#eaf5f1;font-size:.49rem}
 .household-home-card{border-color:#dbe7e4!important;background:linear-gradient(145deg,#fff,#fbfdfc)!important;box-shadow:0 8px 26px rgb(34 74 64 / 5%)}
-@media(max-width:620px){.household-profile-page{padding-inline:8px}.household-profile-topbar{padding-inline:3px}.household-profile-hero{grid-template-columns:64px minmax(0,1fr);padding:15px;border-radius:24px}.household-profile-avatar{width:64px;height:64px;border-radius:20px;font-size:1.12rem}.household-profile-title h1{font-size:1.08rem;line-height:1.6}.household-profile-title p{font-size:.59rem}.household-open-husband{grid-column:1/-1;min-height:42px;border-radius:14px}.household-profile-stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.household-profile-stats article{padding:10px 3px;border-radius:16px}.household-profile-stats strong{font-size:.96rem}.household-profile-stats span{font-size:.47rem}.household-profile-origin{grid-template-columns:1fr}.household-share-panel{grid-template-columns:1fr;padding:11px;border-radius:20px}.household-share-copy{padding:2px 3px}.household-share-copy>strong{font-size:.72rem}.household-share-actions{display:grid;grid-template-columns:1fr 1fr}.household-share-actions button{min-width:0;padding:9px;border-radius:15px}.household-share-actions button>span{width:31px;height:31px}.household-share-actions b{font-size:.54rem}.household-share-actions small{font-size:.4rem}.household-marriages-section{padding:10px;border-radius:21px}.household-marriage-card{padding:9px}.household-child-grid>button{min-height:60px}}
-@media(max-width:380px){.household-profile-stats{grid-template-columns:repeat(2,1fr)}.household-share-actions{grid-template-columns:1fr}.household-share-actions button{min-height:54px}.household-profile-title h1{font-size:.98rem}}
-@media(min-width:761px){.household-share-panel{padding:16px 18px}.household-profile-hero{margin-top:8px}}
+
+@media(max-width:620px){
+  .household-profile-page{padding:0 8px 92px}
+  .household-profile-topbar{min-height:52px;padding:6px 2px}
+  .household-profile-topbar>button{width:36px;height:36px;border-radius:11px;font-size:1.15rem}
+
+  .household-profile-hero{
+    grid-template-columns:54px minmax(0,1fr);
+    gap:9px;
+    padding:11px;
+    border-radius:18px;
+  }
+  .household-profile-avatar{width:54px;height:54px;border-radius:16px;font-size:1rem}
+  .household-profile-title h1{margin-block:3px;font-size:.94rem;line-height:1.48}
+  .household-profile-title p{font-size:.52rem;line-height:1.5}
+  .household-profile-title>span{padding:2px 6px;font-size:.46rem}
+
+  .household-open-husband{
+    grid-column:1/-1;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    min-width:0;
+    min-height:38px;
+    padding:5px 8px;
+    border-radius:11px;
+  }
+  .household-open-husband>span{font-size:.43rem}
+  .household-open-husband>strong{font-size:.54rem}
+
+  .household-profile-stats{margin:8px 0;border-radius:14px}
+  .household-profile-stats article{min-height:52px;padding:6px 2px}
+  .household-profile-stats strong{font-size:.82rem}
+  .household-profile-stats span{font-size:.41rem}
+
+  .household-share-panel{
+    display:block;
+    margin:8px 0;
+    padding:0;
+    border:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  .household-share-copy{display:none}
+  .household-share-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .household-share-actions button{min-width:0;min-height:40px;padding:5px 7px;border-radius:11px}
+  .household-share-actions button>span{width:26px;height:26px;border-radius:8px}
+  .household-share-actions b{font-size:.49rem}
+  .household-share-actions small{font-size:.35rem}
+  .household-share-message{margin-top:6px}
+
+  .household-profile-context{gap:7px;margin:8px 0;padding:9px;border-radius:15px}
+  .household-profile-context>header strong{display:none}
+  .household-profile-context-grid{gap:5px}
+  .household-profile-context-grid>div{padding:7px 8px;border-radius:10px}
+  .household-profile-context-grid strong{font-size:.53rem}
+
+  .household-marriages-section{padding:9px;border-radius:17px}
+  .household-marriage-card{padding:7px;border-radius:14px}
+  .household-spouse-heading{align-items:center;flex-direction:row}
+  .household-spouse-heading>button{width:auto;flex:1 1 auto;min-width:0}
+  .household-spouse-heading em{align-self:center;white-space:nowrap}
+  .household-child-grid{grid-template-columns:1fr}
+  .household-child-grid>button{min-height:52px}
+  .household-child-grid strong{white-space:normal;line-height:1.4}
+}
+
+@media(max-width:380px){
+  .household-profile-stats span{font-size:.38rem}
+  .household-share-actions button small{display:none}
+  .household-profile-context-grid{grid-template-columns:1fr}
+  .household-spouse-heading{align-items:stretch;flex-direction:column}
+  .household-spouse-heading>button{width:100%}
+  .household-spouse-heading em{align-self:flex-start}
+}
+
+@media(min-width:761px){
+  .household-profile-page{padding-inline:18px}
+  .household-profile-hero{margin-top:6px}
+  .household-marriages-section{padding:14px}
+  .household-child-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}

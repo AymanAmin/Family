@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import '../lineage-hierarchy.css'
+import '../lineage-expand-tree.css'
 
 type Gender = 'male' | 'female' | null
 

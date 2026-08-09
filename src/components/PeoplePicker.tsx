@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { normalizeArabicSearch } from '../lib/arabicSearch'
 import VerifiedBadge from './VerifiedBadge'
 import '../people-picker-scroll.css'
 
@@ -29,7 +30,7 @@ const CACHE_TTL = 60_000
 const resultCache = new Map<string, { savedAt: number; rows: PersonOption[] }>()
 
 function cacheKey(query: string, excludeId: string | undefined, searchMode: SearchMode, genderFilter: GenderFilter | undefined) {
-  return `${searchMode}::${genderFilter ?? 'any'}::${query.trim().toLocaleLowerCase('ar')}::${excludeId ?? ''}`
+  return `${searchMode}::${genderFilter ?? 'any'}::${normalizeArabicSearch(query)}::${excludeId ?? ''}`
 }
 
 export default function PeoplePicker({ label, value, onChange, excludeId, required = false, searchMode = 'prefix', genderFilter }: Props) {
@@ -84,7 +85,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
     setOpen(true)
     if (timerRef.current) window.clearTimeout(timerRef.current)
 
-    const normalized = valueText.trim()
+    const normalized = normalizeArabicSearch(valueText)
     if (normalized.length < 2) {
       requestRef.current += 1
       setResults([])
@@ -105,29 +106,12 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
       const requestId = ++requestRef.current
       setLoading(true)
 
-      if (searchMode === 'prefix' || genderFilter) {
-        let directQuery = supabase
-          .from('people')
-          .select('id,full_name,gender,birth_year,is_verified')
-          .eq('status', 'approved')
-          .ilike('full_name', searchMode === 'prefix' ? `${normalized}%` : `%${normalized}%`)
-          .order('full_name')
-          .limit(6)
-        if (excludeId) directQuery = directQuery.neq('id', excludeId)
-        if (genderFilter) directQuery = directQuery.eq('gender', genderFilter)
-        const { data } = await directQuery
-        if (requestId !== requestRef.current) return
-        const rows = (data ?? []) as PersonOption[]
-        resultCache.set(key, { savedAt: Date.now(), rows })
-        setResults(rows)
-        setLoading(false)
-        return
-      }
-
-      const smart = await supabase.rpc('search_people_names', {
-        p_query: normalized,
+      const smart = await supabase.rpc('search_people_names_v2', {
+        p_query: valueText.trim(),
         p_limit: 6,
         p_exclude_id: excludeId || null,
+        p_gender: genderFilter || null,
+        p_prefix: searchMode === 'prefix',
       })
       if (requestId !== requestRef.current) return
 
@@ -139,19 +123,20 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
         return
       }
 
-      let fallback = supabase
-        .from('people')
-        .select('id,full_name,gender,birth_year,is_verified')
-        .eq('status', 'approved')
-        .ilike('full_name', `%${normalized}%`)
-        .order('full_name')
-        .limit(6)
-      if (excludeId) fallback = fallback.neq('id', excludeId)
-      const { data } = await fallback
+      // Compatibility fallback for deployments that have not received the v2 RPC yet.
+      const fallback = await supabase.rpc('search_people_names', {
+        p_query: valueText.trim(),
+        p_limit: 12,
+        p_exclude_id: excludeId || null,
+      })
       if (requestId !== requestRef.current) return
-      const rows = (data ?? []) as PersonOption[]
-      resultCache.set(key, { savedAt: Date.now(), rows })
-      setResults(rows)
+
+      const fallbackRows = ((fallback.data ?? []) as PersonOption[])
+        .filter((person) => !genderFilter || person.gender === genderFilter)
+        .filter((person) => searchMode !== 'prefix' || normalizeArabicSearch(person.full_name).startsWith(normalized))
+        .slice(0, 6)
+      resultCache.set(key, { savedAt: Date.now(), rows: fallbackRows })
+      setResults(fallbackRows)
       setLoading(false)
     }, SEARCH_DELAY)
   }
@@ -210,7 +195,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
 
         {open && !selected && (
           <div className="people-picker-menu" aria-live="polite">
-            {loading ? <div className="people-picker-state">جارٍ البحث…</div> : query.trim().length < 2 ? <div className="people-picker-state">ابدأ بكتابة حرفين من الاسم.</div> : results.length ? results.map((person) => (
+            {loading ? <div className="people-picker-state">جارٍ البحث…</div> : normalizeArabicSearch(query).length < 2 ? <div className="people-picker-state">ابدأ بكتابة حرفين من الاسم.</div> : results.length ? results.map((person) => (
               <button
                 type="button"
                 key={person.id}

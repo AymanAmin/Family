@@ -151,6 +151,22 @@ A feature is not complete until:
 - Accessibility basics are validated.
 - Tests and builds pass in GitHub Actions.
 - Documentation and migrations are updated.
+- Any database change has also updated and verified the full backup/export and restore paths when the changed schema or data is part of application backup scope.
 - No secrets or sensitive sample data are committed.
 
 Read `docs/PRODUCT_REQUIREMENTS.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_GUIDELINES.md`, and `docs/DEPLOYMENT.md` before implementing a substantial feature.
+
+## 11. Backup and Restore Contract
+
+Backup and restore are mandatory parts of every database change, not optional maintenance work.
+
+- Whenever a migration, table, column, relationship, constraint, enum/status value, trigger, function, view, or other persisted application-data structure is added, removed, renamed, or materially changed, review the backup/export and restore implementation in the same change.
+- Any new application table or persisted dataset that belongs to recoverable Family data must be added to the full backup manifest/export list and to the restore allowlist/order before the database change is considered complete.
+- If a column or table is renamed or its data shape changes, update restore validation/compatibility so older supported backup files fail safely with a clear message or are migrated deliberately; never silently drop unknown backup data.
+- Preserve relationship integrity during restore. Parent tables must be restored before dependent tables, and restore must account for foreign keys, triggers, generated/derived data, and synchronization logic.
+- Restore must remain a protected Primary Super Admin operation and must never expose service-role credentials to the browser.
+- A restore must validate the backup version, project/scope metadata, expected tables, row structure, and counts before making destructive changes.
+- Destructive restore must be atomic where practical: if any required step fails, do not leave the database partially restored.
+- Restore must not unintentionally resend historical notifications or execute side effects merely because old rows are being replayed.
+- After every database schema change, verify at minimum that a fresh JSON backup can be created and that the restore path recognizes the updated backup structure.
+- Keep backup/export and restore code, documentation, and tests synchronized with the current production schema.

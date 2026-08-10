@@ -53,10 +53,40 @@
     z-index: 3 !important;
     top: 0 !important;
   }
+
+  /* The contextual add-person dialog is intentionally a touch taller and
+     slightly higher than the standard edit dialog. Keep the adjustment tied
+     to the visual viewport so Android keyboard open/close still reflows it. */
+  .record-edit-overlay.person-add-overlay {
+    place-items: center !important;
+    padding:
+      max(8px, calc(env(safe-area-inset-top) + 6px))
+      10px
+      max(62px, calc(env(safe-area-inset-bottom) + 50px)) !important;
+  }
+
+  .record-edit-sheet.person-add-sheet {
+    width: min(100%, 460px) !important;
+    min-height: min(58dvh, 860px) !important;
+    max-height: min(90dvh, 860px) !important;
+    transform: translateY(-2.5dvh) !important;
+    border-radius: 23px !important;
+  }
+
+  .person-add-form {
+    flex: 1 1 auto !important;
+    align-content: start !important;
+  }
 }
 
 @media (max-height: 620px) and (max-width: 760px) {
   .record-edit-sheet {
     max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 92px) !important;
+  }
+
+  .record-edit-sheet.person-add-sheet {
+    min-height: 0 !important;
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 70px) !important;
+    transform: translateY(-1dvh) !important;
   }
 }

@@ -143,13 +143,23 @@
 
 .news-page .event-share-button span {
   display: grid !important;
-  width: auto !important;
-  height: auto !important;
+  width: 17px !important;
+  height: 17px !important;
   place-items: center;
+  overflow: hidden;
   color: currentColor !important;
   background: transparent !important;
-  font-size: .88rem !important;
-  line-height: 1 !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+.news-page .event-share-button span::before {
+  width: 17px;
+  height: 17px;
+  background: currentColor;
+  content: '';
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='18' cy='5' r='3'/%3E%3Ccircle cx='6' cy='12' r='3'/%3E%3Ccircle cx='18' cy='19' r='3'/%3E%3Cpath d='m8.6 10.5 6.8-4M8.6 13.5l6.8 4'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='18' cy='5' r='3'/%3E%3Ccircle cx='6' cy='12' r='3'/%3E%3Ccircle cx='18' cy='19' r='3'/%3E%3Cpath d='m8.6 10.5 6.8-4M8.6 13.5l6.8 4'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .news-page .event-share-button b,
@@ -278,8 +288,10 @@
     min-height: 32px !important;
   }
 
-  .news-page .event-share-button span {
-    font-size: .82rem !important;
+  .news-page .event-share-button span,
+  .news-page .event-share-button span::before {
+    width: 16px !important;
+    height: 16px !important;
   }
 
   .news-page .news-card-actions:has(.record-action-group) {

@@ -1,4 +1,5 @@
 import { supabase } from './lib/supabase'
+import './admin-person-attribution.css'
 
 type Attribution = {
   user_id: string | null

@@ -27,6 +27,7 @@ import './mobile-shell.css'
 import './phase3.css'
 import './mobile-v2.css'
 import './kinship-scroll.css'
+import './people-picker-scroll.css'
 import './directory-v2.css'
 import './edit-compact.css'
 import './kinship-extended.css'
@@ -61,6 +62,13 @@ import './person-profile-compact.css'
 type FamilyHistoryState = Record<string, unknown> & {
   __familyApp?: boolean
   __familyDepth?: number
+}
+
+type PickerScrollGesture = {
+  startX: number
+  startY: number
+  list: Element
+  moved: boolean
 }
 
 function historyState(value: unknown): FamilyHistoryState {
@@ -115,6 +123,74 @@ function installAppNavigationHistory() {
   }, true)
 }
 
+function installPickerTouchScrollGuard() {
+  const selector = '.picker-touch-scroll-list, .people-picker-menu, .family-picker-menu'
+  const gestures = new Map<number, PickerScrollGesture>()
+  const movementThreshold = 3
+  const suppressDurationMs = 850
+  let suppressClickUntil = 0
+  let suppressList: Element | null = null
+
+  function listFromTarget(target: EventTarget | null): Element | null {
+    if (!(target instanceof Element)) return null
+    return target.closest(selector)
+  }
+
+  document.addEventListener('pointerdown', (event) => {
+    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return
+    const list = listFromTarget(event.target)
+    if (!list) return
+
+    gestures.set(event.pointerId, {
+      startX: event.clientX,
+      startY: event.clientY,
+      list,
+      moved: false,
+    })
+  }, true)
+
+  document.addEventListener('pointermove', (event) => {
+    const gesture = gestures.get(event.pointerId)
+    if (!gesture) return
+
+    const movedX = Math.abs(event.clientX - gesture.startX)
+    const movedY = Math.abs(event.clientY - gesture.startY)
+    if (movedX < movementThreshold && movedY < movementThreshold) return
+
+    gesture.moved = true
+    suppressList = gesture.list
+    suppressClickUntil = Date.now() + suppressDurationMs
+  }, true)
+
+  const finishGesture = (event: PointerEvent) => {
+    const gesture = gestures.get(event.pointerId)
+    if (gesture?.moved) {
+      suppressList = gesture.list
+      suppressClickUntil = Date.now() + suppressDurationMs
+    }
+    gestures.delete(event.pointerId)
+  }
+
+  document.addEventListener('pointerup', finishGesture, true)
+  document.addEventListener('pointercancel', finishGesture, true)
+
+  // Android/iOS may synthesize a click after a completed finger drag. Capture it
+  // before React sees it so scrolling can never accidentally select a result.
+  document.addEventListener('click', (event) => {
+    if (!suppressList || Date.now() > suppressClickUntil) return
+    const target = event.target
+    if (!(target instanceof Element)) return
+    const actionable = target.closest('button, [role="option"], [data-picker-option]')
+    if (!actionable || !suppressList.contains(actionable)) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    event.stopImmediatePropagation()
+    suppressClickUntil = 0
+    suppressList = null
+  }, true)
+}
+
 function disablePageZoom() {
   document.documentElement.style.touchAction = 'pan-x pan-y'
   document.body.style.touchAction = 'pan-x pan-y'
@@ -150,6 +226,7 @@ function registerServiceWorker() {
 }
 
 installAppNavigationHistory()
+installPickerTouchScrollGuard()
 disablePageZoom()
 registerServiceWorker()
 

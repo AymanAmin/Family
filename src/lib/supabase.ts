@@ -26,29 +26,31 @@ function projectRefFromUrl(url: string): string {
 }
 
 const authStorageKey = `sb-${projectRefFromUrl(projectUrl)}-auth-token`
-let explicitSignOutInProgress = 0
+const SESSION_REFRESH_MARGIN_SECONDS = 90
+let refreshInFlight: Promise<Session | null> | null = null
 
-const guardedAuthStorage = typeof window !== 'undefined'
-  ? {
-      getItem(key: string) {
-        return window.localStorage.getItem(key)
-      },
-      setItem(key: string, value: string) {
-        window.localStorage.setItem(key, value)
-      },
-      removeItem(key: string) {
-        // Never destroy the persisted login because of a transient auth,
-        // refresh, permission or connectivity failure. The real Supabase
-        // session may be removed only by an app-controlled signOut(): either
-        // the user's own logout action or the targeted permission-change flow.
-        if (key === authStorageKey && explicitSignOutInProgress === 0) return
-        window.localStorage.removeItem(key)
-      },
-    }
-  : undefined
+async function refreshSessionIfNeeded(client: SupabaseClient): Promise<Session | null> {
+  const { data, error } = await client.auth.getSession()
+  if (error || !data.session) return null
+
+  const session = data.session
+  const expiresAt = session.expires_at ?? 0
+  const secondsRemaining = expiresAt - Math.floor(Date.now() / 1000)
+  if (!expiresAt || secondsRemaining > SESSION_REFRESH_MARGIN_SECONDS) return session
+
+  if (!refreshInFlight) {
+    refreshInFlight = client.auth
+      .refreshSession()
+      .then(({ data: refreshed, error: refreshError }) => refreshError ? null : refreshed.session)
+      .finally(() => {
+        refreshInFlight = null
+      })
+  }
+
+  return refreshInFlight
+}
 
 function protectSession(client: SupabaseClient): SupabaseClient {
-  const originalSignOut = client.auth.signOut.bind(client.auth)
   const originalOnAuthStateChange = client.auth.onAuthStateChange.bind(client.auth)
   let permissionChannel: ReturnType<SupabaseClient['channel']> | null = null
   let permissionChannelUserId = ''
@@ -65,7 +67,7 @@ function protectSession(client: SupabaseClient): SupabaseClient {
     const userId = session.user.id
     if (!userId) return
 
-    // Refresh the private Realtime authorization whenever the access token changes.
+    // Refresh private Realtime authorization whenever Supabase rotates the JWT.
     try {
       await client.realtime.setAuth(session.access_token)
     } catch {
@@ -82,9 +84,8 @@ function protectSession(client: SupabaseClient): SupabaseClient {
         if (permissionSignOutInProgress) return
         permissionSignOutInProgress = true
 
-        // This is intentionally a local sign-out. Every active device for the
-        // affected user listens to the same private topic, so each device logs
-        // itself out without touching the administrator or any other account.
+        // Only the user whose permissions changed is signed out on this device.
+        // The private topic is unique to that user, so unrelated users/admins stay signed in.
         void client.auth.signOut({ scope: 'local' }).finally(() => {
           permissionSignOutInProgress = false
         })
@@ -95,32 +96,28 @@ function protectSession(client: SupabaseClient): SupabaseClient {
     channel.subscribe()
   }
 
-  client.auth.signOut = (async (...args: Parameters<typeof originalSignOut>) => {
-    explicitSignOutInProgress += 1
-    try {
-      return await originalSignOut(...args)
-    } finally {
-      explicitSignOutInProgress = Math.max(0, explicitSignOutInProgress - 1)
-    }
-  }) as typeof client.auth.signOut
-
-  // Internal listener: keep one private permission channel attached to the
-  // currently authenticated user. Supabase Database broadcasts only to this
-  // user's topic when their effective role/scope is changed.
+  // Do not suppress Supabase SIGNED_OUT events or block removal of the auth
+  // storage key. A genuinely expired/revoked session must be allowed to refresh
+  // or clear itself instead of leaving an expired JWT stuck in localStorage.
   originalOnAuthStateChange((event, session) => {
     if (session) void subscribeToPermissionChanges(session)
-    if (event === 'SIGNED_OUT' && explicitSignOutInProgress > 0) removePermissionChannel()
+    if (event === 'SIGNED_OUT') removePermissionChannel()
   })
 
-  client.auth.onAuthStateChange = ((callback: Parameters<typeof originalOnAuthStateChange>[0]) =>
-    originalOnAuthStateChange((event, session) => {
-      // Permission errors, failed operations, refresh issues and unrelated
-      // unexpected SIGNED_OUT events must never visually log the user out.
-      // We accept SIGNED_OUT only while an app-controlled signOut() is running:
-      // manual logout or the targeted permission-change notification above.
-      if (event === 'SIGNED_OUT' && explicitSignOutInProgress === 0) return
-      callback(event, session)
-    })) as typeof client.auth.onAuthStateChange
+  if (typeof window !== 'undefined') {
+    const refreshWhenActive = () => {
+      void refreshSessionIfNeeded(client)
+    }
+
+    // PWAs/mobile browsers can suspend JavaScript while the JWT expires. Refresh
+    // immediately when the app becomes usable again rather than letting the next
+    // database request fail with "JWT expired".
+    window.addEventListener('focus', refreshWhenActive)
+    window.addEventListener('online', refreshWhenActive)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refreshWhenActive()
+    })
+  }
 
   return client
 }
@@ -132,10 +129,14 @@ export const supabase: SupabaseClient | null = supabaseConfiguration.isComplete
         persistSession: true,
         detectSessionInUrl: true,
         storageKey: authStorageKey,
-        storage: guardedAuthStorage,
       },
     }))
   : null
+
+export async function getFreshSession(): Promise<Session | null> {
+  if (!supabase) return null
+  return refreshSessionIfNeeded(supabase)
+}
 
 export function getApplicationUrl(): string {
   return new URL(import.meta.env.BASE_URL, window.location.origin).toString()

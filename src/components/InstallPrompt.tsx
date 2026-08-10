@@ -9,7 +9,11 @@ type BeforeInstallPromptEvent = Event & {
 type NavigatorWithStandalone = Navigator & { standalone?: boolean }
 
 const DISMISS_KEY = 'sila_pwa_install_dismissed_at'
+const VISIT_COUNT_KEY = 'sila_pwa_visit_count'
+const VISIT_SESSION_KEY = 'sila_pwa_visit_counted'
 const DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
+const PROMPT_DELAY_MS = 4_000
+const MIN_VISITS_BEFORE_PROMPT = 2
 
 function isStandaloneMode() {
   return window.matchMedia('(display-mode: standalone)').matches || Boolean((navigator as NavigatorWithStandalone).standalone)
@@ -20,6 +24,16 @@ function recentlyDismissed() {
   if (!raw) return false
   const timestamp = Number(raw)
   return Number.isFinite(timestamp) && Date.now() - timestamp < DISMISS_COOLDOWN_MS
+}
+
+function registerVisit() {
+  const current = Number(window.localStorage.getItem(VISIT_COUNT_KEY) || '0')
+  if (window.sessionStorage.getItem(VISIT_SESSION_KEY) === '1') return Number.isFinite(current) ? current : 0
+
+  const next = Number.isFinite(current) ? current + 1 : 1
+  window.localStorage.setItem(VISIT_COUNT_KEY, String(next))
+  window.sessionStorage.setItem(VISIT_SESSION_KEY, '1')
+  return next
 }
 
 export default function InstallPrompt() {
@@ -40,15 +54,25 @@ export default function InstallPrompt() {
       return undefined
     }
 
+    const visitCount = registerVisit()
+    const canSuggestInstall = visitCount >= MIN_VISITS_BEFORE_PROMPT && !recentlyDismissed()
+    let promptTimer: number | undefined
+
+    const showWhenReady = () => {
+      if (!canSuggestInstall || promptTimer) return
+      promptTimer = window.setTimeout(() => setVisible(true), PROMPT_DELAY_MS)
+    }
+
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault()
       setInstallEvent(event as BeforeInstallPromptEvent)
-      if (!recentlyDismissed()) window.setTimeout(() => setVisible(true), 1200)
+      showWhenReady()
     }
 
     const onInstalled = () => {
       setInstalled(true)
       setVisible(false)
+      setIosHelp(false)
       setInstallEvent(null)
       window.localStorage.removeItem(DISMISS_KEY)
     }
@@ -56,15 +80,12 @@ export default function InstallPrompt() {
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
     window.addEventListener('appinstalled', onInstalled)
 
-    let iosTimer: number | undefined
-    if (isIos && !recentlyDismissed()) {
-      iosTimer = window.setTimeout(() => setVisible(true), 2200)
-    }
+    if (isIos) showWhenReady()
 
     return () => {
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
       window.removeEventListener('appinstalled', onInstalled)
-      if (iosTimer) window.clearTimeout(iosTimer)
+      if (promptTimer) window.clearTimeout(promptTimer)
     }
   }, [isIos])
 
@@ -95,36 +116,39 @@ export default function InstallPrompt() {
   if (installed || !visible || (!installEvent && !isIos)) return null
 
   return (
-    <aside className="pwa-install-prompt" role="dialog" aria-label="تثبيت تطبيق صلة المنطقة">
+    <aside className={`pwa-install-prompt ${iosHelp ? 'is-ios-help' : ''}`} role="dialog" aria-label="تثبيت تطبيق صلة">
       <button className="pwa-install-close" type="button" onClick={dismiss} aria-label="إغلاق اقتراح التثبيت">×</button>
+
       <div className="pwa-install-brand">
         <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" aria-hidden="true" />
         <div>
-          <span>تطبيق صلة المنطقة</span>
-          <strong>ثبّت صلة على جهازك</strong>
-          <small>وصول أسرع للشجرة والدليل والمناسبات من الشاشة الرئيسية.</small>
+          <span>صلة</span>
+          <strong>{iosHelp ? 'تثبيت صلة على iPhone / iPad' : 'استخدم صلة كتطبيق'}</strong>
+          <small>{iosHelp ? 'خطوتان فقط من قائمة المشاركة.' : 'أضفه إلى الشاشة الرئيسية للوصول السريع والتنبيهات.'}</small>
         </div>
-      </div>
-
-      <div className="pwa-install-benefits" aria-label="مزايا التثبيت">
-        <span>◉ تطبيق مستقل</span>
-        <span>⌁ وصول سريع</span>
-        <span>◌ يعمل أفضل مع الشبكة الضعيفة</span>
       </div>
 
       {iosHelp ? (
         <div className="pwa-ios-steps">
-          <strong>التثبيت على iPhone / iPad</strong>
-          <span>1. افتح الصفحة في Safari.</span>
-          <span>2. اضغط زر المشاركة ⎋.</span>
-          <span>3. اختر «إضافة إلى الشاشة الرئيسية» ثم «إضافة».</span>
+          <span><b>1</b> اضغط زر المشاركة <strong aria-hidden="true">↑</strong> في Safari.</span>
+          <span><b>2</b> اختر «إضافة إلى الشاشة الرئيسية» ثم «إضافة».</span>
         </div>
-      ) : null}
+      ) : (
+        <div className="pwa-install-benefits" aria-label="مزايا التثبيت">
+          <span>◉ تطبيق مستقل</span>
+          <span>⌁ وصول سريع</span>
+          <span>🔔 إشعارات حتى عند الإغلاق</span>
+        </div>
+      )}
 
       <div className="pwa-install-actions">
-        <button className="pwa-install-primary" type="button" onClick={() => void install()} disabled={installing}>
-          {installing ? 'جارٍ التثبيت…' : installEvent ? 'تثبيت التطبيق' : 'طريقة التثبيت'}
-        </button>
+        {!iosHelp ? (
+          <button className="pwa-install-primary" type="button" onClick={() => void install()} disabled={installing}>
+            {installing ? 'جارٍ التثبيت…' : 'تثبيت'}
+          </button>
+        ) : (
+          <button className="pwa-install-primary" type="button" onClick={() => setIosHelp(false)}>رجوع</button>
+        )}
         <button className="pwa-install-later" type="button" onClick={dismiss}>ليس الآن</button>
       </div>
     </aside>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import DuplicatePersonCheck from './DuplicatePersonCheck'
 import PeoplePicker from './PeoplePicker'
@@ -95,6 +96,22 @@ export default function PersonFamilyOverview({ personId, personName, personGende
 
   useEffect(() => { void load() }, [load])
 
+  useEffect(() => {
+    if (!activeSlot || typeof document === 'undefined') return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !busy) setActiveSlot(null)
+    }
+    document.addEventListener('keydown', closeOnEscape)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [activeSlot, busy])
+
   const grouped = useMemo(() => {
     const map = new Map<string, KinshipRow[]>()
     for (const row of rows) {
@@ -188,6 +205,33 @@ export default function PersonFamilyOverview({ personId, personName, personGende
     return <button className="family-overview-add" type="button" onClick={() => openAdd(slot)}>＋ {slotConfig[slot].label.replace('إضافة ', '')}</button>
   }
 
+  const addModal = activeSlot && typeof document !== 'undefined' ? createPortal(
+    <div className="record-edit-overlay person-add-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeAdd()}>
+      <section className="record-edit-sheet person-add-sheet" role="dialog" aria-modal="true" aria-label={slotConfig[activeSlot].label}>
+        <div className="record-edit-heading">
+          <div><span>إضافة من داخل الملف</span><h2>{slotConfig[activeSlot].label} لـ {personName}</h2></div>
+          <button type="button" onClick={closeAdd} aria-label="إغلاق">×</button>
+        </div>
+
+        <div className="context-sheet-mode">
+          <button type="button" className={mode === 'new' ? 'active' : ''} onClick={() => setMode('new')}>شخص جديد</button>
+          <button type="button" className={mode === 'existing' ? 'active' : ''} onClick={() => setMode('existing')}>موجود في الدليل</button>
+        </div>
+
+        <form className="record-edit-form person-add-form" onSubmit={submit}>
+          {mode === 'new' ? <>
+            <label><span>الاسم الكامل *</span><input value={name} onChange={(event) => setName(event.target.value)} placeholder="اكتب الاسم فقط" required /></label>
+            <DuplicatePersonCheck name={name} onOpenPerson={selectExistingPerson} />
+            <div className="context-auto-note"><b>{slotConfig[activeSlot].relationLabel}</b><span>سيتم تحديد الجنس والصلة تلقائيًا، ثم يُحدّث النسب والأسرة من العلاقات المعتمدة دون اختيار عائلة يدويًا.</span></div>
+          </> : <PeoplePicker label={`اختر ${slotConfig[activeSlot].relationLabel} من الدليل`} value={existingId} onChange={setExistingId} excludeId={personId} required />}
+          {message && <div className="context-sheet-error">{message}</div>}
+          <button className="primary context-sheet-submit" type="submit" disabled={busy}>{busy ? 'جارٍ الحفظ…' : isAdmin ? 'إضافة مباشرة' : 'إرسال للمراجعة'}</button>
+        </form>
+      </section>
+    </div>,
+    document.body,
+  ) : null
+
   return <section className="family-overview-card detail-section" aria-label={`الأسرة المباشرة لـ ${personName}`}>
     <header className="family-overview-heading">
       <div><span className="eyebrow">الأسرة والنسب</span><h2>الأسرة المباشرة</h2><p>أهم معلومات النسب والعلاقات في شاشة واحدة. الأسرة تتكون تلقائيًا من الزواج وعلاقات الأب والأم المعتمدة.</p></div>
@@ -224,20 +268,6 @@ export default function PersonFamilyOverview({ personId, personName, personGende
       </section>
     </div>}
 
-    {activeSlot && <div className="context-sheet-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeAdd()}>
-      <section className="context-sheet" role="dialog" aria-modal="true" aria-label={slotConfig[activeSlot].label}>
-        <header><div><span>إضافة من داخل الملف</span><h3>{slotConfig[activeSlot].label} لـ {personName}</h3></div><button type="button" onClick={closeAdd} aria-label="إغلاق">×</button></header>
-        <div className="context-sheet-mode"><button type="button" className={mode === 'new' ? 'active' : ''} onClick={() => setMode('new')}>شخص جديد</button><button type="button" className={mode === 'existing' ? 'active' : ''} onClick={() => setMode('existing')}>موجود في الدليل</button></div>
-        <form onSubmit={submit}>
-          {mode === 'new' ? <>
-            <label><span>الاسم الكامل *</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="اكتب الاسم فقط" required /></label>
-            <DuplicatePersonCheck name={name} onOpenPerson={selectExistingPerson} />
-            <div className="context-auto-note"><b>{slotConfig[activeSlot].relationLabel}</b><span>سيتم تحديد الجنس والصلة تلقائيًا، ثم يُحدّث النسب والأسرة من العلاقات المعتمدة دون اختيار عائلة يدويًا.</span></div>
-          </> : <PeoplePicker label={`اختر ${slotConfig[activeSlot].relationLabel} من الدليل`} value={existingId} onChange={setExistingId} excludeId={personId} required />}
-          {message && <div className="context-sheet-error">{message}</div>}
-          <button className="primary context-sheet-submit" type="submit" disabled={busy}>{busy ? 'جارٍ الحفظ…' : isAdmin ? 'إضافة مباشرة' : 'إرسال للمراجعة'}</button>
-        </form>
-      </section>
-    </div>}
+    {addModal}
   </section>
 }

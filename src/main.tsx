@@ -77,9 +77,30 @@ function historyState(value: unknown): FamilyHistoryState {
   return value && typeof value === 'object' ? value as FamilyHistoryState : {}
 }
 
+function scrollAppToTop() {
+  const reset = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+
+    const appShell = document.querySelector<HTMLElement>('.app-shell')
+    if (appShell) appShell.scrollTop = 0
+  }
+
+  reset()
+  window.requestAnimationFrame(() => {
+    reset()
+    window.requestAnimationFrame(reset)
+  })
+}
+
 function installAppNavigationHistory() {
   const nativeReplaceState = window.history.replaceState.bind(window.history)
   const nativePushState = window.history.pushState.bind(window.history)
+
+  if ('scrollRestoration' in window.history) {
+    window.history.scrollRestoration = 'manual'
+  }
 
   const initialState = historyState(window.history.state)
   if (!initialState.__familyApp) {
@@ -103,9 +124,13 @@ function installAppNavigationHistory() {
     }
 
     nativePushState({ ...incoming, __familyApp: true, __familyDepth: currentDepth + 1 }, unused, url)
+    scrollAppToTop()
   }) as History['replaceState']
 
+  window.addEventListener('hashchange', scrollAppToTop)
+
   window.addEventListener('popstate', () => {
+    scrollAppToTop()
     if (window.location.hash.startsWith('#/')) window.location.reload()
   })
 

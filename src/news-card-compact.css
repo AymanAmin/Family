@@ -1,0 +1,138 @@
+/* Compact the news/event cards on phones without changing desktop layout. */
+@media (max-width: 720px) {
+  .news-page .news-grid {
+    gap: 9px;
+  }
+
+  .news-page .news-card {
+    min-height: 0 !important;
+    height: auto !important;
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgb(35 74 120 / 5%);
+  }
+
+  .news-page .news-card-body {
+    min-height: 0 !important;
+    padding: 11px 12px 10px;
+  }
+
+  .news-page .news-card-kicker {
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .news-page .news-card-type {
+    gap: 5px;
+  }
+
+  .news-page .news-card-glyph {
+    width: 26px;
+    height: 26px;
+    flex-basis: 26px;
+    border-radius: 8px;
+    font-size: .82rem;
+  }
+
+  .news-page .news-type-pill {
+    font-size: .62rem;
+  }
+
+  .news-page .news-card-kicker time {
+    font-size: .58rem;
+  }
+
+  .news-page .news-card h2 {
+    margin-bottom: 4px;
+    font-size: .86rem;
+    line-height: 1.48;
+  }
+
+  .news-page .news-description {
+    margin: 0;
+    font-size: .68rem;
+    line-height: 1.55;
+    -webkit-line-clamp: 2;
+  }
+
+  .news-page .news-meta {
+    gap: 4px 9px;
+    margin-top: 7px;
+    font-size: .61rem;
+    line-height: 1.45;
+  }
+
+  .news-page .news-meta b {
+    font-size: .68rem;
+  }
+
+  .news-page .news-people {
+    gap: 4px;
+    margin-top: 7px;
+  }
+
+  .news-page .news-people button {
+    min-height: 25px;
+    padding: 2px 7px;
+    font-size: .6rem;
+  }
+
+  .news-page .news-card-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+
+  .news-page .event-share-wrap,
+  .news-page .news-admin-edit {
+    width: auto !important;
+    margin: 0 !important;
+  }
+
+  .news-page .event-share-button,
+  .news-page .news-admin-edit button {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 4px 9px !important;
+    border-radius: 10px !important;
+    font-size: .62rem !important;
+    line-height: 1 !important;
+  }
+
+  .news-page .event-share-button {
+    gap: 5px !important;
+  }
+
+  .news-page .event-share-button span {
+    width: 24px !important;
+    height: 24px !important;
+    flex: 0 0 24px !important;
+    font-size: .72rem !important;
+  }
+
+  .news-page .event-share-button small {
+    display: none !important;
+  }
+
+  .news-page .event-share-message {
+    display: none !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .news-page .news-card-body {
+    padding: 10px 11px 9px;
+  }
+
+  .news-page .news-card h2 {
+    font-size: .82rem;
+  }
+
+  .news-page .news-card-actions {
+    margin-top: 7px;
+    padding-top: 7px;
+  }
+}

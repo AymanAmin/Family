@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { normalizeArabicSearch } from '../lib/arabicSearch'
 import VerifiedBadge from './VerifiedBadge'
@@ -27,6 +27,8 @@ type Props = {
 
 const SEARCH_DELAY = 320
 const CACHE_TTL = 60_000
+const TOUCH_SCROLL_THRESHOLD = 7
+const TOUCH_CLICK_SUPPRESS_MS = 420
 const resultCache = new Map<string, { savedAt: number; rows: PersonOption[] }>()
 
 function cacheKey(query: string, excludeId: string | undefined, searchMode: SearchMode, genderFilter: GenderFilter | undefined) {
@@ -42,6 +44,8 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
   const rootRef = useRef<HTMLDivElement | null>(null)
   const timerRef = useRef<number | null>(null)
   const requestRef = useRef(0)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const suppressSelectionUntilRef = useRef(0)
 
   useEffect(() => {
     if (!supabase || !value) {
@@ -108,7 +112,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
 
       const smart = await supabase.rpc('search_people_names_v2', {
         p_query: valueText.trim(),
-        p_limit: 6,
+        p_limit: 20,
         p_exclude_id: excludeId || null,
         p_gender: genderFilter || null,
         p_prefix: searchMode === 'prefix',
@@ -126,7 +130,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
       // Compatibility fallback for deployments that have not received the v2 RPC yet.
       const fallback = await supabase.rpc('search_people_names', {
         p_query: valueText.trim(),
-        p_limit: 12,
+        p_limit: 24,
         p_exclude_id: excludeId || null,
       })
       if (requestId !== requestRef.current) return
@@ -134,7 +138,7 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
       const fallbackRows = ((fallback.data ?? []) as PersonOption[])
         .filter((person) => !genderFilter || person.gender === genderFilter)
         .filter((person) => searchMode !== 'prefix' || normalizeArabicSearch(person.full_name).startsWith(normalized))
-        .slice(0, 6)
+        .slice(0, 20)
       resultCache.set(key, { savedAt: Date.now(), rows: fallbackRows })
       setResults(fallbackRows)
       setLoading(false)
@@ -159,6 +163,35 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
     setResults([])
     setOpen(false)
     setLoading(false)
+  }
+
+  function onListTouchStart(event: ReactTouchEvent<HTMLDivElement>) {
+    const touch = event.touches[0]
+    if (!touch) return
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+    suppressSelectionUntilRef.current = 0
+  }
+
+  function onListTouchMove(event: ReactTouchEvent<HTMLDivElement>) {
+    const start = touchStartRef.current
+    const touch = event.touches[0]
+    if (!start || !touch) return
+    if (Math.abs(touch.clientY - start.y) >= TOUCH_SCROLL_THRESHOLD || Math.abs(touch.clientX - start.x) >= TOUCH_SCROLL_THRESHOLD) {
+      suppressSelectionUntilRef.current = Date.now() + TOUCH_CLICK_SUPPRESS_MS
+    }
+  }
+
+  function onListTouchEnd() {
+    touchStartRef.current = null
+  }
+
+  function chooseFromClick(event: ReactMouseEvent<HTMLButtonElement>, person: PersonOption) {
+    if (Date.now() < suppressSelectionUntilRef.current) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+    choose(person)
   }
 
   return (
@@ -194,12 +227,19 @@ export default function PeoplePicker({ label, value, onChange, excludeId, requir
         )}
 
         {open && !selected && (
-          <div className="people-picker-menu" aria-live="polite">
+          <div
+            className="people-picker-menu picker-touch-scroll-list"
+            aria-live="polite"
+            onTouchStart={onListTouchStart}
+            onTouchMove={onListTouchMove}
+            onTouchEnd={onListTouchEnd}
+            onTouchCancel={onListTouchEnd}
+          >
             {loading ? <div className="people-picker-state">جارٍ البحث…</div> : normalizeArabicSearch(query).length < 2 ? <div className="people-picker-state">ابدأ بكتابة حرفين من الاسم.</div> : results.length ? results.map((person) => (
               <button
                 type="button"
                 key={person.id}
-                onClick={() => choose(person)}
+                onClick={(event) => chooseFromClick(event, person)}
               >
                 <span className="people-picker-avatar">{person.full_name.charAt(0)}</span>
                 <span><span className="verified-name-line"><strong>{person.full_name}</strong>{person.is_verified && <VerifiedBadge compact />}</span><small>{person.birth_year || 'سنة الميلاد غير محددة'}</small></span>

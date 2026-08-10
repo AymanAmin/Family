@@ -1,0 +1,80 @@
+.person-link-account-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 14px;
+  padding: 11px 12px;
+  border: 1px solid #cee2dc;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #f8fcfa, #eef8f4);
+  box-shadow: 0 7px 20px rgb(31 88 72 / 6%);
+}
+
+.person-link-account-card > div {
+  min-width: 0;
+}
+
+.person-link-account-card strong {
+  display: block;
+  margin: 0;
+  color: #244a78;
+  font-size: .76rem;
+  line-height: 1.5;
+}
+
+.person-link-account-card p {
+  margin: 2px 0 0;
+  color: #75837f;
+  font-size: .59rem;
+  line-height: 1.55;
+}
+
+.person-link-account-card .primary {
+  min-height: 39px;
+  padding: 7px 13px;
+  border-radius: 12px;
+  font-size: .66rem;
+  font-weight: 900;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgb(35 74 120 / 12%);
+}
+
+@media (max-width: 620px) {
+  .person-link-account-card {
+    gap: 9px;
+    margin: 8px 0 11px;
+    padding: 9px 10px;
+    border-radius: 14px;
+  }
+
+  .person-link-account-card strong {
+    font-size: .7rem;
+  }
+
+  .person-link-account-card p {
+    display: none;
+  }
+
+  .person-link-account-card .primary {
+    min-height: 36px;
+    padding: 6px 10px;
+    border-radius: 11px;
+    font-size: .61rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .person-link-account-card {
+    grid-template-columns: minmax(0, .8fr) auto;
+  }
+
+  .person-link-account-card strong {
+    font-size: .65rem;
+  }
+
+  .person-link-account-card .primary {
+    padding-inline: 8px;
+    font-size: .58rem;
+  }
+}

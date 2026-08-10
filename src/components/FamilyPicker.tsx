@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { normalizeArabicSearch } from '../lib/arabicSearch'
+import '../people-picker-scroll.css'
 
 type FamilyOption = {
   id: string
@@ -19,6 +20,8 @@ type Props = {
 }
 
 const CACHE_TTL = 60_000
+const TOUCH_SCROLL_THRESHOLD = 7
+const TOUCH_CLICK_SUPPRESS_MS = 420
 const cache = new Map<string, { at: number; rows: FamilyOption[] }>()
 
 export default function FamilyPicker({ label, value, onChange, required = false, emptyLabel = 'بدون عائلة محددة', approvedOnly = false }: Props) {
@@ -29,6 +32,8 @@ export default function FamilyPicker({ label, value, onChange, required = false,
   const [open, setOpen] = useState(false)
   const timerRef = useRef<number | null>(null)
   const requestRef = useRef(0)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const suppressSelectionUntilRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
@@ -69,7 +74,7 @@ export default function FamilyPicker({ label, value, onChange, required = false,
       const { data, error } = await supabase.rpc('search_legacy_families_v1', {
         p_query: term || null,
         p_approved_only: approvedOnly,
-        p_limit: 7,
+        p_limit: 20,
       })
       if (requestId !== requestRef.current) return
 
@@ -85,12 +90,12 @@ export default function FamilyPicker({ label, value, onChange, required = false,
       // same Arabic normalizer used by the rest of the client.
       let request = supabase.from('families').select('id,name,origin_place,status')
       request = approvedOnly ? request.eq('status', 'approved') : request.in('status', ['approved', 'pending'])
-      const fallback = await request.order('created_at', { ascending: false }).limit(100)
+      const fallback = await request.order('created_at', { ascending: false }).limit(140)
       if (requestId !== requestRef.current) return
       const rows = ((fallback.data ?? []) as FamilyOption[])
         .filter((family) => !normalizedTerm || normalizeArabicSearch(family.name).includes(normalizedTerm))
         .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
-        .slice(0, 7)
+        .slice(0, 20)
       cache.set(key, { at: Date.now(), rows })
       setResults(rows)
       setLoading(false)
@@ -132,6 +137,35 @@ export default function FamilyPicker({ label, value, onChange, required = false,
     setLoading(false)
   }
 
+  function onListTouchStart(event: ReactTouchEvent<HTMLDivElement>) {
+    const touch = event.touches[0]
+    if (!touch) return
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+    suppressSelectionUntilRef.current = 0
+  }
+
+  function onListTouchMove(event: ReactTouchEvent<HTMLDivElement>) {
+    const start = touchStartRef.current
+    const touch = event.touches[0]
+    if (!start || !touch) return
+    if (Math.abs(touch.clientY - start.y) >= TOUCH_SCROLL_THRESHOLD || Math.abs(touch.clientX - start.x) >= TOUCH_SCROLL_THRESHOLD) {
+      suppressSelectionUntilRef.current = Date.now() + TOUCH_CLICK_SUPPRESS_MS
+    }
+  }
+
+  function onListTouchEnd() {
+    touchStartRef.current = null
+  }
+
+  function chooseFromClick(event: ReactMouseEvent<HTMLButtonElement>, family: FamilyOption) {
+    if (Date.now() < suppressSelectionUntilRef.current) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+    choose(family)
+  }
+
   return (
     <div className="family-picker-label">
       <span>{label}{required ? ' *' : ''}</span>
@@ -158,16 +192,18 @@ export default function FamilyPicker({ label, value, onChange, required = false,
         )}
 
         {open && !selected && (
-          <div className="family-picker-menu">
+          <div
+            className="family-picker-menu picker-touch-scroll-list"
+            onTouchStart={onListTouchStart}
+            onTouchMove={onListTouchMove}
+            onTouchEnd={onListTouchEnd}
+            onTouchCancel={onListTouchEnd}
+          >
             {loading ? <div className="family-picker-state">جارٍ البحث…</div> : results.length ? results.map((family) => (
               <button
                 type="button"
                 key={family.id}
-                onPointerDown={(event) => {
-                  event.preventDefault()
-                  choose(family)
-                }}
-                onClick={() => choose(family)}
+                onClick={(event) => chooseFromClick(event, family)}
               >
                 <span className="family-picker-mark">{family.name.trim().charAt(0) || 'ع'}</span>
                 <span><strong>{family.name}</strong><small>{family.origin_place || (family.status === 'pending' ? 'بانتظار الاعتماد' : 'عائلة معتمدة')}</small></span>

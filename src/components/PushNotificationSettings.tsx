@@ -15,6 +15,8 @@ const EMPTY_COUNTS: PendingModerationCounts = {
 const MODERATOR_ROLES = new Set(['family_moderator', 'content_moderator', 'admin', 'super_admin'])
 const ADMIN_ROLES = new Set(['admin', 'super_admin'])
 
+type NavigatorWithStandalone = Navigator & { standalone?: boolean }
+
 function normalizeCounts(value: unknown): PendingModerationCounts {
   const raw = Array.isArray(value) ? value[0] : value
   const row = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
@@ -44,6 +46,15 @@ function deviceLabel() {
   return 'جهاز ويب'
 }
 
+function isIosDevice() {
+  const ua = navigator.userAgent
+  return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+function isStandaloneMode() {
+  return window.matchMedia('(display-mode: standalone)').matches || Boolean((navigator as NavigatorWithStandalone).standalone)
+}
+
 export default function PushNotificationSettings() {
   const [session, setSession] = useState<Session | null>(null)
   const [subscription, setSubscription] = useState<PushSubscription | null>(null)
@@ -55,11 +66,32 @@ export default function PushNotificationSettings() {
   const [pendingCounts, setPendingCounts] = useState<PendingModerationCounts>(EMPTY_COUNTS)
   const [dismissed, setDismissed] = useState(() => localStorage.getItem('family-push-prompt-dismissed') === '1')
 
-  const supported = useMemo(() => (
+  const browserSupportsPush = useMemo(() => (
     'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
   ), [])
+  const iosNeedsHomeScreenInstall = useMemo(() => isIosDevice() && !isStandaloneMode(), [])
+  const supported = browserSupportsPush && !iosNeedsHomeScreenInstall
   const canModerate = MODERATOR_ROLES.has(role)
   const canSendTest = ADMIN_ROLES.has(role)
+
+  async function persistSubscription(current: PushSubscription, userId: string) {
+    if (!supabase) throw new Error('تعذر الاتصال بخدمة الإشعارات.')
+    const json = current.toJSON()
+    const keys = json.keys
+    if (!keys?.p256dh || !keys.auth) throw new Error('تعذر قراءة مفاتيح اشتراك الجهاز.')
+
+    const { error } = await supabase.from('push_subscriptions').upsert({
+      user_id: userId,
+      endpoint: current.endpoint,
+      p256dh: keys.p256dh,
+      auth_key: keys.auth,
+      user_agent: navigator.userAgent,
+      device_label: deviceLabel(),
+      is_active: true,
+      last_seen_at: new Date().toISOString(),
+    }, { onConflict: 'endpoint' })
+    if (error) throw error
+  }
 
   useEffect(() => {
     if (!supabase) return
@@ -98,6 +130,42 @@ export default function PushNotificationSettings() {
       .then((current) => setSubscription(current))
       .catch((): void => {})
   }, [supported])
+
+  useEffect(() => {
+    if (!supported || !session || !supabase || permission !== 'granted') return
+
+    let cancelled = false
+    const reconcile = async () => {
+      try {
+        const registration = await navigator.serviceWorker.ready
+        const current = await registration.pushManager.getSubscription()
+        if (cancelled) return
+        setSubscription(current)
+        if (!current) return
+        await persistSubscription(current, session.user.id)
+      } catch (error) {
+        console.warn('Unable to refresh Web Push subscription.', error)
+      }
+    }
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void reconcile()
+    }
+    const onFocus = () => void reconcile()
+    const onControllerChange = () => void reconcile()
+
+    void reconcile()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onFocus)
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange)
+
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onFocus)
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
+    }
+  }, [permission, session, supported])
 
   useEffect(() => {
     const receiveCounts = (event: Event) => {
@@ -154,26 +222,12 @@ export default function PushNotificationSettings() {
         })
       }
 
-      const json = current.toJSON()
-      const keys = json.keys
-      if (!keys?.p256dh || !keys.auth) throw new Error('تعذر قراءة مفاتيح اشتراك الجهاز.')
-
-      const { error } = await supabase.from('push_subscriptions').upsert({
-        user_id: session.user.id,
-        endpoint: current.endpoint,
-        p256dh: keys.p256dh,
-        auth_key: keys.auth,
-        user_agent: navigator.userAgent,
-        device_label: deviceLabel(),
-        is_active: true,
-        last_seen_at: new Date().toISOString(),
-      }, { onConflict: 'endpoint' })
-      if (error) throw error
+      await persistSubscription(current, session.user.id)
 
       setSubscription(current)
       localStorage.removeItem('family-push-prompt-dismissed')
       setDismissed(false)
-      setMessage('تم تفعيل الإشعارات على هذا الجهاز.')
+      setMessage('تم تفعيل الإشعارات، وستصل عبر Web Push حتى عند إغلاق التطبيق.')
       setOpen(true)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'تعذر تفعيل الإشعارات.')
@@ -259,7 +313,7 @@ export default function PushNotificationSettings() {
       {open && (
         <aside className="push-settings-sheet" role="dialog" aria-label="إعدادات الإشعارات">
           <div className="push-sheet-head">
-            <div><strong>إشعارات الجهاز</strong><span>{active ? 'مفعّلة على هذا الجهاز' : permission === 'denied' ? 'محظورة من إعدادات المتصفح' : 'غير مفعّلة'}</span></div>
+            <div><strong>إشعارات الجهاز</strong><span>{active ? 'مفعّلة وتعمل عبر Web Push في الخلفية' : permission === 'denied' ? 'محظورة من إعدادات المتصفح' : 'غير مفعّلة'}</span></div>
             <button type="button" onClick={() => setOpen(false)}>×</button>
           </div>
 

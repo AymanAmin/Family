@@ -1,4 +1,40 @@
 /* Compact person profile header/actions on mobile. Loaded last on purpose. */
+
+/*
+ * Person-profile context sheets must behave like true viewport modals.
+ * Lock the page behind the sheet so autofocus inside the add-person form
+ * cannot push the document to the bottom of the profile.
+ */
+html:has(.detail-page .context-sheet-backdrop),
+body:has(.detail-page .context-sheet-backdrop) {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+.detail-page .context-sheet-backdrop {
+  position: fixed !important;
+  z-index: 5000 !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  box-sizing: border-box !important;
+  display: grid !important;
+  align-items: center !important;
+  justify-items: center !important;
+  overflow: hidden !important;
+  overscroll-behavior: contain !important;
+  padding: clamp(12px, 3vw, 24px) !important;
+}
+
+.detail-page .context-sheet {
+  width: min(100%, 620px) !important;
+  max-height: min(86dvh, 780px) !important;
+  margin: 0 !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch;
+}
+
 @media (max-width: 760px) {
   .detail-page {
     padding-top: 10px !important;
@@ -155,6 +191,25 @@
     margin-top: 14px !important;
     padding: 13px !important;
     border-radius: 18px !important;
+  }
+
+  /* The modal lives inside this card in React; do not let the card clip it. */
+  .detail-page .family-overview-card.detail-section:has(.context-sheet-backdrop) {
+    overflow: visible !important;
+  }
+
+  .detail-page .context-sheet-backdrop {
+    align-items: end !important;
+    justify-items: stretch !important;
+    padding: 0 !important;
+  }
+
+  .detail-page .context-sheet {
+    width: 100% !important;
+    max-height: min(91dvh, 820px) !important;
+    margin-inline: auto !important;
+    border-radius: 28px 28px 0 0 !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
   }
 }
 

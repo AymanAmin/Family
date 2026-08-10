@@ -30,6 +30,7 @@
   min-height: 0 !important;
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
+  touch-action: pan-y !important;
   -webkit-overflow-scrolling: touch !important;
 }
 
@@ -54,39 +55,79 @@
     top: 0 !important;
   }
 
-  /* The contextual add-person dialog is intentionally a touch taller and
-     slightly higher than the standard edit dialog. Keep the adjustment tied
-     to the visual viewport so Android keyboard open/close still reflows it. */
+  /*
+   * Person-profile contextual add dialog:
+   * Android WebView/installed PWA can stop dispatching pan gestures to a nested
+   * overflow container when the gesture starts on a button (the duplicate-name
+   * result cards are buttons). Make the fixed overlay itself the only vertical
+   * scroll container on phones. This keeps scrolling alive regardless of where
+   * the finger starts and avoids competing nested scroll regions.
+   */
   .record-edit-overlay.person-add-overlay {
-    place-items: center !important;
+    display: block !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
     padding:
       max(8px, calc(env(safe-area-inset-top) + 6px))
       10px
-      max(62px, calc(env(safe-area-inset-bottom) + 50px)) !important;
+      max(104px, calc(env(safe-area-inset-bottom) + 92px)) !important;
   }
 
   .record-edit-sheet.person-add-sheet {
+    display: flex !important;
     width: min(100%, 460px) !important;
-    min-height: min(58dvh, 860px) !important;
-    max-height: min(90dvh, 860px) !important;
-    transform: translateY(-2.5dvh) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 auto !important;
+    transform: none !important;
     border-radius: 23px !important;
   }
 
+  .record-edit-sheet.person-add-sheet .record-edit-heading {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 6 !important;
+    flex: 0 0 auto !important;
+  }
+
   .person-add-form {
-    flex: 1 1 auto !important;
+    display: grid !important;
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
     align-content: start !important;
+    overscroll-behavior: auto !important;
+    touch-action: pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* A drag may begin directly on a similar-person result card. Explicitly
+     allow vertical panning there so the browser hands the gesture to overlay. */
+  .person-add-sheet .duplicate-person-check,
+  .person-add-sheet .duplicate-results,
+  .person-add-sheet .duplicate-result-card,
+  .person-add-sheet .context-auto-note,
+  .person-add-sheet .people-picker-label,
+  .person-add-sheet .people-picker {
+    touch-action: pan-y !important;
   }
 }
 
 @media (max-height: 620px) and (max-width: 760px) {
-  .record-edit-sheet {
+  .record-edit-sheet:not(.person-add-sheet) {
     max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 92px) !important;
   }
 
+  /* The person-add overlay remains the scroll owner even on short screens. */
   .record-edit-sheet.person-add-sheet {
     min-height: 0 !important;
-    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 70px) !important;
-    transform: translateY(-1dvh) !important;
+    max-height: none !important;
+    transform: none !important;
   }
 }

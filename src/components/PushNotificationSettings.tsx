@@ -148,11 +148,15 @@ export default function PushNotificationSettings() {
       }
     }
 
-    const onVisible = () => {
+    const onVisible = (): void => {
       if (document.visibilityState === 'visible') void reconcile()
     }
-    const onFocus = () => void reconcile()
-    const onControllerChange = () => void reconcile()
+    const onFocus = (): void => {
+      void reconcile()
+    }
+    const onControllerChange = (): void => {
+      void reconcile()
+    }
 
     void reconcile()
     document.addEventListener('visibilitychange', onVisible)

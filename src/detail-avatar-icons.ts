@@ -1,4 +1,5 @@
 import { supabase } from './lib/supabase'
+import './admin-person-attribution'
 
 type PersonGender = 'male' | 'female' | null
 type DetailRoute = { kind: 'person' | 'family'; id: string } | null

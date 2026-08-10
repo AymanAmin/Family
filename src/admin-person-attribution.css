@@ -1,0 +1,80 @@
+.admin-person-attribution {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  margin: -2px 0 12px auto;
+  padding: 7px 10px;
+  border: 1px solid rgb(45 101 135 / 14%);
+  border-radius: 13px;
+  color: #36566c;
+  background: linear-gradient(145deg, rgb(248 252 251 / 96%), rgb(237 246 244 / 92%));
+  box-shadow: 0 5px 16px rgb(31 72 94 / 5%);
+}
+
+.admin-person-attribution-icon {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  place-items: center;
+  border-radius: 9px;
+  color: white;
+  background: linear-gradient(145deg, #3e7e9c, #285b7a);
+  font-size: .67rem;
+  font-weight: 900;
+}
+
+.admin-person-attribution-copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.admin-person-attribution-copy > span {
+  color: #7a8c94;
+  font-size: .48rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.admin-person-attribution-copy strong {
+  overflow: hidden;
+  color: #496473;
+  font-size: .59rem;
+  font-weight: 600;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-person-attribution-copy b {
+  color: #244c68;
+  font-weight: 900;
+}
+
+.admin-person-attribution time {
+  flex: 0 0 auto;
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid rgb(62 105 127 / 12%);
+  color: #819099;
+  font-size: .51rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .admin-person-attribution {
+    width: 100%;
+    margin: -2px 0 10px;
+    padding: 7px 9px;
+  }
+
+  .admin-person-attribution-copy {
+    flex: 1;
+  }
+
+  .admin-person-attribution-copy strong {
+    white-space: normal;
+  }
+}

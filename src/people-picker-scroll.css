@@ -1,24 +1,38 @@
-.people-picker-menu {
-  max-height: min(42vh, 320px) !important;
+.people-picker-menu,
+.family-picker-menu,
+.picker-touch-scroll-list {
+  max-height: min(42dvh, 320px) !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
+  overscroll-behavior-x: none !important;
+  overscroll-behavior-y: contain !important;
+  touch-action: pan-y !important;
   -webkit-overflow-scrolling: touch;
   scrollbar-gutter: stable;
+  scroll-behavior: auto !important;
+  pointer-events: auto;
 }
 
-.people-picker-menu > button {
-  touch-action: manipulation;
+.people-picker-menu > button,
+.family-picker-menu > button,
+.picker-touch-scroll-list > button {
+  touch-action: pan-y !important;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 @media (max-width: 760px) {
-  .people-picker-menu {
-    max-height: min(46vh, 360px) !important;
+  .people-picker-menu,
+  .family-picker-menu,
+  .picker-touch-scroll-list {
+    max-height: min(46dvh, 360px) !important;
     padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
 
-  .people-picker-menu > button {
+  .people-picker-menu > button,
+  .family-picker-menu > button,
+  .picker-touch-scroll-list > button {
     min-height: 64px;
   }
 }

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sila-region-v14'
+const CACHE_VERSION = 'sila-v15'
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 
 function appUrl(path = '') {
@@ -38,16 +38,23 @@ self.addEventListener('push', (event) => {
     data = { body: event.data ? event.data.text() : '' }
   }
 
-  const title = data.title || 'صلة المنطقة'
+  const title = data.title || 'صلة'
   const options = {
     body: data.body || 'لديك تحديث جديد في صلة.',
-    icon: data.icon || appUrl('icons/icon-192.png'),
-    badge: appUrl('icons/notification-badge.png'),
-    tag: data.tag || 'family-update',
+    icon: data.icon ? new URL(data.icon, self.registration.scope).toString() : appUrl('icons/icon-192.png'),
+    badge: data.badge ? new URL(data.badge, self.registration.scope).toString() : appUrl('icons/notification-badge.png'),
+    tag: data.tag || 'sila-update',
     renotify: true,
-    data: { url: data.url || appUrl('./#/account') },
+    silent: false,
+    timestamp: Date.now(),
+    data: {
+      url: data.url || appUrl('./#/account'),
+    },
   }
 
+  // Safari on iOS/iPadOS requires a visible notification for every Web Push
+  // event. Keeping showNotification inside waitUntil lets the OS wake this
+  // service worker even when the Home Screen app has no open window.
   event.waitUntil(self.registration.showNotification(title, options))
 })
 

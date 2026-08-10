@@ -74,8 +74,16 @@ function personId(value: RelatedPerson): string {
 }
 
 function formatDate(value: string | null): string {
-  if (!value) return 'بدون تاريخ محدد'
+  if (!value) return 'بدون تاريخ'
   return new Intl.DateTimeFormat('ar-SA', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(value))
+}
+
+function cleanSearchTerm(value: string): string {
+  return value
+    .replace(/[(),.%*"']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80)
 }
 
 export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
@@ -86,6 +94,8 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
   const [error, setError] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
   const [sessionUserId, setSessionUserId] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [activeSearch, setActiveSearch] = useState('')
 
   const loadAdminAccess = useCallback(async (userId: string | null | undefined) => {
     setSessionUserId(userId ?? null)
@@ -114,10 +124,50 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
     append ? setLoadingMore(true) : setLoading(true)
     setError('')
 
-    const result = await supabase
+    let eventsQuery = supabase
       .from('events')
       .select('id,event_type,title,description,event_date,location_name,family_id,created_by,created_at,families(name)')
       .eq('status', 'approved')
+
+    const safeSearch = cleanSearchTerm(activeSearch)
+    if (safeSearch) {
+      const [familiesResult, peopleResult] = await Promise.all([
+        supabase.from('families').select('id').eq('status', 'approved').ilike('name', `%${safeSearch}%`).limit(30),
+        supabase.from('people').select('id').eq('status', 'approved').ilike('full_name', `%${safeSearch}%`).limit(50),
+      ])
+
+      const familyIds = (familiesResult.data ?? []).map((row) => row.id).filter(Boolean)
+      const peopleIds = (peopleResult.data ?? []).map((row) => row.id).filter(Boolean)
+      let mentionedEventIds: string[] = []
+
+      if (peopleIds.length) {
+        const mentionsResult = await supabase
+          .from('event_people')
+          .select('event_id')
+          .in('person_id', peopleIds)
+          .limit(200)
+
+        mentionedEventIds = Array.from(new Set((mentionsResult.data ?? []).map((row) => row.event_id).filter(Boolean)))
+      }
+
+      const matchingTypes = Object.entries(eventLabels)
+        .filter(([, label]) => label.includes(safeSearch) || safeSearch.includes(label))
+        .map(([type]) => type)
+
+      const filters = [
+        `title.ilike.*${safeSearch}*`,
+        `description.ilike.*${safeSearch}*`,
+        `location_name.ilike.*${safeSearch}*`,
+      ]
+
+      if (familyIds.length) filters.push(`family_id.in.(${familyIds.join(',')})`)
+      if (mentionedEventIds.length) filters.push(`id.in.(${mentionedEventIds.join(',')})`)
+      if (matchingTypes.length) filters.push(`event_type.in.(${matchingTypes.join(',')})`)
+
+      eventsQuery = eventsQuery.or(filters.join(','))
+    }
+
+    const result = await eventsQuery
       .order('event_date', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + PAGE_SIZE)
@@ -156,7 +206,12 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
     setHasMore(fetched.length > PAGE_SIZE)
     setLoading(false)
     setLoadingMore(false)
-  }, [])
+  }, [activeSearch])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setActiveSearch(searchTerm.trim()), 320)
+    return () => window.clearTimeout(timer)
+  }, [searchTerm])
 
   useEffect(() => {
     void loadPage(0, false)
@@ -182,19 +237,35 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
 
   return (
     <section className="news-page page-section">
-      <div className="news-page-topbar">
-        <button className="news-back" type="button" onClick={onBack}>→ العودة للرئيسية</button>
-        <button className="news-add" type="button" onClick={onAdd}>＋ إضافة خبر أو مناسبة</button>
-      </div>
-
-      <header className="news-hero">
-        <div className="news-hero-mark" aria-hidden="true"><span>صلة</span></div>
-        <div>
-          <span className="eyebrow">ذاكرة العائلة الحيّة</span>
-          <h1>أخبار ومناسبات العائلة</h1>
-          <p>المناسبات والذكريات والأخبار المعتمدة، مرتبة من الأحدث مع تحميل تدريجي يحافظ على سرعة التطبيق.</p>
+      <header className="news-page-header">
+        <button className="news-back" type="button" onClick={onBack} aria-label="العودة للرئيسية">
+          <span aria-hidden="true">→</span><b>الرئيسية</b>
+        </button>
+        <div className="news-title-block">
+          <span className="eyebrow">أخبار صلة</span>
+          <h1>الأخبار والمناسبات</h1>
+          <p>آخر أخبار العائلة وذكرياتها في مكان واحد.</p>
         </div>
+        <button className="news-add" type="button" onClick={onAdd}><span aria-hidden="true">＋</span><b>إضافة</b></button>
       </header>
+
+      <div className="news-toolbar">
+        <label className="news-search-field">
+          <span className="news-search-icon" aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="ابحث عن خبر، مناسبة، شخص أو عائلة"
+            aria-label="البحث في الأخبار والمناسبات"
+            autoComplete="off"
+          />
+          {searchTerm && <button type="button" onClick={() => setSearchTerm('')} aria-label="مسح البحث">×</button>}
+        </label>
+        <div className="news-toolbar-status" aria-live="polite">
+          {activeSearch ? <span>نتائج البحث عن <b>«{activeSearch}»</b></span> : <span>الأحدث أولًا</span>}
+        </div>
+      </div>
 
       {loading ? (
         <div className="news-skeleton-grid" aria-label="جارٍ تحميل الأخبار">
@@ -209,29 +280,37 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
               const family = familyName(item.families)
               return (
                 <article className={`news-card news-type-${item.event_type}`} key={item.id}>
-                  <div className="news-card-accent" aria-hidden="true"><span>{eventGlyphs[item.event_type] ?? '•'}</span></div>
                   <div className="news-card-body">
-                    <div className="news-card-kicker">
-                      <span className="news-type-pill">{eventLabels[item.event_type] ?? item.event_type}</span>
+                    <header className="news-card-kicker">
+                      <div className="news-card-type">
+                        <span className="news-card-glyph" aria-hidden="true">{eventGlyphs[item.event_type] ?? '•'}</span>
+                        <span className="news-type-pill">{eventLabels[item.event_type] ?? item.event_type}</span>
+                      </div>
                       <time dateTime={item.event_date ?? item.created_at}>{formatDate(item.event_date)}</time>
-                    </div>
+                    </header>
+
                     <h2>{item.title}</h2>
                     {item.description && <p className="news-description">{item.description}</p>}
-                    <div className="news-meta">
-                      {item.location_name && <span><b aria-hidden="true">⌖</b>{item.location_name}</span>}
-                      {family && <span><b aria-hidden="true">⌂</b>{family}</span>}
-                    </div>
+
+                    {(item.location_name || family) && (
+                      <div className="news-meta">
+                        {item.location_name && <span><b aria-hidden="true">⌖</b>{item.location_name}</span>}
+                        {family && <span><b aria-hidden="true">⌂</b>{family}</span>}
+                      </div>
+                    )}
+
                     {item.mentions?.length ? (
                       <div className="news-people" aria-label="الأشخاص المرتبطون بالخبر">
                         {item.mentions.map((mention) => {
                           const id = personId(mention.people)
                           const name = personName(mention.people)
                           if (!id || !name) return null
-                          return <button type="button" key={`${item.id}-${id}-${mention.participant_role}`} onClick={() => void onOpenPerson(id)}>@ {name}</button>
+                          return <button type="button" key={`${item.id}-${id}-${mention.participant_role}`} onClick={() => void onOpenPerson(id)}>{name}</button>
                         })}
                       </div>
                     ) : null}
-                    <div className="news-card-actions">
+
+                    <footer className="news-card-actions">
                       <EventShareButton event={{ id: item.id, event_type: item.event_type, title: item.title, description: item.description, event_date: item.event_date, location_name: item.location_name, family_name: family || null, people: (item.mentions ?? []).map((mention) => personName(mention.people)).filter(Boolean) }} />
                       <div className="news-admin-edit">
                         <RecordEditButton
@@ -251,7 +330,7 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
                           onSaved={() => loadPage(0, false)}
                         />
                       </div>
-                    </div>
+                    </footer>
                   </div>
                 </article>
               )
@@ -261,11 +340,18 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
           {hasMore && (
             <div className="news-load-more-wrap">
               <button className="news-load-more" type="button" disabled={loadingMore} onClick={() => void loadPage(items.length, true)}>
-                {loadingMore ? 'جارٍ تحميل المزيد…' : 'عرض أخبار أقدم'}
+                {loadingMore ? 'جارٍ تحميل المزيد…' : activeSearch ? 'عرض نتائج إضافية' : 'عرض أخبار أقدم'}
               </button>
             </div>
           )}
         </>
+      ) : activeSearch ? (
+        <div className="news-empty news-search-empty">
+          <span aria-hidden="true">⌕</span>
+          <strong>لا توجد نتائج لـ «{activeSearch}»</strong>
+          <p>جرّب جزءًا من الاسم أو عنوان المناسبة.</p>
+          <button type="button" onClick={() => setSearchTerm('')}>مسح البحث</button>
+        </div>
       ) : (
         <div className="news-empty"><span aria-hidden="true">◇</span><strong>لا توجد أخبار منشورة بعد</strong><p>عند اعتماد أول مناسبة أو خبر سيظهر هنا تلقائيًا.</p></div>
       )}

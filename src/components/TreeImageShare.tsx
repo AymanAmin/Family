@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { createTreeImage, downloadTreeImage, shareTreeImage, type TreeImageExport } from '../lib/treeImageExport'
+import { createTreeImage, downloadTreeImage, type TreeImageExport } from '../lib/treeImageExport'
 import '../tree-image-share.css'
 
 type ShareMode = 'network' | 'lineage'
@@ -40,6 +40,33 @@ function captureElements(section: HTMLElement, mode: ShareMode) {
   if (map) elements.push(map)
   if (extended) elements.push(extended)
   return elements
+}
+
+function currentShareUrl() {
+  const url = new URL(window.location.href)
+  const sensitiveKeys = ['access_token', 'refresh_token', 'provider_token', 'provider_refresh_token', 'code']
+  sensitiveKeys.forEach((key) => url.searchParams.delete(key))
+
+  if (url.hash && !url.hash.startsWith('#/')) {
+    const hash = url.hash.toLowerCase()
+    if (hash.includes('access_token=') || hash.includes('refresh_token=') || hash.includes('provider_token=')) {
+      url.hash = ''
+    }
+  }
+
+  return url.toString()
+}
+
+function shareText(preview: Preview) {
+  const viewLabel = preview.mode === 'lineage' ? 'هيكل النسب' : 'شبكة العلاقات'
+  return [
+    `🌿 هذه شجرة عائلة ${preview.personName}.`,
+    `الصورة المرفقة تعرض ${viewLabel} على منصة صلة القرابة.`,
+    '',
+    'ساهم معنا في استكمال شجرة العائلة وحفظ تاريخها للأجيال القادمة. إذا لاحظت اسمًا أو علاقة ناقصة، أو معلومة تحتاج تصحيحًا، افتح الرابط وساهم بإضافة أو اقتراح البيانات الصحيحة.',
+    '',
+    `🔗 رابط الملف والشجرة: ${currentShareUrl()}`,
+  ].join('\n')
 }
 
 export default function TreeImageShare() {
@@ -84,6 +111,7 @@ export default function TreeImageShare() {
   }, [preview])
 
   const label = useMemo(() => mode === 'lineage' ? 'مشاركة هيكل النسب' : 'مشاركة شبكة العلاقات', [mode])
+  const previewShareText = useMemo(() => preview ? shareText(preview) : '', [preview])
 
   function closePreview() {
     if (preview?.url) URL.revokeObjectURL(preview.url)
@@ -126,11 +154,19 @@ export default function TreeImageShare() {
     if (!preview) return
     setMessage('')
     try {
-      const title = preview.mode === 'lineage' ? `هيكل نسب ${preview.personName}` : `شبكة علاقات ${preview.personName}`
-      const shared = await shareTreeImage(preview.blob, preview.fileName, title)
-      if (!shared) {
+      const viewLabel = preview.mode === 'lineage' ? 'هيكل النسب' : 'شبكة العلاقات'
+      const title = `شجرة عائلة ${preview.personName} — ${viewLabel}`
+      const file = new File([preview.blob], preview.fileName, { type: 'image/png', lastModified: Date.now() })
+      const fileOnlyData: ShareData = { files: [file] }
+      const shareData: ShareData = { title, text: shareText(preview), files: [file] }
+      const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean }
+
+      if (!navigator.share || (nav.canShare && !nav.canShare(fileOnlyData))) {
         setMessage('هذا المتصفح لا يسمح بمشاركة الملفات مباشرة. نزّل PNG ثم شاركه من معرض الصور أو واتساب.')
+        return
       }
+
+      await navigator.share(shareData)
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
       console.error('tree image share failed', error)
@@ -162,7 +198,7 @@ export default function TreeImageShare() {
             <div>
               <span>جاهزة للمشاركة</span>
               <h2 id="tree-share-preview-title">{preview.mode === 'lineage' ? 'صورة هيكل النسب' : 'صورة شبكة العلاقات'}</h2>
-              <p>{preview.personName} · PNG بجودة {preview.width.toLocaleString('ar-SA')} × {preview.height.toLocaleString('ar-SA')}</p>
+              <p>شجرة عائلة {preview.personName} · PNG بجودة {preview.width.toLocaleString('ar-SA')} × {preview.height.toLocaleString('ar-SA')}</p>
             </div>
             <button type="button" className="tree-image-share-close" onClick={closePreview} aria-label="إغلاق">×</button>
           </header>
@@ -171,13 +207,18 @@ export default function TreeImageShare() {
             <img src={preview.url} alt={preview.mode === 'lineage' ? `هيكل نسب ${preview.personName}` : `شبكة علاقات ${preview.personName}`} />
           </div>
 
+          <div className="tree-image-share-copy" aria-label="النص المرفق مع المشاركة">
+            <strong>النص المرفق مع الصورة</strong>
+            <p>{previewShareText}</p>
+          </div>
+
           {message && <div className="tree-image-share-message" role="status" aria-live="polite">{message}</div>}
 
           <footer>
-            <button type="button" className="primary" onClick={() => void sharePreview()}><span aria-hidden="true">↗</span> مشاركة</button>
+            <button type="button" className="primary" onClick={() => void sharePreview()}><span aria-hidden="true">↗</span> مشاركة الصورة والنص</button>
             <button type="button" onClick={downloadPreview}><span aria-hidden="true">↓</span> تنزيل PNG</button>
           </footer>
-          <small className="tree-image-share-note">يُرتب هيكل النسب حسب الأجيال في صفوف واضحة لتكون الصورة مقروءة عند المشاركة. في هيكل النسب تظهر الأجيال المفتوحة حاليًا؛ افتح ما تريد إظهاره قبل إنشاء الصورة.</small>
+          <small className="tree-image-share-note">تُرفق عند المشاركة رسالة توضح اسم شجرة العائلة مع رابط الملف ودعوة للمساعدة في استكمال الأسماء والعلاقات وتصحيح المعلومات. يُرتب هيكل النسب حسب الأجيال في صفوف واضحة لتكون الصورة مقروءة عند المشاركة.</small>
         </section>
       </div>,
       document.body,

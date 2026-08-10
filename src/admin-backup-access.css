@@ -1,0 +1,18 @@
+.admin-console-panel.admin-backup-active > :not(.admin-backup-external-host) {
+  display: none !important;
+}
+
+.admin-backup-external-host {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-backup-tab {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .admin-backup-external-host {
+    margin-inline: -2px;
+  }
+}

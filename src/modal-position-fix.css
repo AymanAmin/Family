@@ -131,3 +131,9 @@
     transform: none !important;
   }
 }
+
+/* The PeoplePicker already shows the selected tree focus person. Avoid repeating
+   the same person in a second card with add-person and add-relation buttons. */
+.family-tree-page .tree-focus-summary {
+  display: none !important;
+}

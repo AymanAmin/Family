@@ -1,472 +1,417 @@
-/* Refined Sila household profile — calm, compact and content-led. */
+/* Household profile v3 — final compact Sila layout.
+   Important rules intentionally win over the legacy household stylesheet,
+   which is loaded later by HouseholdExperienceUpgrade. */
+
 .household-profile-layer{
-  background:
-    radial-gradient(circle at 92% 5%,rgb(88 179 169 / 10%),transparent 28%),
-    linear-gradient(180deg,#f8fbfa 0%,#f5f8f7 52%,#f8f6f1 100%);
+  background:linear-gradient(180deg,#f7faf9 0%,#f3f7f5 58%,#f8f6f1 100%)!important;
+  color:#294c45!important;
 }
 
 .household-profile-page{
-  width:min(100%,820px);
-  padding-inline:16px;
+  width:min(100%,780px)!important;
+  margin:0 auto!important;
+  padding:0 14px 104px!important;
 }
 
 .household-profile-topbar{
-  min-height:62px;
-  margin:0 -4px 8px;
-  padding:8px 4px;
-  border:0;
-  border-bottom:1px solid rgb(211 226 221 / 72%);
-  background:rgb(248 251 250 / 88%);
-  backdrop-filter:blur(18px);
+  position:sticky!important;
+  z-index:20!important;
+  top:0!important;
+  display:flex!important;
+  min-height:60px!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  margin:0 0 10px!important;
+  padding:8px 2px!important;
+  border:0!important;
+  border-bottom:1px solid #dde8e4!important;
+  background:rgb(247 250 249 / 94%)!important;
+  backdrop-filter:blur(16px)!important;
 }
 
 .household-profile-topbar>button{
-  width:40px;
-  height:40px;
-  border:1px solid #d8e4e0;
-  border-radius:14px;
-  color:#526d68;
-  background:rgb(255 255 255 / 92%);
-  box-shadow:0 6px 18px rgb(29 70 61 / 7%);
+  display:grid!important;
+  width:40px!important;
+  height:40px!important;
+  place-items:center!important;
+  border:1px solid #d6e2de!important;
+  border-radius:13px!important;
+  color:#526f68!important;
+  background:#fff!important;
+  box-shadow:0 5px 16px rgb(40 73 66 / 6%)!important;
+  font-size:24px!important;
+  line-height:1!important;
 }
 
-.household-profile-topbar>div{gap:1px}
-.household-profile-topbar small{color:#96a39f;font-size:.5rem;letter-spacing:.02em}
-.household-profile-topbar strong{color:#244d58;font-size:.88rem;font-weight:900}
+.household-profile-topbar>div{display:grid!important;gap:0!important;text-align:right!important}
+.household-profile-topbar small{color:#97a49f!important;font-size:12px!important}
+.household-profile-topbar strong{color:#244d58!important;font-size:21px!important;font-weight:900!important}
 
-/* Hero: one clear identity card with the husband link folded into it. */
+/* Identity hero — deliberately flex based so RTL can never collapse the name column. */
 .household-profile-hero{
-  position:relative;
-  overflow:hidden;
-  grid-template-columns:62px minmax(0,1fr);
-  grid-template-rows:auto auto;
-  align-items:center;
-  gap:10px 13px;
-  padding:16px;
-  border:1px solid #dbe8e4;
-  border-radius:24px;
-  background:linear-gradient(145deg,rgb(255 255 255 / 98%),rgb(240 248 246 / 96%));
-  box-shadow:0 14px 38px rgb(31 74 67 / 7%);
+  position:relative!important;
+  display:flex!important;
+  min-height:0!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:10px 12px!important;
+  overflow:hidden!important;
+  padding:15px!important;
+  border:1px solid #d8e7e2!important;
+  border-radius:22px!important;
+  background:linear-gradient(145deg,#fff 0%,#f0f8f5 100%)!important;
+  box-shadow:0 10px 28px rgb(35 76 67 / 6%)!important;
+  direction:rtl!important;
 }
 
 .household-profile-hero:before{
-  position:absolute;
-  width:220px;
-  height:220px;
-  inset:-150px auto auto -72px;
-  border:1px solid rgb(65 157 151 / 12%);
-  border-radius:50%;
-  content:'';
-  pointer-events:none;
+  position:absolute!important;
+  width:150px!important;
+  height:150px!important;
+  inset:-96px auto auto -44px!important;
+  border:1px solid rgb(69 160 151 / 10%)!important;
+  border-radius:50%!important;
+  background:transparent!important;
+  content:''!important;
+  pointer-events:none!important;
 }
 
 .household-profile-hero:after{
-  position:absolute;
-  width:110px;
-  height:110px;
-  inset:auto -62px -65px auto;
-  border-radius:32px;
-  background:linear-gradient(145deg,rgb(43 111 139 / 5%),rgb(73 170 155 / 10%));
-  content:'';
-  transform:rotate(22deg);
-  pointer-events:none;
+  position:absolute!important;
+  width:92px!important;
+  height:92px!important;
+  inset:auto -46px -54px auto!important;
+  border-radius:30px!important;
+  background:linear-gradient(145deg,rgb(45 106 132 / 4%),rgb(79 170 157 / 9%))!important;
+  content:''!important;
+  transform:rotate(24deg)!important;
+  pointer-events:none!important;
 }
 
 .household-profile-avatar{
-  position:relative;
-  z-index:1;
-  grid-row:1/3;
-  width:62px;
-  height:62px;
-  border:0;
-  border-radius:19px;
-  color:#fff;
-  background:linear-gradient(145deg,#245b7a,#49a79e);
-  box-shadow:0 10px 24px rgb(35 105 105 / 18%);
-  font-size:1.12rem;
-  font-weight:950;
+  position:relative!important;
+  z-index:1!important;
+  display:grid!important;
+  width:58px!important;
+  height:58px!important;
+  flex:0 0 58px!important;
+  order:1!important;
+  place-items:center!important;
+  border:0!important;
+  border-radius:18px!important;
+  color:#fff!important;
+  background:linear-gradient(145deg,#255b7b,#49a79e)!important;
+  box-shadow:0 8px 20px rgb(36 99 100 / 16%)!important;
+  font-size:25px!important;
+  font-weight:950!important;
 }
 
 .household-profile-title{
-  position:relative;
-  z-index:1;
-  min-width:0;
-  align-self:end;
+  position:relative!important;
+  z-index:1!important;
+  display:block!important;
+  min-width:0!important;
+  flex:1 1 240px!important;
+  order:2!important;
+  align-self:center!important;
+  text-align:right!important;
 }
 
 .household-profile-title>span{
-  display:inline-flex;
-  padding:3px 8px;
-  border-radius:999px;
-  color:#4c8177;
-  background:#e8f4f0;
-  font-size:.48rem;
-  font-weight:900;
+  display:inline-flex!important;
+  margin:0 0 4px!important;
+  padding:3px 8px!important;
+  border-radius:999px!important;
+  color:#4e7e75!important;
+  background:#e5f2ee!important;
+  font-size:11px!important;
+  font-weight:900!important;
 }
 
 .household-profile-title h1{
-  margin:5px 0 2px;
-  color:#224b5c;
-  font-size:1.12rem;
-  line-height:1.5;
-  text-wrap:balance;
+  display:block!important;
+  width:100%!important;
+  margin:0!important;
+  color:#244d58!important;
+  font-size:23px!important;
+  font-weight:950!important;
+  line-height:1.45!important;
+  overflow-wrap:break-word!important;
+  word-break:normal!important;
+  white-space:normal!important;
+  text-wrap:pretty!important;
 }
 
 .household-profile-title p{
-  margin:0;
-  color:#74857f;
-  font-size:.56rem;
-  line-height:1.6;
+  display:block!important;
+  margin:4px 0 0!important;
+  color:#71847e!important;
+  font-size:13px!important;
+  line-height:1.7!important;
+  white-space:normal!important;
 }
 
 .household-open-husband{
-  position:relative;
-  z-index:1;
-  grid-column:2;
-  grid-row:2;
-  display:flex;
-  align-items:center;
-  gap:5px;
-  width:max-content;
-  max-width:100%;
-  min-width:0;
-  min-height:28px;
-  align-self:start;
-  padding:4px 9px;
-  border:0;
-  border-radius:999px;
-  color:#3c6a62;
-  background:rgb(232 244 240 / 78%);
-  text-align:right;
+  position:relative!important;
+  z-index:1!important;
+  display:flex!important;
+  min-width:0!important;
+  min-height:34px!important;
+  flex:1 0 100%!important;
+  order:3!important;
+  align-items:center!important;
+  gap:6px!important;
+  justify-content:flex-start!important;
+  padding:7px 10px!important;
+  border:1px solid #dbe7e3!important;
+  border-radius:11px!important;
+  color:#35675f!important;
+  background:rgb(255 255 255 / 76%)!important;
+  text-align:right!important;
 }
 
-.household-open-husband>span{
-  flex:0 0 auto;
-  color:#879690;
-  font-size:.42rem;
-  font-weight:800;
-}
-.household-open-husband>span:after{content:' •'}
-.household-open-husband>strong{
-  overflow:hidden;
-  max-width:320px;
-  color:#315f57;
-  font-size:.5rem;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.household-open-husband>i{color:#50867c;font-size:.72rem;font-style:normal}
+.household-open-husband>span{flex:0 0 auto!important;color:#899994!important;font-size:11px!important;font-weight:800!important}
+.household-open-husband>span:after{content:' •'!important}
+.household-open-husband>strong{overflow:hidden!important;min-width:0!important;color:#315f57!important;font-size:13px!important;font-weight:900!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.household-open-husband>i{margin-inline-start:auto!important;color:#4f867b!important;font-size:18px!important;font-style:normal!important}
 
-/* One quiet metrics ribbon. */
+/* One real metrics ribbon — never 2x2 on mobile. */
 .household-profile-stats{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:0;
-  overflow:hidden;
-  margin:9px 0 7px;
-  border:1px solid #dce8e4;
-  border-radius:16px;
-  background:rgb(255 255 255 / 92%);
-  box-shadow:0 7px 22px rgb(38 81 70 / 4%);
+  display:flex!important;
+  min-height:0!important;
+  flex-wrap:nowrap!important;
+  gap:0!important;
+  overflow:hidden!important;
+  margin:9px 0 7px!important;
+  border:1px solid #dbe7e3!important;
+  border-radius:15px!important;
+  background:#fff!important;
+  box-shadow:0 6px 18px rgb(39 79 70 / 4%)!important;
 }
 
 .household-profile-stats article{
-  position:relative;
-  display:flex;
-  min-width:0;
-  min-height:52px;
-  align-items:center;
-  justify-content:center;
-  gap:5px;
-  padding:6px 3px;
-  border:0;
-  border-inline-end:1px solid #edf2f0;
-  border-radius:0;
-  background:transparent;
-  box-shadow:none;
+  display:flex!important;
+  min-width:0!important;
+  min-height:58px!important;
+  flex:1 1 25%!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:5px!important;
+  padding:7px 3px!important;
+  border:0!important;
+  border-inline-end:1px solid #edf2f0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  text-align:center!important;
 }
-.household-profile-stats article:last-child{border-inline-end:0}
-.household-profile-stats strong{color:#275f67;font-size:.84rem;line-height:1}
-.household-profile-stats span{color:#7b8c87;font-size:.43rem;font-weight:800;white-space:nowrap}
+.household-profile-stats article:last-child{border-inline-end:0!important}
+.household-profile-stats strong{color:#28665c!important;font-size:21px!important;font-weight:950!important;line-height:1!important}
+.household-profile-stats span{color:#7b8d87!important;font-size:11px!important;font-weight:800!important;white-space:nowrap!important}
 
-/* Sharing becomes a slim utility row rather than a visual section. */
+/* Sharing is a utility, not a content card. */
 .household-share-panel{
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  gap:7px;
-  margin:6px 0 8px;
-  padding:0;
-  border:0;
-  background:transparent;
-  box-shadow:none;
-  direction:rtl;
+  display:block!important;
+  margin:7px 0!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  direction:rtl!important;
 }
-.household-share-copy{display:none}
-.household-share-actions{display:flex;align-items:center;gap:6px}
+.household-share-copy{display:none!important}
+.household-share-actions{display:flex!important;width:100%!important;align-items:center!important;gap:6px!important}
 .household-share-actions button{
-  display:flex;
-  min-width:0;
-  min-height:34px;
-  align-items:center;
-  gap:6px;
-  padding:5px 9px;
-  border-radius:11px;
-  font-family:inherit;
-  text-align:right;
+  display:flex!important;
+  min-width:0!important;
+  min-height:38px!important;
+  flex:1 1 0!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  padding:6px 9px!important;
+  border-radius:11px!important;
+  font-family:inherit!important;
+  text-align:center!important;
 }
-.household-share-actions button>span{
-  display:grid;
-  width:23px;
-  height:23px;
-  flex:0 0 auto;
-  place-items:center;
-  border-radius:8px;
-  font-size:.58rem;
-}
-.household-share-actions b{font-size:.46rem;white-space:nowrap}
-.household-share-actions small{display:none}
-.household-share-image{border:1px solid #cfe1dd;color:#315f65;background:#fff}
-.household-share-image>span{color:#fff;background:linear-gradient(145deg,#286d89,#47a394)}
-.household-share-link{border:1px solid #d7e5e1;color:#3e6d64;background:#f7fbf9}
-.household-share-link>span{color:#437b70;background:#e6f2ee}
-.household-share-actions button:disabled{opacity:.58}
-.household-share-message{flex:1 1 auto;padding:5px 8px;border-radius:9px;color:#52736b;background:#edf6f3;font-size:.43rem;font-weight:750;text-align:center}
+.household-share-actions button>span{display:grid!important;width:25px!important;height:25px!important;flex:0 0 25px!important;place-items:center!important;border-radius:8px!important;font-size:12px!important}
+.household-share-actions b{font-size:12px!important;font-weight:900!important;white-space:nowrap!important}
+.household-share-actions small{display:none!important}
+.household-share-image{border:1px solid #cfe0dc!important;color:#315e65!important;background:#fff!important}
+.household-share-image>span{color:#fff!important;background:linear-gradient(145deg,#286b89,#48a195)!important}
+.household-share-link{border:1px solid #d7e4e0!important;color:#3d6961!important;background:#f8fbfa!important}
+.household-share-link>span{color:#40786d!important;background:#e6f2ee!important}
+.household-share-message{margin-top:6px!important;padding:6px 8px!important;border-radius:9px!important;color:#52736b!important;background:#edf6f3!important;font-size:11px!important;font-weight:750!important;text-align:center!important}
 
-/* Lineage context is information, not another large card. */
+/* Lineage becomes one quiet information row. */
 .household-profile-context{
-  display:grid;
-  grid-template-columns:auto minmax(0,1fr);
-  align-items:center;
-  gap:10px;
-  margin:7px 0 12px;
-  padding:9px 11px;
-  border:1px solid #e0e9e6;
-  border-radius:14px;
-  background:rgb(255 255 255 / 72%);
-  box-shadow:none;
+  display:flex!important;
+  min-height:0!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:7px 10px!important;
+  margin:8px 0 14px!important;
+  padding:9px 11px!important;
+  border:1px solid #e0e9e6!important;
+  border-radius:13px!important;
+  background:rgb(255 255 255 / 72%)!important;
+  box-shadow:none!important;
 }
-.household-profile-context>header{display:block;min-width:max-content}
-.household-profile-context>header span{color:#477970;font-size:.49rem;font-weight:900}
-.household-profile-context>header strong{display:none}
-.household-profile-context-grid{display:flex;min-width:0;align-items:center;gap:5px}
-.household-profile-context-grid>div{
-  display:flex;
-  min-width:0;
-  align-items:center;
-  gap:5px;
-  padding:0;
-  border-radius:0;
-  background:transparent;
-}
-.household-profile-context-grid>div+div:before{margin-inline:3px;color:#b1bfba;content:'•'}
-.household-profile-context-grid small{color:#94a19d;font-size:.4rem}
-.household-profile-context-grid strong{overflow:hidden;color:#3a625c;font-size:.49rem;text-overflow:ellipsis;white-space:nowrap}
+.household-profile-context>header{display:block!important;min-width:auto!important}
+.household-profile-context>header span{color:#467970!important;font-size:12px!important;font-weight:900!important}
+.household-profile-context>header strong{display:none!important}
+.household-profile-context-grid{display:flex!important;min-width:0!important;flex:1 1 240px!important;align-items:center!important;flex-wrap:wrap!important;gap:5px 12px!important}
+.household-profile-context-grid>div{display:flex!important;min-width:0!important;align-items:center!important;gap:5px!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important}
+.household-profile-context-grid>div+div:before{display:inline!important;margin-inline-end:4px!important;color:#aebdb8!important;content:'•'!important}
+.household-profile-context-grid small{color:#929f9b!important;font-size:10px!important}
+.household-profile-context-grid strong{overflow:hidden!important;color:#3b625c!important;font-size:12px!important;font-weight:850!important;text-overflow:ellipsis!important;white-space:nowrap!important}
 
-/* Marriages are the main content and get the visual emphasis. */
+/* Main content: marriages only. */
 .household-marriages-section{
-  display:grid;
-  gap:9px;
-  padding:0;
-  border:0;
-  border-radius:0;
-  background:transparent;
-  box-shadow:none;
+  display:grid!important;
+  gap:8px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
 }
-.household-marriages-section>header{
-  align-items:center;
-  padding:4px 2px 2px;
-}
-.household-marriages-section>header div{gap:1px}
-.household-marriages-section>header span{color:#8a9994;font-size:.47rem}
-.household-marriages-section>header h2{margin:0;color:#244e5a;font-size:.88rem}
-.household-marriages-section>header b{
-  min-width:30px;
-  height:30px;
-  border:1px solid #d6e7e2;
-  border-radius:10px;
-  color:#337166;
-  background:#e9f4f0;
-  font-size:.58rem;
-}
-.household-marriage-list{display:grid;gap:9px}
+.household-marriages-section>header{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;padding:4px 2px!important}
+.household-marriages-section>header div{display:grid!important;gap:1px!important}
+.household-marriages-section>header span{color:#8a9994!important;font-size:11px!important}
+.household-marriages-section>header h2{margin:0!important;color:#244e5a!important;font-size:22px!important;font-weight:950!important}
+.household-marriages-section>header b{display:grid!important;min-width:31px!important;height:31px!important;place-items:center!important;border:1px solid #d6e6e1!important;border-radius:10px!important;color:#327065!important;background:#e9f4f0!important;font-size:13px!important}
+
+.household-marriage-list{display:grid!important;gap:9px!important}
 .household-marriage-card{
-  display:grid;
-  gap:8px;
-  padding:10px;
-  border:1px solid #dce8e4;
-  border-radius:18px;
-  background:rgb(255 255 255 / 94%);
-  box-shadow:0 8px 24px rgb(37 75 66 / 4%);
+  display:grid!important;
+  gap:8px!important;
+  min-height:0!important;
+  padding:10px!important;
+  border:1px solid #dce7e3!important;
+  border-radius:17px!important;
+  background:#fff!important;
+  box-shadow:0 7px 20px rgb(37 75 66 / 4%)!important;
 }
-.household-spouse-heading{display:flex;align-items:center;gap:8px}
+
+.household-spouse-heading{display:flex!important;align-items:center!important;flex-direction:row!important;gap:7px!important}
 .household-spouse-heading>button{
-  display:grid;
-  grid-template-columns:36px minmax(0,1fr) 14px;
-  align-items:center;
-  gap:7px;
-  min-width:0;
-  flex:1 1 auto;
-  padding:6px 7px;
-  border:0;
-  border-radius:13px;
-  color:inherit;
-  background:#fbf7ef;
-  text-align:right;
+  display:grid!important;
+  min-width:0!important;
+  flex:1 1 auto!important;
+  grid-template-columns:38px minmax(0,1fr) 14px!important;
+  align-items:center!important;
+  gap:7px!important;
+  padding:6px 7px!important;
+  border:0!important;
+  border-radius:12px!important;
+  color:inherit!important;
+  background:#fff9f1!important;
+  text-align:right!important;
 }
-.household-spouse-heading>button>span:first-child{
-  display:grid;
-  width:36px;
-  height:36px;
-  place-items:center;
-  border-radius:11px;
-  color:#8a6d45;
-  background:#f2e6cf;
-  font-size:.65rem;
-  font-weight:950;
-}
-.household-spouse-heading>button.female>span:first-child{color:#875e72;background:#f4e7ec}
-.household-spouse-heading>button>span:last-child{display:grid;min-width:0;gap:1px}
-.household-spouse-heading small{color:#a08761;font-size:.4rem;font-weight:850}
-.household-spouse-heading strong{overflow:hidden;color:#5e5548;font-size:.56rem;text-overflow:ellipsis;white-space:nowrap}
-.household-spouse-heading>button>i{color:#aa8c5c;font-size:.75rem;font-style:normal}
-.household-spouse-heading em{
-  flex:0 0 auto;
-  padding:5px 8px;
-  border-radius:999px;
-  color:#4f7169;
-  background:#edf5f2;
-  font-size:.42rem;
-  font-style:normal;
-  font-weight:900;
-  white-space:nowrap;
-}
+.household-spouse-heading>button>span:first-child{display:grid!important;width:38px!important;height:38px!important;place-items:center!important;border-radius:11px!important;color:#856a43!important;background:#f2e6cf!important;font-size:15px!important;font-weight:950!important}
+.household-spouse-heading>button.female>span:first-child{color:#855f70!important;background:#f5e8ed!important}
+.household-spouse-heading>button>span:last-child{display:grid!important;min-width:0!important;gap:1px!important}
+.household-spouse-heading small{color:#a0865e!important;font-size:10px!important;font-weight:850!important}
+.household-spouse-heading strong{overflow:hidden!important;color:#5c554a!important;font-size:13px!important;font-weight:900!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.household-spouse-heading>button>i{color:#aa8b5b!important;font-size:17px!important;font-style:normal!important}
+.household-spouse-heading em{flex:0 0 auto!important;align-self:center!important;padding:5px 8px!important;border-radius:999px!important;color:#4e7068!important;background:#edf5f2!important;font-size:10px!important;font-style:normal!important;font-weight:900!important;white-space:nowrap!important}
 
-.household-child-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.household-child-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important}
 .household-child-grid>button{
-  display:grid;
-  grid-template-columns:32px minmax(0,1fr) 12px;
-  align-items:center;
-  gap:6px;
-  min-width:0;
-  min-height:46px;
-  padding:6px 7px;
-  border:1px solid #e4ece9;
-  border-radius:12px;
-  color:inherit;
-  background:#fbfdfc;
-  text-align:right;
+  display:grid!important;
+  min-width:0!important;
+  min-height:48px!important;
+  grid-template-columns:32px minmax(0,1fr) 12px!important;
+  align-items:center!important;
+  gap:6px!important;
+  padding:6px 7px!important;
+  border:1px solid #e4ece9!important;
+  border-radius:11px!important;
+  color:inherit!important;
+  background:#fbfdfc!important;
+  text-align:right!important;
 }
-.household-child-grid>button>span:first-child{
-  display:grid;
-  width:32px;
-  height:32px;
-  place-items:center;
-  border-radius:10px;
-  color:#32695e;
-  background:#e7f2ee;
-  font-size:.54rem;
-  font-weight:950;
-}
-.household-child-grid>button.female>span:first-child{color:#865f70;background:#f5e9ee}
-.household-child-grid>button>span:nth-child(2){display:grid;min-width:0;gap:1px}
-.household-child-grid strong{overflow:hidden;color:#3e625a;font-size:.49rem;line-height:1.4;text-overflow:ellipsis;white-space:nowrap}
-.household-child-grid small{color:#8a9994;font-size:.38rem}
-.household-child-grid i{color:#8aa099;font-size:.72rem;font-style:normal}
-.household-no-children{padding:8px 9px;border-radius:10px;color:#8a9994;background:#f7faf9;font-size:.46rem}
+.household-child-grid>button>span:first-child{display:grid!important;width:32px!important;height:32px!important;place-items:center!important;border-radius:9px!important;color:#32695e!important;background:#e7f2ee!important;font-size:12px!important;font-weight:950!important}
+.household-child-grid>button.female>span:first-child{color:#865f70!important;background:#f5e9ee!important}
+.household-child-grid>button>span:nth-child(2){display:grid!important;min-width:0!important;gap:1px!important}
+.household-child-grid strong{overflow:hidden!important;color:#3e625a!important;font-size:12px!important;font-weight:850!important;line-height:1.45!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.household-child-grid small{color:#899993!important;font-size:9px!important}
+.household-child-grid i{color:#8aa099!important;font-size:15px!important;font-style:normal!important}
+.household-no-children{padding:9px!important;border-radius:10px!important;color:#899993!important;background:#f7faf9!important;font-size:11px!important}
 
-.household-unassigned-section{
-  display:grid;
-  gap:8px;
-  margin-top:10px;
-  padding:10px;
-  border:1px dashed #ddcda8;
-  border-radius:16px;
-  background:#fffaf0;
-}
-.household-unassigned-section>div:first-child span{color:#9c7c45;font-size:.43rem;font-weight:900}
-.household-unassigned-section h2{margin:1px 0;color:#745f3d;font-size:.65rem}
-.household-unassigned-section p{margin:0;color:#89795e;font-size:.45rem;line-height:1.65}
-.household-profile-note{
-  margin-top:10px;
-  padding:8px 10px;
-  border:0;
-  border-radius:12px;
-  color:#6c817a;
-  background:#edf5f2;
-  font-size:.43rem;
-  line-height:1.65;
-  text-align:center;
-}
+.household-unassigned-section{display:grid!important;gap:8px!important;margin-top:10px!important;padding:10px!important;border:1px dashed #ddcda8!important;border-radius:15px!important;background:#fffaf0!important}
+.household-unassigned-section>div:first-child span{color:#9c7c45!important;font-size:10px!important;font-weight:900!important}
+.household-unassigned-section h2{margin:2px 0!important;color:#745f3d!important;font-size:15px!important}
+.household-unassigned-section p{margin:0!important;color:#89795e!important;font-size:11px!important;line-height:1.7!important}
+.household-profile-note{margin-top:9px!important;padding:8px 10px!important;border:0!important;border-radius:11px!important;color:#647b74!important;background:#eaf4f0!important;font-size:10px!important;line-height:1.65!important;text-align:center!important}
 
-.household-home-card{border-color:#dbe7e4!important;background:linear-gradient(145deg,#fff,#fbfdfc)!important;box-shadow:0 8px 26px rgb(34 74 64 / 5%)}
+.household-home-card{border-color:#dbe7e4!important;background:linear-gradient(145deg,#fff,#fbfdfc)!important;box-shadow:0 8px 26px rgb(34 74 64 / 5%)!important}
 
 @media(max-width:620px){
-  .household-profile-page{padding:0 10px 94px}
-  .household-profile-topbar{min-height:54px;margin-bottom:6px;padding:6px 1px}
-  .household-profile-topbar>button{width:36px;height:36px;border-radius:12px;font-size:1.08rem}
+  .household-profile-page{padding:0 10px 94px!important}
+  .household-profile-topbar{min-height:54px!important;margin-bottom:7px!important;padding:6px 1px!important}
+  .household-profile-topbar>button{width:36px!important;height:36px!important;border-radius:11px!important;font-size:22px!important}
+  .household-profile-topbar small{font-size:10px!important}
+  .household-profile-topbar strong{font-size:18px!important}
 
-  .household-profile-hero{grid-template-columns:52px minmax(0,1fr);gap:7px 10px;padding:12px;border-radius:19px}
-  .household-profile-avatar{width:52px;height:52px;border-radius:16px;font-size:.94rem}
-  .household-profile-title h1{margin:3px 0 1px;font-size:.9rem;line-height:1.45}
-  .household-profile-title p{font-size:.47rem;line-height:1.45}
-  .household-profile-title>span{padding:2px 6px;font-size:.41rem}
-  .household-open-husband{min-height:24px;padding:3px 7px}
-  .household-open-husband>span{font-size:.36rem}
-  .household-open-husband>strong{max-width:210px;font-size:.43rem}
+  .household-profile-hero{gap:8px 10px!important;padding:12px!important;border-radius:18px!important}
+  .household-profile-avatar{width:52px!important;height:52px!important;flex-basis:52px!important;border-radius:15px!important;font-size:22px!important}
+  .household-profile-title{flex-basis:calc(100% - 64px)!important}
+  .household-profile-title>span{margin-bottom:3px!important;padding:2px 6px!important;font-size:9px!important}
+  .household-profile-title h1{font-size:19px!important;line-height:1.45!important}
+  .household-profile-title p{margin-top:3px!important;font-size:11px!important;line-height:1.55!important}
+  .household-open-husband{min-height:32px!important;padding:6px 8px!important;border-radius:10px!important}
+  .household-open-husband>span{font-size:9px!important}
+  .household-open-husband>strong{font-size:11px!important}
+  .household-open-husband>i{font-size:15px!important}
 
-  .household-profile-stats{margin:7px 0 5px;border-radius:13px}
-  .household-profile-stats article{min-height:46px;gap:4px;padding:5px 2px}
-  .household-profile-stats strong{font-size:.72rem}
-  .household-profile-stats span{font-size:.36rem}
+  .household-profile-stats{margin:7px 0 6px!important;border-radius:13px!important}
+  .household-profile-stats article{min-height:52px!important;gap:3px!important;padding:6px 2px!important}
+  .household-profile-stats strong{font-size:18px!important}
+  .household-profile-stats span{font-size:9px!important}
 
-  .household-share-panel{margin:4px 0 7px}
-  .household-share-actions{width:100%}
-  .household-share-actions button{min-height:32px;padding:4px 8px;border-radius:10px}
-  .household-share-actions button>span{width:22px;height:22px;border-radius:7px}
-  .household-share-actions b{font-size:.42rem}
-  .household-share-message{font-size:.38rem}
+  .household-share-actions button{min-height:36px!important;padding:5px 7px!important;border-radius:10px!important}
+  .household-share-actions button>span{width:23px!important;height:23px!important;flex-basis:23px!important}
+  .household-share-actions b{font-size:10px!important}
 
-  .household-profile-context{grid-template-columns:auto minmax(0,1fr);gap:7px;margin:5px 0 10px;padding:7px 8px;border-radius:12px}
-  .household-profile-context>header span{font-size:.42rem}
-  .household-profile-context-grid{gap:3px}
-  .household-profile-context-grid small{font-size:.34rem}
-  .household-profile-context-grid strong{font-size:.41rem}
+  .household-profile-context{gap:5px 8px!important;margin:7px 0 12px!important;padding:8px 9px!important;border-radius:12px!important}
+  .household-profile-context>header span{font-size:10px!important}
+  .household-profile-context-grid small{font-size:8px!important}
+  .household-profile-context-grid strong{font-size:10px!important}
 
-  .household-marriages-section>header{padding-inline:1px}
-  .household-marriages-section>header h2{font-size:.78rem}
-  .household-marriages-section>header span{font-size:.4rem}
-  .household-marriages-section>header b{min-width:27px;height:27px;border-radius:9px;font-size:.52rem}
-  .household-marriage-card{padding:8px;border-radius:15px}
-  .household-spouse-heading{gap:6px}
-  .household-spouse-heading>button{grid-template-columns:34px minmax(0,1fr) 12px;padding:5px 6px;border-radius:11px}
-  .household-spouse-heading>button>span:first-child{width:34px;height:34px;border-radius:10px}
-  .household-spouse-heading strong{font-size:.5rem}
-  .household-spouse-heading small{font-size:.36rem}
-  .household-spouse-heading em{padding:4px 7px;font-size:.37rem}
-  .household-child-grid{grid-template-columns:1fr;gap:5px}
-  .household-child-grid>button{grid-template-columns:30px minmax(0,1fr) 11px;min-height:43px;padding:5px 6px;border-radius:11px}
-  .household-child-grid>button>span:first-child{width:30px;height:30px;border-radius:9px}
-  .household-child-grid strong{font-size:.45rem;white-space:normal}
-  .household-child-grid small{font-size:.34rem}
-  .household-profile-note{margin-top:8px;font-size:.38rem}
+  .household-marriages-section>header h2{font-size:19px!important}
+  .household-marriages-section>header span{font-size:9px!important}
+  .household-marriages-section>header b{min-width:28px!important;height:28px!important;font-size:11px!important}
+  .household-marriage-card{padding:8px!important;border-radius:14px!important}
+  .household-spouse-heading{gap:6px!important}
+  .household-spouse-heading>button{grid-template-columns:34px minmax(0,1fr) 12px!important;padding:5px 6px!important;border-radius:10px!important}
+  .household-spouse-heading>button>span:first-child{width:34px!important;height:34px!important;border-radius:10px!important;font-size:13px!important}
+  .household-spouse-heading strong{font-size:11px!important}
+  .household-spouse-heading small{font-size:8px!important}
+  .household-spouse-heading em{padding:4px 7px!important;font-size:9px!important}
+
+  .household-child-grid{grid-template-columns:1fr!important;gap:5px!important}
+  .household-child-grid>button{min-height:44px!important;grid-template-columns:30px minmax(0,1fr) 11px!important;padding:5px 6px!important;border-radius:10px!important}
+  .household-child-grid>button>span:first-child{width:30px!important;height:30px!important;border-radius:8px!important;font-size:11px!important}
+  .household-child-grid strong{font-size:11px!important;white-space:normal!important}
+  .household-child-grid small{font-size:8px!important}
 }
 
-@media(max-width:390px){
-  .household-profile-page{padding-inline:8px}
-  .household-profile-stats span{font-size:.33rem}
-  .household-profile-context{grid-template-columns:1fr}
-  .household-profile-context-grid{flex-wrap:wrap}
-  .household-profile-context-grid>div+div:before{display:none}
-  .household-share-actions{display:grid;grid-template-columns:1fr 1fr}
-  .household-share-actions button{justify-content:center}
-  .household-spouse-heading{align-items:stretch;flex-direction:column}
-  .household-spouse-heading>button{width:100%}
-  .household-spouse-heading em{align-self:flex-start}
+@media(max-width:380px){
+  .household-profile-page{padding-inline:8px!important}
+  .household-profile-title h1{font-size:18px!important}
+  .household-profile-stats strong{font-size:17px!important}
+  .household-profile-stats span{font-size:8px!important}
+  .household-share-actions b{font-size:9px!important}
+  .household-profile-context-grid{flex-basis:100%!important}
+  .household-spouse-heading{align-items:center!important;flex-direction:row!important}
+  .household-spouse-heading em{font-size:8px!important}
 }
 
 @media(min-width:761px){
-  .household-profile-page{padding-inline:18px}
-  .household-profile-hero{margin-top:4px}
-  .household-child-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .household-profile-page{padding-inline:18px!important}
+  .household-profile-hero{padding:17px!important}
+  .household-profile-title h1{font-size:27px!important}
+  .household-child-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 }

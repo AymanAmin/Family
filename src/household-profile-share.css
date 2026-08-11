@@ -1,358 +1,465 @@
+/* Refined Sila household profile — calm, compact and content-led. */
 .household-profile-layer{
-  background:linear-gradient(180deg,#f5faf8 0,#f8faf9 42%,#f2f6f5 100%);
+  background:
+    radial-gradient(circle at 92% 5%,rgb(88 179 169 / 10%),transparent 28%),
+    linear-gradient(180deg,#f8fbfa 0%,#f5f8f7 52%,#f8f6f1 100%);
 }
 
 .household-profile-page{
   width:min(100%,820px);
-  padding-inline:14px;
+  padding-inline:16px;
 }
 
 .household-profile-topbar{
-  min-height:58px;
-  margin-inline:-2px;
+  min-height:62px;
+  margin:0 -4px 8px;
   padding:8px 4px;
-  border-bottom:1px solid rgb(207 226 220 / 62%);
-  background:rgb(247 250 249 / 94%);
-  backdrop-filter:blur(16px);
+  border:0;
+  border-bottom:1px solid rgb(211 226 221 / 72%);
+  background:rgb(248 251 250 / 88%);
+  backdrop-filter:blur(18px);
 }
 
 .household-profile-topbar>button{
   width:40px;
   height:40px;
-  border-radius:13px;
-  box-shadow:0 5px 16px rgb(35 76 67 / 7%);
+  border:1px solid #d8e4e0;
+  border-radius:14px;
+  color:#526d68;
+  background:rgb(255 255 255 / 92%);
+  box-shadow:0 6px 18px rgb(29 70 61 / 7%);
 }
 
-.household-profile-topbar small{font-size:.55rem}
-.household-profile-topbar strong{font-size:.82rem}
+.household-profile-topbar>div{gap:1px}
+.household-profile-topbar small{color:#96a39f;font-size:.5rem;letter-spacing:.02em}
+.household-profile-topbar strong{color:#244d58;font-size:.88rem;font-weight:900}
 
+/* Hero: one clear identity card with the husband link folded into it. */
 .household-profile-hero{
   position:relative;
   overflow:hidden;
-  grid-template-columns:68px minmax(0,1fr) auto;
-  gap:12px;
+  grid-template-columns:62px minmax(0,1fr);
+  grid-template-rows:auto auto;
+  align-items:center;
+  gap:10px 13px;
   padding:16px;
-  border:1px solid #d9e7e3;
+  border:1px solid #dbe8e4;
   border-radius:24px;
-  background:linear-gradient(145deg,#fff,#f0f8f5);
-  box-shadow:0 12px 30px rgb(29 77 65 / 7%);
+  background:linear-gradient(145deg,rgb(255 255 255 / 98%),rgb(240 248 246 / 96%));
+  box-shadow:0 14px 38px rgb(31 74 67 / 7%);
 }
 
 .household-profile-hero:before{
   position:absolute;
-  width:170px;
-  height:170px;
-  inset:-110px auto auto -50px;
-  border:1px solid rgb(74 169 155 / 12%);
-  border-radius:999px;
+  width:220px;
+  height:220px;
+  inset:-150px auto auto -72px;
+  border:1px solid rgb(65 157 151 / 12%);
+  border-radius:50%;
   content:'';
+  pointer-events:none;
+}
+
+.household-profile-hero:after{
+  position:absolute;
+  width:110px;
+  height:110px;
+  inset:auto -62px -65px auto;
+  border-radius:32px;
+  background:linear-gradient(145deg,rgb(43 111 139 / 5%),rgb(73 170 155 / 10%));
+  content:'';
+  transform:rotate(22deg);
   pointer-events:none;
 }
 
 .household-profile-avatar{
   position:relative;
   z-index:1;
-  width:68px;
-  height:68px;
+  grid-row:1/3;
+  width:62px;
+  height:62px;
   border:0;
-  border-radius:21px;
+  border-radius:19px;
   color:#fff;
-  background:linear-gradient(145deg,#24577d,#42a79d);
-  box-shadow:0 10px 22px rgb(35 101 100 / 16%);
-  font-size:1.24rem;
+  background:linear-gradient(145deg,#245b7a,#49a79e);
+  box-shadow:0 10px 24px rgb(35 105 105 / 18%);
+  font-size:1.12rem;
+  font-weight:950;
 }
 
 .household-profile-title{
   position:relative;
   z-index:1;
-  align-self:center;
+  min-width:0;
+  align-self:end;
 }
 
 .household-profile-title>span{
   display:inline-flex;
-  padding:3px 7px;
+  padding:3px 8px;
   border-radius:999px;
-  color:#4f8177;
+  color:#4c8177;
   background:#e8f4f0;
-  font-size:.52rem;
-  font-weight:850;
+  font-size:.48rem;
+  font-weight:900;
 }
 
 .household-profile-title h1{
-  margin:4px 0 3px;
-  color:#244d47;
-  font-size:1.2rem;
+  margin:5px 0 2px;
+  color:#224b5c;
+  font-size:1.12rem;
   line-height:1.5;
+  text-wrap:balance;
 }
 
 .household-profile-title p{
   margin:0;
-  color:#71857f;
-  font-size:.61rem;
+  color:#74857f;
+  font-size:.56rem;
   line-height:1.6;
 }
 
 .household-open-husband{
   position:relative;
   z-index:1;
-  display:grid;
-  grid-template-columns:auto minmax(0,1fr) auto;
-  grid-template-rows:auto auto;
+  grid-column:2;
+  grid-row:2;
+  display:flex;
   align-items:center;
-  gap:0 7px;
-  min-width:142px;
-  min-height:48px;
-  align-self:center;
-  padding:7px 10px;
-  border:1px solid #d5e5e0;
-  border-radius:14px;
-  color:#315f56;
-  background:#fff;
+  gap:5px;
+  width:max-content;
+  max-width:100%;
+  min-width:0;
+  min-height:28px;
+  align-self:start;
+  padding:4px 9px;
+  border:0;
+  border-radius:999px;
+  color:#3c6a62;
+  background:rgb(232 244 240 / 78%);
   text-align:right;
 }
 
 .household-open-husband>span{
-  grid-column:1;
-  color:#879993;
-  font-size:.48rem;
+  flex:0 0 auto;
+  color:#879690;
+  font-size:.42rem;
   font-weight:800;
 }
-
+.household-open-husband>span:after{content:' •'}
 .household-open-husband>strong{
-  grid-column:1/3;
   overflow:hidden;
-  font-size:.59rem;
+  max-width:320px;
+  color:#315f57;
+  font-size:.5rem;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+.household-open-husband>i{color:#50867c;font-size:.72rem;font-style:normal}
 
-.household-open-husband>i{
-  grid-column:3;
-  grid-row:1/3;
-  color:#4c857a;
-  font-size:1rem;
-  font-style:normal;
-}
-
-/* One compact segmented information bar instead of four large cards. */
+/* One quiet metrics ribbon. */
 .household-profile-stats{
   display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));
   gap:0;
   overflow:hidden;
-  margin:10px 0;
-  border:1px solid #d9e7e2;
-  border-radius:17px;
-  background:#fff;
-  box-shadow:0 7px 20px rgb(38 81 70 / 4%);
+  margin:9px 0 7px;
+  border:1px solid #dce8e4;
+  border-radius:16px;
+  background:rgb(255 255 255 / 92%);
+  box-shadow:0 7px 22px rgb(38 81 70 / 4%);
 }
 
 .household-profile-stats article{
   position:relative;
-  display:grid;
-  gap:1px;
+  display:flex;
   min-width:0;
-  min-height:58px;
-  place-content:center;
-  padding:7px 3px;
+  min-height:52px;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  padding:6px 3px;
   border:0;
   border-inline-end:1px solid #edf2f0;
   border-radius:0;
   background:transparent;
   box-shadow:none;
-  text-align:center;
 }
-
 .household-profile-stats article:last-child{border-inline-end:0}
-.household-profile-stats strong{color:#285e57;font-size:.92rem;line-height:1.25}
-.household-profile-stats span{color:#7d908a;font-size:.46rem;font-weight:800;white-space:nowrap}
+.household-profile-stats strong{color:#275f67;font-size:.84rem;line-height:1}
+.household-profile-stats span{color:#7b8c87;font-size:.43rem;font-weight:800;white-space:nowrap}
 
-/* Sharing is an action bar, not another content card. */
+/* Sharing becomes a slim utility row rather than a visual section. */
 .household-share-panel{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
-  gap:10px;
-  margin:10px 0;
-  padding:10px;
-  border:1px solid #dae8e3;
-  border-radius:18px;
-  background:#fff;
-  box-shadow:0 7px 20px rgb(40 82 71 / 4%);
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:7px;
+  margin:6px 0 8px;
+  padding:0;
+  border:0;
+  background:transparent;
+  box-shadow:none;
   direction:rtl;
 }
-
-.household-share-copy{display:grid;align-content:center;min-width:0;padding-inline:2px}
-.household-share-copy>span{color:#83958f;font-size:.48rem;font-weight:850}
-.household-share-copy>strong{margin:1px 0;color:#315f57;font-size:.66rem}
-.household-share-copy>small{overflow:hidden;max-width:100%;color:#6e8b91;font-size:.43rem;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:right}
-.household-share-actions{display:flex;align-items:stretch;gap:6px}
+.household-share-copy{display:none}
+.household-share-actions{display:flex;align-items:center;gap:6px}
 .household-share-actions button{
-  display:grid;
-  grid-template-columns:auto 1fr;
-  grid-template-rows:auto auto;
+  display:flex;
+  min-width:0;
+  min-height:34px;
   align-items:center;
-  gap:0 6px;
-  min-width:118px;
-  min-height:44px;
-  padding:6px 8px;
-  border-radius:13px;
+  gap:6px;
+  padding:5px 9px;
+  border-radius:11px;
   font-family:inherit;
   text-align:right;
 }
-.household-share-actions button>span{grid-row:1/3;display:grid;width:28px;height:28px;place-items:center;border-radius:9px;font-size:.72rem}
-.household-share-actions b{font-size:.52rem}
-.household-share-actions small{font-size:.38rem;font-weight:700;opacity:.72}
-.household-share-image{border:1px solid #2f7784;color:#fff;background:linear-gradient(135deg,#245c79,#3e8992)}
-.household-share-image>span{background:rgb(255 255 255 / 14%)}
-.household-share-link{border:1px solid #cfe1dc;color:#35675e;background:#fff}
-.household-share-link>span{background:#e7f3ef}
-.household-share-actions button:disabled{opacity:.62}
-.household-share-message{grid-column:1/-1;padding:6px 8px;border-radius:10px;color:#52736b;background:#edf6f3;font-size:.46rem;font-weight:750;text-align:center}
+.household-share-actions button>span{
+  display:grid;
+  width:23px;
+  height:23px;
+  flex:0 0 auto;
+  place-items:center;
+  border-radius:8px;
+  font-size:.58rem;
+}
+.household-share-actions b{font-size:.46rem;white-space:nowrap}
+.household-share-actions small{display:none}
+.household-share-image{border:1px solid #cfe1dd;color:#315f65;background:#fff}
+.household-share-image>span{color:#fff;background:linear-gradient(145deg,#286d89,#47a394)}
+.household-share-link{border:1px solid #d7e5e1;color:#3e6d64;background:#f7fbf9}
+.household-share-link>span{color:#437b70;background:#e6f2ee}
+.household-share-actions button:disabled{opacity:.58}
+.household-share-message{flex:1 1 auto;padding:5px 8px;border-radius:9px;color:#52736b;background:#edf6f3;font-size:.43rem;font-weight:750;text-align:center}
 
-/* Family and lineage context now lives in one card. */
+/* Lineage context is information, not another large card. */
 .household-profile-context{
   display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:10px;
+  margin:7px 0 12px;
+  padding:9px 11px;
+  border:1px solid #e0e9e6;
+  border-radius:14px;
+  background:rgb(255 255 255 / 72%);
+  box-shadow:none;
+}
+.household-profile-context>header{display:block;min-width:max-content}
+.household-profile-context>header span{color:#477970;font-size:.49rem;font-weight:900}
+.household-profile-context>header strong{display:none}
+.household-profile-context-grid{display:flex;min-width:0;align-items:center;gap:5px}
+.household-profile-context-grid>div{
+  display:flex;
+  min-width:0;
+  align-items:center;
+  gap:5px;
+  padding:0;
+  border-radius:0;
+  background:transparent;
+}
+.household-profile-context-grid>div+div:before{margin-inline:3px;color:#b1bfba;content:'•'}
+.household-profile-context-grid small{color:#94a19d;font-size:.4rem}
+.household-profile-context-grid strong{overflow:hidden;color:#3a625c;font-size:.49rem;text-overflow:ellipsis;white-space:nowrap}
+
+/* Marriages are the main content and get the visual emphasis. */
+.household-marriages-section{
+  display:grid;
   gap:9px;
-  margin:10px 0;
-  padding:12px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.household-marriages-section>header{
+  align-items:center;
+  padding:4px 2px 2px;
+}
+.household-marriages-section>header div{gap:1px}
+.household-marriages-section>header span{color:#8a9994;font-size:.47rem}
+.household-marriages-section>header h2{margin:0;color:#244e5a;font-size:.88rem}
+.household-marriages-section>header b{
+  min-width:30px;
+  height:30px;
+  border:1px solid #d6e7e2;
+  border-radius:10px;
+  color:#337166;
+  background:#e9f4f0;
+  font-size:.58rem;
+}
+.household-marriage-list{display:grid;gap:9px}
+.household-marriage-card{
+  display:grid;
+  gap:8px;
+  padding:10px;
   border:1px solid #dce8e4;
   border-radius:18px;
-  background:#fff;
-  box-shadow:0 7px 20px rgb(38 81 70 / 4%);
+  background:rgb(255 255 255 / 94%);
+  box-shadow:0 8px 24px rgb(37 75 66 / 4%);
 }
-
-.household-profile-context>header{
-  display:flex;
+.household-spouse-heading{display:flex;align-items:center;gap:8px}
+.household-spouse-heading>button{
+  display:grid;
+  grid-template-columns:36px minmax(0,1fr) 14px;
   align-items:center;
-  justify-content:space-between;
-  gap:10px;
-}
-
-.household-profile-context>header span{
-  color:#477a70;
-  font-size:.55rem;
-  font-weight:900;
-}
-
-.household-profile-context>header strong{
-  color:#81938d;
-  font-size:.48rem;
-  font-weight:700;
-}
-
-.household-profile-context-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
   gap:7px;
-}
-
-.household-profile-context-grid>div{
-  display:grid;
-  gap:2px;
   min-width:0;
-  padding:8px 10px;
+  flex:1 1 auto;
+  padding:6px 7px;
+  border:0;
+  border-radius:13px;
+  color:inherit;
+  background:#fbf7ef;
+  text-align:right;
+}
+.household-spouse-heading>button>span:first-child{
+  display:grid;
+  width:36px;
+  height:36px;
+  place-items:center;
+  border-radius:11px;
+  color:#8a6d45;
+  background:#f2e6cf;
+  font-size:.65rem;
+  font-weight:950;
+}
+.household-spouse-heading>button.female>span:first-child{color:#875e72;background:#f4e7ec}
+.household-spouse-heading>button>span:last-child{display:grid;min-width:0;gap:1px}
+.household-spouse-heading small{color:#a08761;font-size:.4rem;font-weight:850}
+.household-spouse-heading strong{overflow:hidden;color:#5e5548;font-size:.56rem;text-overflow:ellipsis;white-space:nowrap}
+.household-spouse-heading>button>i{color:#aa8c5c;font-size:.75rem;font-style:normal}
+.household-spouse-heading em{
+  flex:0 0 auto;
+  padding:5px 8px;
+  border-radius:999px;
+  color:#4f7169;
+  background:#edf5f2;
+  font-size:.42rem;
+  font-style:normal;
+  font-weight:900;
+  white-space:nowrap;
+}
+
+.household-child-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.household-child-grid>button{
+  display:grid;
+  grid-template-columns:32px minmax(0,1fr) 12px;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+  min-height:46px;
+  padding:6px 7px;
+  border:1px solid #e4ece9;
   border-radius:12px;
-  background:#f5f9f7;
+  color:inherit;
+  background:#fbfdfc;
+  text-align:right;
+}
+.household-child-grid>button>span:first-child{
+  display:grid;
+  width:32px;
+  height:32px;
+  place-items:center;
+  border-radius:10px;
+  color:#32695e;
+  background:#e7f2ee;
+  font-size:.54rem;
+  font-weight:950;
+}
+.household-child-grid>button.female>span:first-child{color:#865f70;background:#f5e9ee}
+.household-child-grid>button>span:nth-child(2){display:grid;min-width:0;gap:1px}
+.household-child-grid strong{overflow:hidden;color:#3e625a;font-size:.49rem;line-height:1.4;text-overflow:ellipsis;white-space:nowrap}
+.household-child-grid small{color:#8a9994;font-size:.38rem}
+.household-child-grid i{color:#8aa099;font-size:.72rem;font-style:normal}
+.household-no-children{padding:8px 9px;border-radius:10px;color:#8a9994;background:#f7faf9;font-size:.46rem}
+
+.household-unassigned-section{
+  display:grid;
+  gap:8px;
+  margin-top:10px;
+  padding:10px;
+  border:1px dashed #ddcda8;
+  border-radius:16px;
+  background:#fffaf0;
+}
+.household-unassigned-section>div:first-child span{color:#9c7c45;font-size:.43rem;font-weight:900}
+.household-unassigned-section h2{margin:1px 0;color:#745f3d;font-size:.65rem}
+.household-unassigned-section p{margin:0;color:#89795e;font-size:.45rem;line-height:1.65}
+.household-profile-note{
+  margin-top:10px;
+  padding:8px 10px;
+  border:0;
+  border-radius:12px;
+  color:#6c817a;
+  background:#edf5f2;
+  font-size:.43rem;
+  line-height:1.65;
+  text-align:center;
 }
 
-.household-profile-context-grid small{color:#8b9b96;font-size:.46rem}
-.household-profile-context-grid strong{overflow:hidden;color:#3b655d;font-size:.59rem;text-overflow:ellipsis;white-space:nowrap}
-
-.household-marriages-section{
-  padding:12px;
-  border:1px solid #d9e8e4;
-  border-radius:20px;
-  background:#fff;
-  box-shadow:0 7px 22px rgb(38 81 70 / 4%);
-}
-
-.household-marriages-section>header{padding:0 1px 8px}
-.household-marriages-section>header h2{font-size:.9rem}
-.household-marriages-section>header span{font-size:.49rem}
-.household-marriages-section>header b{min-width:30px;height:30px;border-radius:10px;font-size:.62rem}
-.household-marriage-list{gap:9px}
-.household-marriage-card{padding:9px;border-color:#dde8e4;border-radius:17px;box-shadow:none;background:#fbfdfc}
-.household-spouse-heading>button{grid-template-columns:38px minmax(0,1fr) auto;padding:6px 7px;border:1px solid #f0e4ce;background:#fffaf3}
-.household-spouse-heading>button>span:first-child{width:38px;height:38px;border-radius:12px}
-.household-spouse-heading>button>span:last-child{min-width:0}
-.household-spouse-heading>button>i{color:#aa8a56;font-size:.9rem;font-style:normal}
-.household-spouse-heading strong{font-size:.62rem}
-.household-spouse-heading em{padding:6px 8px;font-size:.47rem}
-.household-child-grid{gap:6px}
-.household-child-grid>button{padding:7px;border-radius:13px;background:#fff}
-.household-child-grid strong{font-size:.56rem}
-.household-unassigned-section{border-radius:18px}
-.household-profile-note{margin-top:9px;padding:9px 11px;border:0;border-radius:13px;background:#eaf5f1;font-size:.49rem}
 .household-home-card{border-color:#dbe7e4!important;background:linear-gradient(145deg,#fff,#fbfdfc)!important;box-shadow:0 8px 26px rgb(34 74 64 / 5%)}
 
 @media(max-width:620px){
-  .household-profile-page{padding:0 8px 92px}
-  .household-profile-topbar{min-height:52px;padding:6px 2px}
-  .household-profile-topbar>button{width:36px;height:36px;border-radius:11px;font-size:1.15rem}
+  .household-profile-page{padding:0 10px 94px}
+  .household-profile-topbar{min-height:54px;margin-bottom:6px;padding:6px 1px}
+  .household-profile-topbar>button{width:36px;height:36px;border-radius:12px;font-size:1.08rem}
 
-  .household-profile-hero{
-    grid-template-columns:54px minmax(0,1fr);
-    gap:9px;
-    padding:11px;
-    border-radius:18px;
-  }
-  .household-profile-avatar{width:54px;height:54px;border-radius:16px;font-size:1rem}
-  .household-profile-title h1{margin-block:3px;font-size:.94rem;line-height:1.48}
-  .household-profile-title p{font-size:.52rem;line-height:1.5}
-  .household-profile-title>span{padding:2px 6px;font-size:.46rem}
+  .household-profile-hero{grid-template-columns:52px minmax(0,1fr);gap:7px 10px;padding:12px;border-radius:19px}
+  .household-profile-avatar{width:52px;height:52px;border-radius:16px;font-size:.94rem}
+  .household-profile-title h1{margin:3px 0 1px;font-size:.9rem;line-height:1.45}
+  .household-profile-title p{font-size:.47rem;line-height:1.45}
+  .household-profile-title>span{padding:2px 6px;font-size:.41rem}
+  .household-open-husband{min-height:24px;padding:3px 7px}
+  .household-open-husband>span{font-size:.36rem}
+  .household-open-husband>strong{max-width:210px;font-size:.43rem}
 
-  .household-open-husband{
-    grid-column:1/-1;
-    grid-template-columns:auto minmax(0,1fr) auto;
-    min-width:0;
-    min-height:38px;
-    padding:5px 8px;
-    border-radius:11px;
-  }
-  .household-open-husband>span{font-size:.43rem}
-  .household-open-husband>strong{font-size:.54rem}
+  .household-profile-stats{margin:7px 0 5px;border-radius:13px}
+  .household-profile-stats article{min-height:46px;gap:4px;padding:5px 2px}
+  .household-profile-stats strong{font-size:.72rem}
+  .household-profile-stats span{font-size:.36rem}
 
-  .household-profile-stats{margin:8px 0;border-radius:14px}
-  .household-profile-stats article{min-height:52px;padding:6px 2px}
-  .household-profile-stats strong{font-size:.82rem}
-  .household-profile-stats span{font-size:.41rem}
+  .household-share-panel{margin:4px 0 7px}
+  .household-share-actions{width:100%}
+  .household-share-actions button{min-height:32px;padding:4px 8px;border-radius:10px}
+  .household-share-actions button>span{width:22px;height:22px;border-radius:7px}
+  .household-share-actions b{font-size:.42rem}
+  .household-share-message{font-size:.38rem}
 
-  .household-share-panel{
-    display:block;
-    margin:8px 0;
-    padding:0;
-    border:0;
-    background:transparent;
-    box-shadow:none;
-  }
-  .household-share-copy{display:none}
-  .household-share-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .household-share-actions button{min-width:0;min-height:40px;padding:5px 7px;border-radius:11px}
-  .household-share-actions button>span{width:26px;height:26px;border-radius:8px}
-  .household-share-actions b{font-size:.49rem}
-  .household-share-actions small{font-size:.35rem}
-  .household-share-message{margin-top:6px}
+  .household-profile-context{grid-template-columns:auto minmax(0,1fr);gap:7px;margin:5px 0 10px;padding:7px 8px;border-radius:12px}
+  .household-profile-context>header span{font-size:.42rem}
+  .household-profile-context-grid{gap:3px}
+  .household-profile-context-grid small{font-size:.34rem}
+  .household-profile-context-grid strong{font-size:.41rem}
 
-  .household-profile-context{gap:7px;margin:8px 0;padding:9px;border-radius:15px}
-  .household-profile-context>header strong{display:none}
-  .household-profile-context-grid{gap:5px}
-  .household-profile-context-grid>div{padding:7px 8px;border-radius:10px}
-  .household-profile-context-grid strong{font-size:.53rem}
-
-  .household-marriages-section{padding:9px;border-radius:17px}
-  .household-marriage-card{padding:7px;border-radius:14px}
-  .household-spouse-heading{align-items:center;flex-direction:row}
-  .household-spouse-heading>button{width:auto;flex:1 1 auto;min-width:0}
-  .household-spouse-heading em{align-self:center;white-space:nowrap}
-  .household-child-grid{grid-template-columns:1fr}
-  .household-child-grid>button{min-height:52px}
-  .household-child-grid strong{white-space:normal;line-height:1.4}
+  .household-marriages-section>header{padding-inline:1px}
+  .household-marriages-section>header h2{font-size:.78rem}
+  .household-marriages-section>header span{font-size:.4rem}
+  .household-marriages-section>header b{min-width:27px;height:27px;border-radius:9px;font-size:.52rem}
+  .household-marriage-card{padding:8px;border-radius:15px}
+  .household-spouse-heading{gap:6px}
+  .household-spouse-heading>button{grid-template-columns:34px minmax(0,1fr) 12px;padding:5px 6px;border-radius:11px}
+  .household-spouse-heading>button>span:first-child{width:34px;height:34px;border-radius:10px}
+  .household-spouse-heading strong{font-size:.5rem}
+  .household-spouse-heading small{font-size:.36rem}
+  .household-spouse-heading em{padding:4px 7px;font-size:.37rem}
+  .household-child-grid{grid-template-columns:1fr;gap:5px}
+  .household-child-grid>button{grid-template-columns:30px minmax(0,1fr) 11px;min-height:43px;padding:5px 6px;border-radius:11px}
+  .household-child-grid>button>span:first-child{width:30px;height:30px;border-radius:9px}
+  .household-child-grid strong{font-size:.45rem;white-space:normal}
+  .household-child-grid small{font-size:.34rem}
+  .household-profile-note{margin-top:8px;font-size:.38rem}
 }
 
-@media(max-width:380px){
-  .household-profile-stats span{font-size:.38rem}
-  .household-share-actions button small{display:none}
-  .household-profile-context-grid{grid-template-columns:1fr}
+@media(max-width:390px){
+  .household-profile-page{padding-inline:8px}
+  .household-profile-stats span{font-size:.33rem}
+  .household-profile-context{grid-template-columns:1fr}
+  .household-profile-context-grid{flex-wrap:wrap}
+  .household-profile-context-grid>div+div:before{display:none}
+  .household-share-actions{display:grid;grid-template-columns:1fr 1fr}
+  .household-share-actions button{justify-content:center}
   .household-spouse-heading{align-items:stretch;flex-direction:column}
   .household-spouse-heading>button{width:100%}
   .household-spouse-heading em{align-self:flex-start}
@@ -360,7 +467,6 @@
 
 @media(min-width:761px){
   .household-profile-page{padding-inline:18px}
-  .household-profile-hero{margin-top:6px}
-  .household-marriages-section{padding:14px}
+  .household-profile-hero{margin-top:4px}
   .household-child-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }

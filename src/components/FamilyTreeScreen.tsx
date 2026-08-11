@@ -85,6 +85,13 @@ function safePath(value: KinshipResult['path'] | unknown): PathRow[] {
   return Array.isArray(value) ? value as PathRow[] : []
 }
 
+function commonAncestorLabel(result: KinshipResult) {
+  const ancestorGender = safePath(result.path).find((step) => step.person_id === result.common_ancestor_id)?.gender
+  if (ancestorGender === 'male') return 'الجد المشترك'
+  if (ancestorGender === 'female') return 'الجدة المشتركة'
+  return 'السلف المشترك'
+}
+
 function missingParentsLabel(count: number) {
   if (count <= 0) return 'الوالدان المباشران مسجلان'
   if (count === 1) return 'ينقص أحد الوالدين'
@@ -289,7 +296,7 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
               <div className="kinship-engine-badges">
                 <span className="primary">{kinshipResult.is_blood_relation ? 'نسب' : kinshipResult.via_marriage ? 'مصاهرة' : 'صلة مسجلة'}</span>
                 <span>{confidenceLabel(kinshipResult.confidence)}</span>
-                {kinshipResult.common_ancestor_name && <span>الجد المشترك: {kinshipResult.common_ancestor_name}</span>}
+                {kinshipResult.common_ancestor_name && <span>{commonAncestorLabel(kinshipResult)}: {kinshipResult.common_ancestor_name}</span>}
               </div>
 
               <p className="kinship-engine-detail">{kinshipResult.relationship_detail}</p>

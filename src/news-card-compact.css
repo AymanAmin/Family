@@ -122,18 +122,19 @@
 }
 
 .news-page .event-share-button {
-  display: grid !important;
+  position: relative !important;
+  display: block !important;
   width: 34px !important;
   min-width: 34px !important;
   height: 34px !important;
   min-height: 34px !important;
-  place-items: center;
   padding: 0 !important;
   border: 1px solid rgb(58 130 137 / 18%) !important;
   border-radius: 50% !important;
   color: #397f83 !important;
   background: rgb(242 249 247 / 94%) !important;
   box-shadow: 0 4px 12px rgb(35 74 120 / 7%) !important;
+  line-height: 0 !important;
 }
 
 .news-page .event-share-button:hover {
@@ -141,27 +142,21 @@
   transform: translateY(-1px);
 }
 
-.news-page .event-share-button span {
-  display: grid !important;
-  width: 17px !important;
-  height: 17px !important;
-  place-items: center;
-  overflow: hidden;
-  color: currentColor !important;
-  background: transparent !important;
-  font-size: 0 !important;
-  line-height: 0 !important;
-}
-
-.news-page .event-share-button span::before {
+/* Draw the share glyph on the button itself so RTL/text baselines cannot offset it. */
+.news-page .event-share-button::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 17px;
   height: 17px;
   background: currentColor;
   content: '';
+  transform: translate(-50%, -50%);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='18' cy='5' r='3'/%3E%3Ccircle cx='6' cy='12' r='3'/%3E%3Ccircle cx='18' cy='19' r='3'/%3E%3Cpath d='m8.6 10.5 6.8-4M8.6 13.5l6.8 4'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='18' cy='5' r='3'/%3E%3Ccircle cx='6' cy='12' r='3'/%3E%3Ccircle cx='18' cy='19' r='3'/%3E%3Cpath d='m8.6 10.5 6.8-4M8.6 13.5l6.8 4'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
+.news-page .event-share-button span,
 .news-page .event-share-button b,
 .news-page .event-share-button small,
 .news-page .event-share-message {
@@ -288,10 +283,9 @@
     min-height: 32px !important;
   }
 
-  .news-page .event-share-button span,
-  .news-page .event-share-button span::before {
-    width: 16px !important;
-    height: 16px !important;
+  .news-page .event-share-button::before {
+    width: 16px;
+    height: 16px;
   }
 
   .news-page .news-card-actions:has(.record-action-group) {

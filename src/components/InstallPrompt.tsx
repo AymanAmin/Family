@@ -36,6 +36,15 @@ function registerVisit() {
   return next
 }
 
+function openCurrentPageInChrome() {
+  const current = new URL(window.location.href)
+  const scheme = current.protocol.replace(':', '')
+  const target = `${current.host}${current.pathname}${current.search}`
+  const chromeStoreUrl = 'https://play.google.com/store/apps/details?id=com.android.chrome'
+  const intentUrl = `intent://${target}#Intent;scheme=${scheme};package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(chromeStoreUrl)};end`
+  window.location.href = intentUrl
+}
+
 export default function InstallPrompt() {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
@@ -47,6 +56,8 @@ export default function InstallPrompt() {
     const ua = navigator.userAgent
     return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   }, [])
+
+  const isSamsungInternet = useMemo(() => /SamsungBrowser/i.test(navigator.userAgent), [])
 
   useEffect(() => {
     if (isStandaloneMode()) {
@@ -65,6 +76,16 @@ export default function InstallPrompt() {
 
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault()
+
+      // Samsung Internet may package the PWA using a WebAPK path that newer
+      // Play Protect versions can flag as targeting an old Android release.
+      // Do not invoke that installer; route the user to Chrome instead.
+      if (isSamsungInternet) {
+        setInstallEvent(null)
+        showWhenReady()
+        return
+      }
+
       setInstallEvent(event as BeforeInstallPromptEvent)
       showWhenReady()
     }
@@ -80,14 +101,14 @@ export default function InstallPrompt() {
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
     window.addEventListener('appinstalled', onInstalled)
 
-    if (isIos) showWhenReady()
+    if (isIos || isSamsungInternet) showWhenReady()
 
     return () => {
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
       window.removeEventListener('appinstalled', onInstalled)
       if (promptTimer) window.clearTimeout(promptTimer)
     }
-  }, [isIos])
+  }, [isIos, isSamsungInternet])
 
   function dismiss() {
     window.localStorage.setItem(DISMISS_KEY, String(Date.now()))
@@ -96,6 +117,11 @@ export default function InstallPrompt() {
   }
 
   async function install() {
+    if (isSamsungInternet) {
+      openCurrentPageInChrome()
+      return
+    }
+
     if (installEvent) {
       setInstalling(true)
       await installEvent.prompt()
@@ -113,7 +139,19 @@ export default function InstallPrompt() {
     if (isIos) setIosHelp(true)
   }
 
-  if (installed || !visible || (!installEvent && !isIos)) return null
+  if (installed || !visible || (!installEvent && !isIos && !isSamsungInternet)) return null
+
+  const showingSamsungHelp = isSamsungInternet && !iosHelp
+  const title = iosHelp
+    ? 'تثبيت صلة على iPhone / iPad'
+    : showingSamsungHelp
+      ? 'تثبيت صلة على Samsung'
+      : 'استخدم صلة كتطبيق'
+  const subtitle = iosHelp
+    ? 'خطوتان فقط من قائمة المشاركة.'
+    : showingSamsungHelp
+      ? 'افتح صلة في Google Chrome لتجنب تحذير Play Protect في Samsung Internet.'
+      : 'أضفه إلى الشاشة الرئيسية للوصول السريع والتنبيهات.'
 
   return (
     <aside className={`pwa-install-prompt ${iosHelp ? 'is-ios-help' : ''}`} role="dialog" aria-label="تثبيت تطبيق صلة">
@@ -123,8 +161,8 @@ export default function InstallPrompt() {
         <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" aria-hidden="true" />
         <div>
           <span>صلة</span>
-          <strong>{iosHelp ? 'تثبيت صلة على iPhone / iPad' : 'استخدم صلة كتطبيق'}</strong>
-          <small>{iosHelp ? 'خطوتان فقط من قائمة المشاركة.' : 'أضفه إلى الشاشة الرئيسية للوصول السريع والتنبيهات.'}</small>
+          <strong>{title}</strong>
+          <small>{subtitle}</small>
         </div>
       </div>
 
@@ -132,6 +170,11 @@ export default function InstallPrompt() {
         <div className="pwa-ios-steps">
           <span><b>1</b> اضغط زر المشاركة <strong aria-hidden="true">↑</strong> في Safari.</span>
           <span><b>2</b> اختر «إضافة إلى الشاشة الرئيسية» ثم «إضافة».</span>
+        </div>
+      ) : showingSamsungHelp ? (
+        <div className="pwa-ios-steps">
+          <span><b>1</b> اضغط «فتح في Google Chrome» أدناه.</span>
+          <span><b>2</b> في Chrome اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».</span>
         </div>
       ) : (
         <div className="pwa-install-benefits" aria-label="مزايا التثبيت">
@@ -144,7 +187,7 @@ export default function InstallPrompt() {
       <div className="pwa-install-actions">
         {!iosHelp ? (
           <button className="pwa-install-primary" type="button" onClick={() => void install()} disabled={installing}>
-            {installing ? 'جارٍ التثبيت…' : 'تثبيت'}
+            {showingSamsungHelp ? 'فتح في Google Chrome' : installing ? 'جارٍ التثبيت…' : 'تثبيت'}
           </button>
         ) : (
           <button className="pwa-install-primary" type="button" onClick={() => setIosHelp(false)}>رجوع</button>

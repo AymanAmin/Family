@@ -10,7 +10,7 @@ function openKinshipPath() {
   const navigationButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.desktop-nav button, .mobile-bottom-nav button'))
   const treeButton = navigationButtons.find((button) => {
     const text = buttonText(button)
-    return text.includes('شجرة العائلة') || text === 'الشجرة'
+    return text.includes('شجرة العائلة') || text === 'الشجرة' || text.includes('شجرة النسب')
   })
 
   treeButton?.click()
@@ -37,30 +37,61 @@ export default function HomeKinshipShortcut() {
 
   useEffect(() => {
     let currentHost: HTMLElement | null = null
+    let movedWelcome: HTMLElement | null = null
     let frame = 0
+
+    const restoreWelcome = () => {
+      if (!movedWelcome) return
+
+      if (currentHost?.isConnected && currentHost.parentElement) {
+        currentHost.insertAdjacentElement('afterend', movedWelcome)
+      } else if (movedWelcome.isConnected) {
+        movedWelcome.remove()
+      }
+
+      movedWelcome = null
+    }
+
+    const clearHost = () => {
+      restoreWelcome()
+      if (currentHost?.isConnected) currentHost.remove()
+      currentHost = null
+      setHost(null)
+    }
 
     const locate = () => {
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
         const hero = document.querySelector<HTMLElement>('.home-search-hero')
+        const welcome = document.querySelector<HTMLElement>('.compact-family-welcome')
 
-        if (!hero) {
-          if (currentHost?.isConnected) currentHost.remove()
-          currentHost = null
-          setHost(null)
+        if (!hero || !welcome) {
+          if (currentHost || movedWelcome) clearHost()
           return
+        }
+
+        if (movedWelcome && movedWelcome !== welcome) {
+          clearHost()
         }
 
         if (!currentHost || !currentHost.isConnected) {
+          const originalParent = welcome.parentElement
+          if (!originalParent) return
+
           currentHost = document.createElement('div')
-          currentHost.className = 'home-kinship-shortcut-host'
-          hero.insertAdjacentElement('afterend', currentHost)
+          currentHost.className = 'home-kinship-shortcut-host home-kinship-shortcut-swapped'
+          originalParent.insertBefore(currentHost, welcome)
+          movedWelcome = welcome
           setHost(currentHost)
-          return
+        } else if (!movedWelcome) {
+          movedWelcome = welcome
         }
 
-        if (currentHost.previousElementSibling !== hero) {
-          hero.insertAdjacentElement('afterend', currentHost)
+        // Swap the two home cards: the digital-family welcome card takes the
+        // shortcut's former position directly below search, while the kinship
+        // shortcut occupies the welcome card's original position after services.
+        if (hero.nextElementSibling !== welcome) {
+          hero.insertAdjacentElement('afterend', welcome)
         }
       })
     }
@@ -72,7 +103,7 @@ export default function HomeKinshipShortcut() {
     return () => {
       window.cancelAnimationFrame(frame)
       observer.disconnect()
-      currentHost?.remove()
+      clearHost()
     }
   }, [])
 
@@ -93,7 +124,14 @@ export default function HomeKinshipShortcut() {
           <strong>صلة القرابة</strong>
           <small>اعرف صلة شخص بآخر مباشرة</small>
         </span>
-        <span className="home-kinship-shortcut-action" aria-hidden="true">←</span>
+        <span className="home-kinship-shortcut-action" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="7" r="3.5" />
+            <circle cx="8" cy="24" r="3.5" />
+            <circle cx="24" cy="24" r="3.5" />
+            <path d="M16 10.5v5.5M8 20.5v-4.5h16v4.5" />
+          </svg>
+        </span>
       </button>
     </section>,
     host,

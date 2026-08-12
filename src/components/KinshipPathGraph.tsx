@@ -32,12 +32,12 @@ type PositionedEdge = {
   kind: 'same' | 'vertical'
 }
 
-const NODE_W = 196
-const NODE_H = 86
-const ROW_GAP = 154
-const COL_GAP = 56
+const NODE_W = 220
+const NODE_H = 96
+const ROW_GAP = 164
+const COL_GAP = 68
 const PAD_X = 52
-const PAD_Y = 34
+const PAD_Y = 36
 
 export function kinshipStepLabel(type: string, gender: string | null) {
   if (type === 'self') return 'البداية'
@@ -47,6 +47,22 @@ export function kinshipStepLabel(type: string, gender: string | null) {
   if (type === 'spouse') return gender === 'female' ? 'زوجة' : gender === 'male' ? 'زوج' : 'زوج/زوجة'
   if (type === 'guardian') return 'وصاية'
   return 'صلة'
+}
+
+/**
+ * The stored path relation is directional from the previous step to the next step.
+ * The graph, however, is drawn as a family tree: parent above, child below.
+ * For vertical edges we therefore label the lower person as ابن/ابنة of the upper
+ * person, regardless of whether the traversal reached that parent by moving upward.
+ */
+export function kinshipVisualEdgeLabel(from: KinshipPathStep, to: KinshipPathStep) {
+  if (to.relation_type === 'parent') {
+    return from.gender === 'female' ? 'ابنة' : from.gender === 'male' ? 'ابن' : 'ابن/ابنة'
+  }
+  if (to.relation_type === 'child') {
+    return to.gender === 'female' ? 'ابنة' : to.gender === 'male' ? 'ابن' : 'ابن/ابنة'
+  }
+  return kinshipStepLabel(to.relation_type, to.gender)
 }
 
 function generationDelta(type: string) {
@@ -73,7 +89,7 @@ function buildLayout(path: KinshipPathStep[]) {
   })
 
   const maxRowCount = Math.max(...Array.from(rows.values(), (items) => items.length))
-  const width = Math.max(620, PAD_X * 2 + maxRowCount * NODE_W + Math.max(0, maxRowCount - 1) * COL_GAP)
+  const width = Math.max(660, PAD_X * 2 + maxRowCount * NODE_W + Math.max(0, maxRowCount - 1) * COL_GAP)
   const maxGeneration = Math.max(...normalized)
   const height = PAD_Y * 2 + NODE_H + maxGeneration * ROW_GAP
   const positioned = new Map<number, PositionedNode>()
@@ -102,7 +118,7 @@ function buildLayout(path: KinshipPathStep[]) {
     edges.push({
       from,
       to,
-      label: kinshipStepLabel(to.relation_type, to.gender),
+      label: kinshipVisualEdgeLabel(from, to),
       inferred: to.is_inferred,
       kind: from.generation === to.generation ? 'same' : 'vertical',
     })
@@ -148,12 +164,12 @@ export default function KinshipPathGraph({ path, fromPersonId, toPersonId, onOpe
         <svg className="kinship-branch-lines" width={layout.width} height={layout.height} aria-hidden="true">
           {layout.edges.map((edge, index) => {
             const pos = edgeLabelPosition(edge)
-            const labelWidth = Math.max(64, Math.min(120, edge.label.length * 12 + 26))
+            const labelWidth = Math.max(70, Math.min(126, edge.label.length * 12 + 28))
             return <g key={`${edge.to.person_id}-${index}`}>
               <path className={`kinship-branch-edge ${edge.to.relation_type === 'spouse' ? 'marriage' : ''}`} d={edgePath(edge)} />
-              <rect className="kinship-branch-edge-pill" x={pos.x - labelWidth / 2} y={pos.y - 15} width={labelWidth} height={30} rx={15} />
+              <rect className="kinship-branch-edge-pill" x={pos.x - labelWidth / 2} y={pos.y - 16} width={labelWidth} height={32} rx={16} />
               <text className="kinship-branch-edge-label" x={pos.x} y={pos.y + 4} textAnchor="middle" direction="rtl">{edge.label}</text>
-              {edge.inferred && <text className="kinship-branch-edge-inferred" x={pos.x} y={pos.y + 25} textAnchor="middle" direction="rtl">✦ مستنتج</text>}
+              {edge.inferred && <text className="kinship-branch-edge-inferred" x={pos.x} y={pos.y + 27} textAnchor="middle" direction="rtl">✦ مستنتج</text>}
             </g>
           })}
         </svg>

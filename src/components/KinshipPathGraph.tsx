@@ -98,7 +98,8 @@ function buildLayout(path: KinshipPathStep[]) {
     const rowWidth = indices.length * NODE_W + Math.max(0, indices.length - 1) * COL_GAP
     const start = (width - rowWidth) / 2
     indices.forEach((pathIndex, rowIndex) => {
-      // In RTL the earlier path node starts on the right, matching the visual reading direction.
+      // x is an absolute canvas coordinate measured from the physical left edge.
+      // Earlier path nodes are placed on the visual right for RTL reading.
       const visualIndex = indices.length - 1 - rowIndex
       positioned.set(pathIndex, {
         ...path[pathIndex],
@@ -182,7 +183,7 @@ export default function KinshipPathGraph({ path, fromPersonId, toPersonId, onOpe
             key={`${node.person_id}-${node.step_no}`}
             type="button"
             className={`kinship-branch-node${isFrom ? ' from' : ''}${isTo ? ' to' : ''}${node.gender === 'female' ? ' female' : ''}`}
-            style={{ insetInlineStart: node.x, top: node.y, width: NODE_W, height: NODE_H }}
+            style={{ left: node.x, top: node.y, width: NODE_W, height: NODE_H }}
             onClick={() => onOpenPerson(node.person_id)}
           >
             <span>{node.full_name.trim().charAt(0) || '؟'}</span>

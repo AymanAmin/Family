@@ -1,0 +1,183 @@
+.kinship-branch-shell {
+  display: grid;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+.kinship-branch-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #7b8b85;
+  font-size: .56rem;
+  font-weight: 800;
+}
+
+.kinship-branch-hint span {
+  color: var(--green-700);
+  font-size: .86rem;
+}
+
+.kinship-branch-scroll {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  padding: 5px 0 9px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kinship-branch-scroll::-webkit-scrollbar { display: none; }
+
+.kinship-branch-canvas {
+  position: relative;
+  min-width: 620px;
+  margin-inline: auto;
+  border: 1px solid #e1ebe7;
+  border-radius: 21px;
+  background:
+    radial-gradient(circle at 50% 0%, rgb(97 182 171 / 10%), transparent 36%),
+    linear-gradient(180deg, #fbfdfc 0%, #f6faf8 100%);
+}
+
+.kinship-branch-lines {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.kinship-branch-edge {
+  fill: none;
+  stroke: #b9d0c8;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.kinship-branch-edge.marriage {
+  stroke: #d0aa62;
+  stroke-width: 4;
+}
+
+.kinship-branch-edge-pill {
+  fill: #fff;
+  stroke: #d9e5e1;
+  stroke-width: 1.5;
+}
+
+.kinship-branch-edge.marriage + .kinship-branch-edge-pill {
+  fill: #fff9ed;
+  stroke: #e6c887;
+}
+
+.kinship-branch-edge-label {
+  fill: #315f56;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.kinship-branch-edge-inferred {
+  fill: #9a7739;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.kinship-branch-node {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 3px 9px;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 2px solid #dce8e4;
+  border-radius: 18px;
+  color: inherit;
+  background: rgb(255 255 255 / 97%);
+  box-shadow: 0 7px 19px rgb(14 72 57 / 7%);
+  text-align: right;
+}
+
+.kinship-branch-node > span {
+  display: grid;
+  grid-row: 1 / span 2;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--green-800);
+  background: #e2f0ea;
+  font-size: .9rem;
+  font-weight: 900;
+}
+
+.kinship-branch-node.female > span {
+  color: #875f70;
+  background: #f5e9ee;
+}
+
+.kinship-branch-node strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--green-950);
+  font-size: .66rem;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.kinship-branch-node small {
+  color: #81918b;
+  font-size: .51rem;
+  font-weight: 800;
+}
+
+.kinship-branch-node.from {
+  border-color: #75a5bd;
+  box-shadow: 0 8px 22px rgb(61 120 151 / 14%);
+}
+
+.kinship-branch-node.from > span {
+  color: #285c7d;
+  background: #e8f2f7;
+}
+
+.kinship-branch-node.to {
+  border-color: #bf8bab;
+  box-shadow: 0 8px 22px rgb(160 91 133 / 14%);
+}
+
+.kinship-branch-node.to > span {
+  color: #8c4c75;
+  background: #f7eaf2;
+}
+
+.kinship-branch-node:focus-visible {
+  outline: 3px solid rgb(29 111 88 / 24%);
+  outline-offset: 3px;
+}
+
+.kinship-branch-accessible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (min-width: 761px) {
+  .kinship-branch-hint { display: none; }
+  .kinship-branch-scroll { overflow-x: visible; }
+  .kinship-branch-canvas { min-width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kinship-branch-scroll { scroll-behavior: auto; }
+}

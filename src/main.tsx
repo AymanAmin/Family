@@ -11,6 +11,7 @@ import './admin-person-attribution'
 import './account-verification-nudge'
 import './person-account-link-placement'
 import InstallPrompt from './components/InstallPrompt'
+import HomeKinshipShortcut from './components/HomeKinshipShortcut'
 import PushNotificationSettings from './components/PushNotificationSettings'
 import AdminVisitorStat from './components/AdminVisitorStat'
 import AdminPendingDashboard from './components/AdminPendingDashboard'
@@ -270,6 +271,7 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <App />
+    <HomeKinshipShortcut />
     <HouseholdExperienceUpgrade />
     <HouseholdPortalLifecycleFix />
     <StructuredScopeExperience />

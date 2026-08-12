@@ -30,9 +30,17 @@ type PositionedEdge = {
   kind: 'same' | 'vertical'
 }
 
-const WIDTH = 1200
+type GraphLayout = {
+  graphWidth: number
+  graphHeight: number
+  nodes: PositionedNode[]
+  edges: PositionedEdge[]
+}
+
+const BASE_WIDTH = 1200
 const PADDING = 54
-const INNER = WIDTH - PADDING * 2
+const GRAPH_SIDE_GUTTER = 40
+const BASE_INNER = BASE_WIDTH - PADDING * 2
 const NODE_W = 250
 const NODE_H = 104
 const ROW_GAP = 168
@@ -70,7 +78,7 @@ function splitText(value: string, max = 42, maxLines = 3) {
   return lines.slice(0, maxLines)
 }
 
-function splitContinuousText(value: string, max = 64, maxLines = 3) {
+function splitContinuousText(value: string, max = 64, maxLines = 4) {
   const source = value.trim()
   if (!source) return ['']
   const lines: string[] = []
@@ -108,9 +116,12 @@ function generationDelta(type: string) {
   return 0
 }
 
-function buildLayout(path: KinshipPathStep[]) {
+function buildLayout(path: KinshipPathStep[]): GraphLayout {
   const generations: number[] = [0]
-  for (let index = 1; index < path.length; index += 1) generations[index] = generations[index - 1] + generationDelta(path[index].relation_type)
+  for (let index = 1; index < path.length; index += 1) {
+    generations[index] = generations[index - 1] + generationDelta(path[index].relation_type)
+  }
+
   const minGeneration = Math.min(...generations)
   const normalized = generations.map((value) => value - minGeneration)
   const rows = new Map<number, number[]>()
@@ -121,7 +132,8 @@ function buildLayout(path: KinshipPathStep[]) {
   })
 
   const maxRowCount = Math.max(...Array.from(rows.values(), (items) => items.length))
-  const graphWidth = Math.max(INNER - 80, maxRowCount * NODE_W + Math.max(0, maxRowCount - 1) * COL_GAP + 80)
+  const requiredRowWidth = maxRowCount * NODE_W + Math.max(0, maxRowCount - 1) * COL_GAP
+  const graphWidth = Math.max(BASE_INNER - GRAPH_SIDE_GUTTER * 2, requiredRowWidth + GRAPH_SIDE_GUTTER * 2)
   const maxGeneration = Math.max(...normalized)
   const graphHeight = 48 + NODE_H + maxGeneration * ROW_GAP + 48
   const positioned = new Map<number, PositionedNode>()
@@ -132,7 +144,9 @@ function buildLayout(path: KinshipPathStep[]) {
     indices.forEach((pathIndex, rowIndex) => {
       const visualIndex = indices.length - 1 - rowIndex
       positioned.set(pathIndex, {
-        ...path[pathIndex], index: pathIndex, generation,
+        ...path[pathIndex],
+        index: pathIndex,
+        generation,
         x: start + visualIndex * (NODE_W + COL_GAP),
         y: 44 + generation * ROW_GAP,
       })
@@ -152,6 +166,7 @@ function buildLayout(path: KinshipPathStep[]) {
       kind: from.generation === to.generation ? 'same' : 'vertical',
     })
   }
+
   return { graphWidth, graphHeight, nodes, edges }
 }
 
@@ -162,6 +177,7 @@ function edgePath(edge: PositionedEdge) {
     const y = edge.from.y + NODE_H / 2
     return `M ${fromX} ${y} H ${toX}`
   }
+
   const down = edge.to.y > edge.from.y
   const fromY = down ? edge.from.y + NODE_H : edge.from.y
   const toY = down ? edge.to.y : edge.to.y + NODE_H
@@ -173,14 +189,14 @@ function edgeLabelPosition(edge: PositionedEdge) {
   const fromX = edge.from.x + NODE_W / 2
   const toX = edge.to.x + NODE_W / 2
   if (edge.kind === 'same') return { x: (fromX + toX) / 2, y: edge.from.y + NODE_H / 2 }
+
   const down = edge.to.y > edge.from.y
   const fromY = down ? edge.from.y + NODE_H : edge.from.y
   const toY = down ? edge.to.y : edge.to.y + NODE_H
   return { x: (fromX + toX) / 2, y: (fromY + toY) / 2 }
 }
 
-function graphSvg(summary: KinshipPathImageSummary, xOffset: number, yOffset: number) {
-  const layout = buildLayout(summary.path)
+function graphSvg(summary: KinshipPathImageSummary, layout: GraphLayout, xOffset: number, yOffset: number) {
   let svg = ''
 
   for (const edge of layout.edges) {
@@ -190,7 +206,9 @@ function graphSvg(summary: KinshipPathImageSummary, xOffset: number, yOffset: nu
     svg += `<path d="${edgePath(edge)}" transform="translate(${xOffset} ${yOffset})" fill="none" stroke="${marriage ? '#d0aa62' : '#b9d0c8'}" stroke-width="${marriage ? 5 : 3}" stroke-linecap="round" stroke-linejoin="round"/>`
     svg += `<rect x="${xOffset + pos.x - labelWidth / 2}" y="${yOffset + pos.y - 18}" width="${labelWidth}" height="36" rx="18" fill="${marriage ? '#fff8e9' : '#fff'}" stroke="${marriage ? '#e6c887' : '#d9e5e1'}" stroke-width="2"/>`
     svg += `<text x="${xOffset + pos.x}" y="${yOffset + pos.y + 5}" text-anchor="middle" direction="rtl" font-family="Tahoma,Arial,sans-serif" font-size="15" font-weight="900" fill="#315f56">${esc(edge.label)}</text>`
-    if (edge.inferred) svg += `<text x="${xOffset + pos.x}" y="${yOffset + pos.y + 31}" text-anchor="middle" direction="rtl" font-family="Tahoma,Arial,sans-serif" font-size="10" font-weight="800" fill="#9a7739">✦ مستنتج</text>`
+    if (edge.inferred) {
+      svg += `<text x="${xOffset + pos.x}" y="${yOffset + pos.y + 31}" text-anchor="middle" direction="rtl" font-family="Tahoma,Arial,sans-serif" font-size="10" font-weight="800" fill="#9a7739">✦ مستنتج</text>`
+    }
   }
 
   for (const node of layout.nodes) {
@@ -213,7 +231,7 @@ function graphSvg(summary: KinshipPathImageSummary, xOffset: number, yOffset: nu
     svg += svgText(nameCenterX, roleY, isFrom ? 'البداية' : isTo ? 'النهاية' : 'ضمن المسار', 11, MUTED, 700, 18, 1)
   }
 
-  return { svg, width: layout.graphWidth, height: layout.graphHeight }
+  return svg
 }
 
 function shortUrl(value: string) {
@@ -226,27 +244,40 @@ function shortUrl(value: string) {
 }
 
 function buildSvg(summary: KinshipPathImageSummary) {
+  const layout = buildLayout(summary.path)
+
+  // The exported canvas expands with the graph instead of clipping large
+  // same-generation branches inside the old fixed 1200px canvas.
+  const width = Math.max(BASE_WIDTH, Math.ceil(layout.graphWidth + (PADDING + GRAPH_SIDE_GUTTER) * 2))
+  const centerX = width / 2
+  const inner = width - PADDING * 2
+  const graphOffsetX = (width - layout.graphWidth) / 2
+
   const subtitle = `${summary.toName} بالنسبة إلى ${summary.fromName}`
-  const subtitleLines = splitText(subtitle, 46, 2)
+  const subtitleMax = Math.max(46, Math.min(82, Math.floor(inner / 20)))
+  const subtitleLines = splitText(subtitle, subtitleMax, 2)
   const subtitleY = 168
   const subtitleBottom = subtitleY + Math.max(0, subtitleLines.length - 1) * 27
 
   const relationLines = splitText(summary.relationshipLabel, 30, 2)
   const relationTop = Math.max(218, subtitleBottom + 26)
   const relationCardHeight = relationLines.length > 1 ? 132 : 112
+  const relationCardWidth = Math.min(600, inner - 120)
   const relationLabelY = relationTop + 42
   const badgeY = relationTop + relationCardHeight - 38
 
   const graphTop = relationTop + relationCardHeight + 34
-  const graph = graphSvg(summary, PADDING + 40, graphTop + 22)
-  const graphCardHeight = graph.height + 44
+  const graphCardHeight = layout.graphHeight + 44
+  const graph = graphSvg(summary, layout, graphOffsetX, graphTop + 22)
 
-  const detailLines = splitText(summary.relationshipDetail, 64, 3)
+  const detailMax = Math.max(64, Math.min(108, Math.floor(inner / 16)))
+  const detailLines = splitText(summary.relationshipDetail, detailMax, 3)
   const detailHeight = Math.max(98, 54 + detailLines.length * 27)
   const detailTop = graphTop + graphCardHeight + 28
 
   const urlLabel = shortUrl(summary.shareUrl)
-  const urlLines = splitContinuousText(urlLabel, 66, 3)
+  const urlMax = Math.max(66, Math.min(112, Math.floor(inner / 15)))
+  const urlLines = splitContinuousText(urlLabel, urlMax, 4)
   const linkCardHeight = Math.max(126, 76 + urlLines.length * 24)
   const linkTop = detailTop + detailHeight + 20
   const height = linkTop + linkCardHeight + 124
@@ -255,35 +286,35 @@ function buildSvg(summary: KinshipPathImageSummary) {
   const degreeLabel = summary.degree == null ? '' : `${summary.degree} درجات`
   const date = new Intl.DateTimeFormat('ar-SA', { dateStyle: 'long' }).format(new Date())
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" viewBox="0 0 ${WIDTH} ${height}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
     <defs>
       <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffdf9"/><stop offset="1" stop-color="#f4faf8"/></linearGradient>
       <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#173d32" flood-opacity=".08"/></filter>
     </defs>
     <rect width="100%" height="100%" fill="url(#paper)"/>
-    <circle cx="${WIDTH / 2}" cy="70" r="32" fill="#e7f4f1" stroke="#cce4df" stroke-width="2"/>
-    ${svgText(WIDTH / 2, 80, 'ص', 25, NAVY, 900, 4, 1)}
-    ${svgText(WIDTH / 2, 126, 'صلة القرابة', 31, NAVY, 900, 20, 1)}
-    ${svgLines(WIDTH / 2, subtitleY, subtitleLines, 20, BLUE, 800, 1.32)}
+    <circle cx="${centerX}" cy="70" r="32" fill="#e7f4f1" stroke="#cce4df" stroke-width="2"/>
+    ${svgText(centerX, 80, 'ص', 25, NAVY, 900, 4, 1)}
+    ${svgText(centerX, 126, 'صلة القرابة', 31, NAVY, 900, 20, 1)}
+    ${svgLines(centerX, subtitleY, subtitleLines, 20, BLUE, 800, 1.32)}
 
-    <rect x="${WIDTH / 2 - 270}" y="${relationTop}" width="540" height="${relationCardHeight}" rx="26" fill="#ffffff" stroke="#cfe3dc" stroke-width="2" filter="url(#shadow)"/>
-    ${svgLines(WIDTH / 2, relationLabelY, relationLines, 29, NAVY, 900, 1.24)}
-    <rect x="${WIDTH / 2 - 122}" y="${badgeY}" width="108" height="28" rx="14" fill="#eaf6f1"/><text x="${WIDTH / 2 - 68}" y="${badgeY + 19}" text-anchor="middle" direction="rtl" font-family="Tahoma,Arial,sans-serif" font-size="12" font-weight="900" fill="#315f56">${esc(relationKind)}</text>
-    ${degreeLabel ? `<rect x="${WIDTH / 2 + 14}" y="${badgeY}" width="108" height="28" rx="14" fill="#eef4f8"/><text x="${WIDTH / 2 + 68}" y="${badgeY + 19}" text-anchor="middle" direction="rtl" font-family="Tahoma,Arial,sans-serif" font-size="12" font-weight="900" fill="#3d6d89">${esc(degreeLabel)}</text>` : ''}
+    <rect x="${centerX - relationCardWidth / 2}" y="${relationTop}" width="${relationCardWidth}" height="${relationCardHeight}" rx="26" fill="#ffffff" stroke="#cfe3dc" stroke-width="2" filter="url(#shadow)"/>
+    ${svgLines(centerX, relationLabelY, relationLines, 29, NAVY, 900, 1.24)}
+    <rect x="${centerX - 122}" y="${badgeY}" width="108" height="28" rx="14" fill="#eaf6f1"/><text x="${centerX - 68}" y="${badgeY + 19}" text-anchor="middle" direction="rtl" font-family="Tahoma,Arial,sans-serif" font-size="12" font-weight="900" fill="#315f56">${esc(relationKind)}</text>
+    ${degreeLabel ? `<rect x="${centerX + 14}" y="${badgeY}" width="108" height="28" rx="14" fill="#eef4f8"/><text x="${centerX + 68}" y="${badgeY + 19}" text-anchor="middle" direction="rtl" font-family="Tahoma,Arial,sans-serif" font-size="12" font-weight="900" fill="#3d6d89">${esc(degreeLabel)}</text>` : ''}
 
-    ${roundedRect(PADDING, graphTop, INNER, graphCardHeight, '#fbfdfc', BORDER, 28, 2)}
-    ${graph.svg}
+    ${roundedRect(PADDING, graphTop, inner, graphCardHeight, '#fbfdfc', BORDER, 28, 2)}
+    ${graph}
 
-    ${roundedRect(PADDING, detailTop, INNER, detailHeight, '#ffffff', BORDER, 22, 2)}
-    ${svgText(WIDTH / 2, detailTop + 31, 'توضيح العلاقة', 15, TEAL, 900, 28, 1)}
-    ${svgLines(WIDTH / 2, detailTop + 61, detailLines, 16, MUTED, 700, 1.55)}
+    ${roundedRect(PADDING, detailTop, inner, detailHeight, '#ffffff', BORDER, 22, 2)}
+    ${svgText(centerX, detailTop + 31, 'توضيح العلاقة', 15, TEAL, 900, 28, 1)}
+    ${svgLines(centerX, detailTop + 61, detailLines, 16, MUTED, 700, 1.55)}
 
-    ${roundedRect(PADDING, linkTop, INNER, linkCardHeight, '#fff8ee', '#ead8b7', 22, 2)}
-    ${svgText(WIDTH / 2, linkTop + 34, 'افتح الرابط لمشاهدة صلة القرابة والتفاصيل المحدثة', 15, GOLD, 900, 50, 1)}
-    ${svgLines(WIDTH / 2, linkTop + 70, urlLines, 13, NAVY, 700, 1.55)}
+    ${roundedRect(PADDING, linkTop, inner, linkCardHeight, '#fff8ee', '#ead8b7', 22, 2)}
+    ${svgText(centerX, linkTop + 34, 'افتح الرابط لمشاهدة صلة القرابة والتفاصيل المحدثة', 15, GOLD, 900, 50, 1)}
+    ${svgLines(centerX, linkTop + 70, urlLines, 13, NAVY, 700, 1.55)}
 
-    <line x1="${PADDING}" y1="${height - 78}" x2="${WIDTH - PADDING}" y2="${height - 78}" stroke="${BORDER}"/>
-    ${svgText(WIDTH / 2, height - 45, `منصة صلة القرابة · ${date}`, 13, MUTED, 700, 44, 1)}
+    <line x1="${PADDING}" y1="${height - 78}" x2="${width - PADDING}" y2="${height - 78}" stroke="${BORDER}"/>
+    ${svgText(centerX, height - 45, `منصة صلة القرابة · ${date}`, 13, MUTED, 700, 44, 1)}
   </svg>`
 }
 
@@ -306,19 +337,24 @@ function canvasToPng(canvas: HTMLCanvasElement) {
 
 export async function createKinshipPathImage(summary: KinshipPathImageSummary): Promise<KinshipPathImageExport> {
   if (!summary.path.length) throw new Error('لا يوجد مسار قرابة يمكن تحويله إلى صورة.')
+
   const svg = buildSvg(summary)
   const image = await loadSvgImage(svg)
-  const scale = Math.min(1.5, 3200 / WIDTH, 10000 / image.naturalHeight)
-  const outputWidth = Math.round(WIDTH * scale)
+
+  // Preserve the full adaptive canvas while keeping PNG sizes practical on mobile.
+  const scale = Math.min(1.5, 3600 / image.naturalWidth, 10000 / image.naturalHeight)
+  const outputWidth = Math.round(image.naturalWidth * scale)
   const outputHeight = Math.round(image.naturalHeight * scale)
   const canvas = document.createElement('canvas')
   canvas.width = outputWidth
   canvas.height = outputHeight
   const context = canvas.getContext('2d')
   if (!context) throw new Error('تعذر تهيئة محرك الصور في هذا الجهاز.')
+
   context.fillStyle = PAPER
   context.fillRect(0, 0, outputWidth, outputHeight)
   context.drawImage(image, 0, 0, outputWidth, outputHeight)
+
   const blob = await canvasToPng(canvas)
   return {
     blob,

@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import PeoplePicker from './PeoplePicker'
 import KinshipNetwork from './KinshipNetwork'
 import LineageSummaryCard from './LineageSummaryCard'
+import KinshipPathGraph, { type KinshipPathStep } from './KinshipPathGraph'
+import KinshipPathImageShare from './KinshipPathImageShare'
 import '../kinship-path-summary.css'
 import '../kinship-engine.css'
 
@@ -15,14 +17,7 @@ type PersonSummary = {
   families?: { name?: string } | { name?: string }[] | null
 }
 
-type PathRow = {
-  step_no: number
-  person_id: string
-  full_name: string
-  gender: 'male' | 'female' | null
-  relation_type: string
-  is_inferred: boolean
-}
+type PathRow = KinshipPathStep
 
 type KinshipResult = {
   from_person_id: string
@@ -57,22 +52,14 @@ type Props = {
 
 type Mode = 'tree' | 'path'
 
+type SharedKinshipSelection = { fromId: string; toId: string }
+
 const ENGINE_MAX_DEPTH = 8
 const LEGACY_PATH_MAX_DEPTH = 6
 
 function familyName(value: PersonSummary['families']) {
   if (!value) return ''
   return Array.isArray(value) ? value[0]?.name ?? '' : value.name ?? ''
-}
-
-function relationLabel(type: string, gender: string | null) {
-  if (type === 'self') return 'البداية'
-  if (type === 'parent') return gender === 'female' ? 'أم' : gender === 'male' ? 'أب' : 'والد/والدة'
-  if (type === 'child') return gender === 'female' ? 'ابنة' : gender === 'male' ? 'ابن' : 'ابن/ابنة'
-  if (type === 'sibling') return gender === 'female' ? 'أخت' : gender === 'male' ? 'أخ' : 'أخ/أخت'
-  if (type === 'spouse') return gender === 'female' ? 'زوجة' : gender === 'male' ? 'زوج' : 'زوج/زوجة'
-  if (type === 'guardian') return 'وصاية'
-  return 'صلة'
 }
 
 function confidenceLabel(value: KinshipResult['confidence']) {
@@ -98,13 +85,24 @@ function missingParentsLabel(count: number) {
   return 'الوالدان غير مكتملين'
 }
 
+function sharedKinshipSelection(): SharedKinshipSelection | null {
+  if (typeof window === 'undefined') return null
+  const params = new URL(window.location.href).searchParams
+  if (params.get('kinshipMode') !== 'path') return null
+  const fromId = params.get('kinshipFrom')?.trim() || ''
+  const toId = params.get('kinshipTo')?.trim() || ''
+  return fromId && toId && fromId !== toId ? { fromId, toId } : null
+}
+
 export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddPerson, onAddRelation }: Props) {
-  const [mode, setMode] = useState<Mode>('tree')
+  const sharedSelectionRef = useRef<SharedKinshipSelection | null>(sharedKinshipSelection())
+  const sharedAutoStartedRef = useRef(false)
+  const [mode, setMode] = useState<Mode>(sharedSelectionRef.current ? 'path' : 'tree')
   const [focusId, setFocusId] = useState(initialPersonId ?? '')
   const [focus, setFocus] = useState<PersonSummary | null>(null)
   const [focusLoading, setFocusLoading] = useState(false)
-  const [fromId, setFromId] = useState(initialPersonId ?? '')
-  const [toId, setToId] = useState('')
+  const [fromId, setFromId] = useState(sharedSelectionRef.current?.fromId ?? initialPersonId ?? '')
+  const [toId, setToId] = useState(sharedSelectionRef.current?.toId ?? '')
   const [path, setPath] = useState<PathRow[]>([])
   const [kinshipResult, setKinshipResult] = useState<KinshipResult | null>(null)
   const [pathLoading, setPathLoading] = useState(false)
@@ -112,7 +110,7 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
   const pathRequestRef = useRef(0)
 
   useEffect(() => {
-    if (!initialPersonId) return
+    if (!initialPersonId || sharedSelectionRef.current) return
     setFocusId((current) => current || initialPersonId)
     setFromId((current) => current || initialPersonId)
   }, [initialPersonId])
@@ -222,6 +220,14 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
     setPath(rows)
   }
 
+  useEffect(() => {
+    const shared = sharedSelectionRef.current
+    if (!shared || sharedAutoStartedRef.current || mode !== 'path') return
+    if (fromId !== shared.fromId || toId !== shared.toId) return
+    sharedAutoStartedRef.current = true
+    void discoverPath()
+  }, [mode, fromId, toId])
+
   const pathFromName = kinshipResult?.from_name || path[0]?.full_name || ''
   const pathToName = kinshipResult?.to_name || path[path.length - 1]?.full_name || ''
   const pathTitle = pathFromName && pathToName ? `${pathFromName} ← ${pathToName}` : ''
@@ -315,20 +321,27 @@ export default function FamilyTreeScreen({ initialPersonId, onOpenPerson, onAddP
 
           {path.length > 0 && (
             <section className="path-result-card">
-              <header><div><span>{kinshipResult ? 'المسار الذي أثبت النتيجة' : 'أقصر مسار موثق'}</span><h3>{pathTitle}</h3></div><b>{Math.max(0, path.length - 1)} درجات</b></header>
+              <header>
+                <div><span>{kinshipResult ? 'المسار الذي أثبت النتيجة' : 'أقصر مسار موثق'}</span><h3>{pathTitle}</h3></div>
+                <div className="path-result-actions">
+                  <b>{Math.max(0, path.length - 1)} درجات</b>
+                  {kinshipResult && <KinshipPathImageShare
+                    fromPersonId={kinshipResult.from_person_id}
+                    toPersonId={kinshipResult.to_person_id}
+                    fromName={kinshipResult.from_name}
+                    toName={kinshipResult.to_name}
+                    relationshipLabel={kinshipResult.relationship_label}
+                    relationshipDetail={kinshipResult.relationship_detail}
+                    degree={kinshipResult.degree}
+                    viaMarriage={kinshipResult.via_marriage}
+                    isBloodRelation={kinshipResult.is_blood_relation}
+                    path={path}
+                  />}
+                </div>
+              </header>
 
-              <div className="kinship-path-strip">
-                {path.map((step, index) => (
-                  <div className="path-step-wrap" key={`${step.person_id}-${step.step_no}`}>
-                    {index > 0 && <span className="path-connector"><b>{relationLabel(step.relation_type, step.gender)}</b>{step.is_inferred && <small>✦ مستنتج</small>}<i>←</i></span>}
-                    <button className="path-person-node" type="button" onClick={() => onOpenPerson(step.person_id)}>
-                      <span>{step.full_name.trim().charAt(0) || '؟'}</span>
-                      <strong>{step.full_name}</strong>
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <p className="path-footnote">النتيجة مبنية على العلاقات المعتمدة حاليًا، وتتحدث تلقائيًا كلما أضيف أب أو أم أو زواج جديد.</p>
+              <KinshipPathGraph path={path} fromPersonId={fromId} toPersonId={toId} onOpenPerson={onOpenPerson} />
+              <p className="path-footnote">المخطط يرتب الأشخاص بحسب الأجيال ويُظهر الزواج والإخوة والتفرعات بصريًا. النتيجة مبنية على العلاقات المعتمدة حاليًا وتتحدث تلقائيًا كلما أضيف أب أو أم أو زواج جديد.</p>
             </section>
           )}
 

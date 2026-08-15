@@ -19,13 +19,26 @@ function currentScreen() {
   return new URL(window.location.href).searchParams.get('screen')
 }
 
+function navButtons() {
+  return Array.from(document.querySelectorAll<HTMLButtonElement>('.mobile-bottom-nav > button'))
+}
+
 function findSectionsButton() {
   return document.querySelector<HTMLButtonElement>('.mobile-bottom-nav .mobile-sections-nav')
 }
 
 function candidateSectionsButton() {
-  const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.mobile-bottom-nav > button'))
+  const buttons = navButtons()
   return findSectionsButton() || buttons.at(-1) || null
+}
+
+function syncExclusiveSectionsState(button: HTMLButtonElement) {
+  const isSections = currentScreen() === SECTIONS_SCREEN
+  if (isSections) {
+    navButtons().forEach((item) => item.classList.toggle('active', item === button))
+  } else {
+    button.classList.remove('active')
+  }
 }
 
 function enhanceMobileSectionsButton() {
@@ -44,7 +57,7 @@ function enhanceMobileSectionsButton() {
   const label = button.querySelector<HTMLElement>(':scope > span:last-child')
   if (label && label.textContent !== 'الأقسام') label.textContent = 'الأقسام'
 
-  button.classList.toggle('active', currentScreen() === SECTIONS_SCREEN)
+  syncExclusiveSectionsState(button)
 }
 
 function scheduleEnhance() {
@@ -60,6 +73,13 @@ function notifySectionsHost() {
   signal.remove()
 }
 
+function clearSectionsScreen() {
+  const url = new URL(window.location.href)
+  if (url.searchParams.get('screen') !== SECTIONS_SCREEN) return
+  url.searchParams.delete('screen')
+  window.history.replaceState(window.history.state, '', url.toString())
+}
+
 function openSections() {
   const url = new URL(window.location.href)
   if (url.searchParams.get('screen') !== SECTIONS_SCREEN) {
@@ -69,7 +89,6 @@ function openSections() {
 
   enhanceMobileSectionsButton()
   notifySectionsHost()
-
   window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }))
   window.requestAnimationFrame(notifySectionsHost)
 }
@@ -78,22 +97,30 @@ if (typeof document !== 'undefined') {
   document.addEventListener('click', (event) => {
     const target = event.target
     if (!(target instanceof Element)) return
-    const button = target.closest<HTMLButtonElement>('.mobile-bottom-nav .mobile-sections-nav')
-    if (!button) return
 
-    event.preventDefault()
-    event.stopPropagation()
-    event.stopImmediatePropagation()
-    openSections()
+    const navButton = target.closest<HTMLButtonElement>('.mobile-bottom-nav > button')
+    if (!navButton) return
+
+    if (navButton.classList.contains('mobile-sections-nav')) {
+      event.preventDefault()
+      event.stopPropagation()
+      event.stopImmediatePropagation()
+      openSections()
+      return
+    }
+
+    clearSectionsScreen()
+    window.setTimeout(scheduleEnhance, 0)
   }, true)
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scheduleEnhance, { once: true })
   else scheduleEnhance()
 
   const observer = new MutationObserver(scheduleEnhance)
-  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true })
+  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] })
 
   window.addEventListener('popstate', scheduleEnhance)
+  window.addEventListener('hashchange', scheduleEnhance)
 }
 
 export {}

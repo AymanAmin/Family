@@ -11,14 +11,19 @@ const icons = {
 
 function enhanceBrandMark(): void {
   const mark = document.querySelector<HTMLElement>('.brand-mark')
-  if (!mark || mark.dataset.silaBrand === '1') return
+  if (!mark) return
+
+  const desiredSource = `${import.meta.env.BASE_URL}brand/sila-app-icon.png`
+  const current = mark.querySelector<HTMLImageElement>('img')
+  if (current?.src.endsWith('/brand/sila-app-icon.png')) return
 
   const image = document.createElement('img')
-  image.src = `${import.meta.env.BASE_URL}brand/sila-mark.svg`
+  image.src = desiredSource
   image.alt = ''
   image.decoding = 'async'
+  image.className = 'sila-brand-image'
   mark.replaceChildren(image)
-  mark.dataset.silaBrand = '1'
+  mark.dataset.silaBrand = '2'
 }
 
 function enhanceBrandName(): void {
@@ -68,4 +73,5 @@ function scheduleBrandIdentity(): void {
 const observer = new MutationObserver((): void => scheduleBrandIdentity())
 observer.observe(document.documentElement, { childList: true, subtree: true })
 window.addEventListener('hashchange', scheduleBrandIdentity)
+window.addEventListener('popstate', scheduleBrandIdentity)
 scheduleBrandIdentity()

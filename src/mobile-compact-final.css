@@ -1,0 +1,275 @@
+/* Final phone density pass: preserve the new theme while reclaiming vertical space. */
+@media (max-width: 760px) {
+  :root {
+    --phone-content-gutter: 10px;
+  }
+
+  /* Use the supplied Sila Al-Qaraba mark in the header without showing the tiny wordmark. */
+  .brand-mark {
+    position: relative !important;
+    overflow: hidden !important;
+    border: 1px solid rgb(158 142 116 / 18%) !important;
+    background: #f4efe6 !important;
+  }
+
+  .brand-mark .sila-brand-image {
+    position: absolute !important;
+    top: -12% !important;
+    left: -27.5% !important;
+    width: 155% !important;
+    max-width: none !important;
+    height: 155% !important;
+    object-fit: cover !important;
+  }
+
+  /* Main titles: phone-sized, not tablet/desktop sized. */
+  .directory-v2-heading h1,
+  .family-tree-hero h1,
+  .detail-page .detail-hero h1,
+  .admin-console-hero h1,
+  .page-heading h1,
+  .home-navigation-hub-header h1,
+  .household-profile-title h1 {
+    margin-block: 2px 4px !important;
+    font-size: clamp(21px, 6vw, 25px) !important;
+    line-height: 1.18 !important;
+    letter-spacing: 0 !important;
+  }
+
+  .detail-page .detail-hero h1,
+  .person-title-line h1 {
+    font-size: clamp(20px, 5.7vw, 24px) !important;
+  }
+
+  .directory-v2-heading h1,
+  .family-tree-hero h1 {
+    font-size: clamp(22px, 6.2vw, 26px) !important;
+  }
+
+  .directory-v2-heading p,
+  .family-tree-hero p,
+  .detail-hero p,
+  .admin-console-hero p,
+  .page-heading p,
+  .home-navigation-hub-header p,
+  .household-profile-title p {
+    margin-top: 3px !important;
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+  }
+
+  .directory-kicker,
+  .tree-kicker,
+  .detail-hero .eyebrow,
+  .admin-console-hero .eyebrow,
+  .page-heading .eyebrow,
+  .household-profile-title > span {
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+  }
+
+  .directory-v2-hero,
+  .family-tree-hero,
+  .detail-page > .detail-hero,
+  .admin-console-hero,
+  .page-section.narrow > .page-heading,
+  .home-navigation-hub-header {
+    padding: 12px !important;
+    border-radius: 18px !important;
+  }
+
+  .detail-page > .detail-hero {
+    grid-template-columns: 56px minmax(0, 1fr) !important;
+    gap: 9px !important;
+  }
+
+  .detail-avatar {
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 17px !important;
+    font-size: 20px !important;
+  }
+
+  .family-tree-hero {
+    grid-template-columns: minmax(0, 1fr) 54px !important;
+    gap: 9px !important;
+  }
+
+  .tree-hero-mark {
+    width: 54px !important;
+    height: 54px !important;
+    border-radius: 16px !important;
+  }
+
+  .admin-console-hero {
+    grid-template-columns: minmax(0, 1fr) 54px !important;
+  }
+
+  .admin-console-count {
+    width: 52px !important;
+    min-height: 54px !important;
+    border-radius: 15px !important;
+  }
+
+  /* Secondary headings and names. */
+  .section-title h2,
+  .home-section-heading h2,
+  .directory-result-section > header h2,
+  .tree-card-heading h2,
+  .path-result-card h3,
+  .detail-page h2,
+  .admin-console-panel h2,
+  .household-profile-title h2 {
+    font-size: 18px !important;
+    line-height: 1.28 !important;
+  }
+
+  .directory-card-copy strong,
+  .directory-person-card strong,
+  .directory-family-card strong,
+  .person-profile-action strong,
+  .family-member-card strong,
+  .household-member-card strong,
+  .record-card strong {
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+  }
+
+  /* Compact directory hero/search and results. */
+  .directory-v2-page,
+  .family-tree-page,
+  .detail-page,
+  .page-section,
+  .home-navigation-hub-screen {
+    gap: 9px !important;
+  }
+
+  .directory-search-box {
+    min-height: 46px !important;
+    margin-top: 9px !important;
+    border-radius: 14px !important;
+  }
+
+  .directory-search-box input {
+    min-height: 36px !important;
+    font-size: 13px !important;
+  }
+
+  .directory-search-submit {
+    min-width: 66px !important;
+    min-height: 36px !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+
+  .directory-result-section {
+    padding: 11px !important;
+  }
+
+  .directory-person-card,
+  .directory-family-card {
+    min-height: 60px !important;
+    padding: 7px 9px !important;
+  }
+
+  .directory-avatar,
+  .directory-family-mark {
+    width: 40px !important;
+    height: 40px !important;
+    flex-basis: 40px !important;
+    border-radius: 12px !important;
+  }
+
+  /* All-sections screen: compact two-column tiles. */
+  .home-navigation-hub-screen {
+    margin-top: 8px !important;
+  }
+
+  .home-navigation-hub-header {
+    gap: 8px !important;
+  }
+
+  .home-navigation-hub-grid {
+    gap: 7px !important;
+  }
+
+  .home-navigation-hub-item {
+    min-height: 94px !important;
+    gap: 5px !important;
+    padding: 9px !important;
+    border-radius: 15px !important;
+  }
+
+  .home-navigation-hub-item .home-hub-icon {
+    width: 34px !important;
+    height: 34px !important;
+    flex-basis: 34px !important;
+  }
+
+  .home-navigation-hub-item .home-hub-copy strong {
+    font-size: 13px !important;
+  }
+
+  .home-navigation-hub-item .home-hub-copy small {
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+  }
+
+  .home-navigation-hub-group-title {
+    padding-top: 8px !important;
+    font-size: 16px !important;
+  }
+
+  /* Profile controls and facts should not dominate the first viewport. */
+  .person-detail-quick-actions {
+    gap: 6px !important;
+    margin-top: 6px !important;
+  }
+
+  .person-profile-action {
+    min-height: 42px !important;
+    padding: 6px 8px !important;
+  }
+
+  .detail-facts > article {
+    min-height: 68px !important;
+    padding: 9px 10px !important;
+  }
+
+  .detail-facts strong {
+    font-size: 14px !important;
+  }
+
+  /* Keep only the genuinely active bottom tab visually selected. */
+  .mobile-bottom-nav button:not(.active):not(.add-nav-action) {
+    color: #737b7d !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-bottom-nav button:not(.active)::after {
+    display: none !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .directory-v2-heading h1,
+  .family-tree-hero h1,
+  .home-navigation-hub-header h1,
+  .admin-console-hero h1,
+  .page-heading h1 {
+    font-size: 22px !important;
+  }
+
+  .detail-page .detail-hero h1 {
+    font-size: 20px !important;
+  }
+
+  .directory-v2-hero,
+  .family-tree-hero,
+  .detail-page > .detail-hero,
+  .admin-console-hero,
+  .home-navigation-hub-header {
+    padding: 10px !important;
+  }
+}

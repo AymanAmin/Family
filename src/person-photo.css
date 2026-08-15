@@ -24,9 +24,82 @@
   border-radius: 50% !important;
 }
 
+.person-photo-admin-trigger {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid #b8d7d1;
+  border-radius: 12px;
+  color: var(--brand-navy-900, #20466d);
+  background: #f3faf8;
+  font-size: .66rem;
+  font-weight: 900;
+}
+
+.person-photo-admin-trigger > span {
+  color: var(--brand-teal-600, #3d9387);
+  font-size: .8rem;
+}
+
+.person-photo-admin-trigger:disabled {
+  opacity: .6;
+}
+
+.person-photo-admin-sheet {
+  width: min(100%, 560px) !important;
+}
+
+.person-photo-admin-form {
+  display: grid;
+  gap: 13px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.person-photo-admin-note {
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid #d5e8e4;
+  border-radius: 14px;
+  color: #55736f;
+  background: #f2faf7;
+  font-size: .67rem;
+  line-height: 1.75;
+}
+
+.person-photo-url-field {
+  display: grid;
+  gap: 6px;
+}
+
+.person-photo-url-field > span {
+  color: var(--brand-navy-950, #173653);
+  font-size: .72rem;
+  font-weight: 850;
+}
+
 .person-photo-url-field input {
+  width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border: 1px solid #d7e2e1;
+  border-radius: 14px;
+  outline: 0;
+  color: var(--ink);
+  background: white;
   direction: ltr;
   text-align: left;
+  font: inherit;
+}
+
+.person-photo-url-field input:focus {
+  border-color: var(--brand-teal-600, #3d9387);
+  box-shadow: 0 0 0 4px rgb(102 185 177 / 14%);
 }
 
 .person-photo-url-field small {
@@ -74,4 +147,44 @@
   font-size: .6rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.person-photo-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.person-photo-admin-actions > button {
+  min-height: 42px;
+  padding-inline: 13px;
+  border-radius: 12px;
+}
+
+.person-photo-remove {
+  border: 1px solid #ebc3c7;
+  color: #a64e57;
+  background: #fff5f6;
+  font-size: .67rem;
+  font-weight: 850;
+}
+
+@media (max-width: 760px) {
+  .person-photo-admin-trigger {
+    min-height: 40px;
+  }
+
+  .person-photo-admin-form {
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+
+  .person-photo-admin-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .person-photo-admin-actions .primary {
+    grid-column: 1 / -1;
+  }
 }

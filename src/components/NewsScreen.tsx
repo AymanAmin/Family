@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import RecordEditButton from './RecordEditButton'
 import EventShareButton from './EventShareButton'
 import './NewsScreen.css'
+import './NewsScreenReference.css'
 
 type RelatedFamily = { name?: string } | { name?: string }[] | null
 type RelatedPerson = { id?: string; full_name?: string } | { id?: string; full_name?: string }[] | null

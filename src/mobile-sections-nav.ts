@@ -1,3 +1,5 @@
+import './android-apk-install'
+
 const SECTIONS_SCREEN = 'menu'
 
 const sectionsIcon = `

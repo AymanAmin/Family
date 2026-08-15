@@ -74,5 +74,9 @@ function installHomeNewsLayoutFix() {
     overflow-wrap: anywhere !important;
   }
 }
+`
+
+  document.head.appendChild(style)
+}
 
 installHomeNewsLayoutFix()

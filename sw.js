@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sila-v15'
+const CACHE_VERSION = 'sila-v16'
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 
 function appUrl(path = '') {
@@ -11,7 +11,7 @@ self.addEventListener('install', (event) => {
       .then((cache) => cache.addAll([
         appUrl('./'),
         appUrl('manifest.webmanifest'),
-        appUrl('brand/sila-mark.svg'),
+        appUrl('brand/sila-app-icon.png'),
         appUrl('icons/icon-192.png'),
         appUrl('icons/icon-512.png'),
         appUrl('icons/maskable-512.png'),
@@ -52,9 +52,6 @@ self.addEventListener('push', (event) => {
     },
   }
 
-  // Safari on iOS/iPadOS requires a visible notification for every Web Push
-  // event. Keeping showNotification inside waitUntil lets the OS wake this
-  // service worker even when the Home Screen app has no open window.
   event.waitUntil(self.registration.showNotification(title, options))
 })
 

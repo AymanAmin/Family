@@ -3,21 +3,115 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#244a78" />
+    <meta name="theme-color" content="#f4efe6" />
     <meta name="description" content="صلة — منصة العائلة وصلة القرابة." />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="صلة" />
     <link rel="manifest" href="/Family/manifest.webmanifest" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/Family/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/Family/icons/apple-touch-icon.png" />
-    <title>صلة</title>
-    <script type="module" crossorigin src="/Family/assets/index-D4fmhbY0.js"></script>
+    <link rel="icon" type="image/png" href="/Family/icons/icon-512.png" />
+    <link rel="apple-touch-icon" href="/Family/icons/apple-touch-icon.png" />
+    <title>صلة القرابة</title>
+    <style>
+      #sila-splash {
+        position: fixed;
+        z-index: 2147483647;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 16% 16%, rgba(191,174,143,.12), transparent 22rem),
+          radial-gradient(circle at 84% 82%, rgba(191,174,143,.09), transparent 20rem),
+          linear-gradient(180deg, #fbf8f1 0%, #f3ecdf 100%);
+        opacity: 1;
+        visibility: visible;
+        transition: opacity .38s ease, visibility .38s ease;
+      }
+      #sila-splash::before,
+      #sila-splash::after {
+        position: absolute;
+        width: min(64vw, 360px);
+        aspect-ratio: 1;
+        border: 1px solid rgba(156,137,105,.13);
+        border-radius: 50%;
+        content: '';
+      }
+      #sila-splash::before { top: -18%; left: -18%; }
+      #sila-splash::after { right: -22%; bottom: -20%; }
+      #sila-splash.sila-splash-hide {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .sila-splash-inner {
+        position: relative;
+        display: grid;
+        width: min(78vw, 390px);
+        place-items: center;
+        padding: 18px;
+      }
+      .sila-splash-inner img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 28px;
+        box-shadow: 0 26px 70px rgba(82,68,49,.14);
+      }
+      .sila-splash-loader {
+        width: 56px;
+        height: 4px;
+        margin-top: 22px;
+        overflow: hidden;
+        border-radius: 99px;
+        background: rgba(117,101,78,.14);
+      }
+      .sila-splash-loader::after {
+        display: block;
+        width: 48%;
+        height: 100%;
+        border-radius: inherit;
+        background: #9b896f;
+        content: '';
+        animation: silaSplashMove 1.05s ease-in-out infinite alternate;
+      }
+      @keyframes silaSplashMove { to { transform: translateX(-108%); } }
+      @media (max-width: 430px) {
+        .sila-splash-inner { width: min(82vw, 340px); padding: 12px; }
+        .sila-splash-inner img { border-radius: 24px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .sila-splash-loader::after { animation: none; }
+        #sila-splash { transition-duration: .01ms; }
+      }
+    </style>
+    <script type="module" crossorigin src="/Family/assets/index-CbiPDjc5.js"></script>
     <link rel="modulepreload" crossorigin href="/Family/assets/jsx-runtime-Cut7sifM.js">
-    <link rel="stylesheet" crossorigin href="/Family/assets/index-CKwuRcmj.css">
+    <link rel="stylesheet" crossorigin href="/Family/assets/index-murIFGdz.css">
   </head>
   <body>
+    <div id="sila-splash" role="status" aria-label="جارٍ فتح صلة القرابة">
+      <div class="sila-splash-inner">
+        <img src="/Family/brand/sila-app-icon.png" alt="صلة القرابة — Kinship Connection" />
+        <span class="sila-splash-loader" aria-hidden="true"></span>
+      </div>
+    </div>
     <div id="root"></div>
+    <script>
+      (() => {
+        let hidden = false
+        const hideSplash = () => {
+          if (hidden) return
+          hidden = true
+          const splash = document.getElementById('sila-splash')
+          if (!splash) return
+          splash.classList.add('sila-splash-hide')
+          window.setTimeout(() => splash.remove(), 450)
+        }
+        window.addEventListener('load', () => window.setTimeout(hideSplash, 550), { once: true })
+        window.setTimeout(hideSplash, 4200)
+      })()
+    </script>
   </body>
 </html>

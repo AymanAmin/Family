@@ -25,6 +25,7 @@ import HouseholdExperienceUpgrade from './components/HouseholdExperienceUpgrade'
 import HouseholdPortalLifecycleFix from './components/HouseholdPortalLifecycleFix'
 import StructuredScopeExperience from './components/StructuredScopeExperience'
 import AdminScopeAssignments from './components/AdminScopeAssignments'
+import PersonPhotoEverywhere from './components/PersonPhotoEverywhere'
 import './styles.css'
 import './mobile-app.css'
 import './mobile-fixes.css'
@@ -271,6 +272,7 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <App />
+    <PersonPhotoEverywhere />
     <HomeKinshipShortcut />
     <HouseholdExperienceUpgrade />
     <HouseholdPortalLifecycleFix />

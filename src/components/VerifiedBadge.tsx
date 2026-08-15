@@ -25,5 +25,8 @@ export function PersonVerifiedBadge({ personId, compact = false }: { personId: s
     return () => { cancelled = true }
   }, [personId])
 
-  return verified ? <VerifiedBadge compact={compact} /> : null
+  return <>
+    <span className="person-context-anchor" data-person-context-id={personId} hidden aria-hidden="true" />
+    {verified ? <VerifiedBadge compact={compact} /> : null}
+  </>
 }

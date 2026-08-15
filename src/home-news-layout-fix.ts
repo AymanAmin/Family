@@ -6,9 +6,8 @@ function installHomeNewsLayoutFix() {
   const style = document.createElement('style')
   style.id = STYLE_ID
   style.textContent = `
-/* Keep the home "latest news" feed vertical and content-sized on phones.
-   Older mobile rules turn .event-grid into a horizontal auto-flow grid,
-   which makes every card inherit the height of the tallest item. */
+/* Keep the home "latest news" cards horizontally swipeable on phones,
+   while allowing every card to keep its own natural content height. */
 @media (max-width: 760px) {
   main .section-block.soft .cards-grid.event-grid,
   main .section-block.soft .event-grid {
@@ -18,20 +17,25 @@ function installHomeNewsLayoutFix() {
     min-width: 0 !important;
     height: auto !important;
     min-height: 0 !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 9px !important;
-    grid-auto-flow: row !important;
-    grid-auto-columns: auto !important;
-    grid-auto-rows: auto !important;
-    grid-template-columns: none !important;
-    grid-template-rows: none !important;
-    overflow: visible !important;
-    overflow-x: visible !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    padding-inline: 2px 18px !important;
+    padding-bottom: 6px !important;
+    overflow-x: auto !important;
     overflow-y: visible !important;
-    scroll-snap-type: none !important;
-    scroll-behavior: auto !important;
+    scroll-snap-type: x proximity !important;
+    scroll-padding-inline: 2px !important;
+    scroll-behavior: smooth !important;
+    overscroll-behavior-inline: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
     transform: none !important;
+  }
+
+  main .section-block.soft .cards-grid.event-grid::-webkit-scrollbar,
+  main .section-block.soft .event-grid::-webkit-scrollbar {
+    display: none !important;
   }
 
   main .section-block.soft .cards-grid.event-grid > .event-card,
@@ -39,16 +43,16 @@ function installHomeNewsLayoutFix() {
     position: relative !important;
     display: block !important;
     box-sizing: border-box !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
+    width: min(84vw, 520px) !important;
+    max-width: min(84vw, 520px) !important;
+    min-width: min(84vw, 520px) !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
-    flex: 0 0 auto !important;
-    align-self: stretch !important;
+    flex: 0 0 min(84vw, 520px) !important;
+    align-self: flex-start !important;
     margin: 0 !important;
-    scroll-snap-align: none !important;
+    scroll-snap-align: start !important;
     transform: none !important;
   }
 

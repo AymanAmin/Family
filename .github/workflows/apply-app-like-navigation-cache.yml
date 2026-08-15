@@ -1,0 +1,47 @@
+name: Apply app-like navigation cache
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-app-like-navigation-cache.yml'
+      - 'scripts/apply-app-like-navigation-cache.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: family-app-like-navigation-cache
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply navigation cache patch
+        run: python3 scripts/apply-app-like-navigation-cache.py
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify build
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+
+      - name: Commit source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/main.tsx src/components/DirectoryScreen.tsx src/components/TopAncestorsScreen.tsx
+          if git diff --cached --quiet; then
+            echo "Navigation cache changes are already applied."
+          else
+            git commit -m "Use fresh-forward cached-back navigation"
+            git push
+          fi

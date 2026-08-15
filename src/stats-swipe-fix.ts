@@ -28,11 +28,9 @@ const HUB_ITEMS: HubItem[] = [
   { action: 'admin', label: 'الإدارة', description: 'طلبات الاعتماد والإعدادات', icon: 'admin', optional: true },
 ]
 
-const enhancedStats = new WeakSet<HTMLElement>()
 let hubScreen: HTMLElement | null = null
 let hubActive = false
-let refreshGuardObserver: MutationObserver | null = null
-let refreshGuardTimer = 0
+let attachFrame = 0
 
 function normalizedText(element: Element | null) {
   return element?.textContent?.replace(/\s+/g, ' ').trim() || ''
@@ -51,19 +49,23 @@ function svgIcon(name: string) {
     kinship: `<svg ${common}><circle cx="8" cy="9" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="16" cy="23" r="3"/><path d="m10.5 11.5 4 8M21.5 11.5l-4 8M11 9h10"/></svg>`,
     add: `<svg ${common}><circle cx="16" cy="16" r="11"/><path d="M16 10v12M10 16h12"/></svg>`,
     account: `<svg ${common}><circle cx="16" cy="10" r="4"/><path d="M8 25c1-5 3.5-7.5 8-7.5s7 2.5 8 7.5"/></svg>`,
-    admin: `<svg ${common}><path d="M7 7h7v7H7zM18 7h7v7h-7zM7 18h7v7H7zM18 18h7v7H18z"/></svg>`,
+    admin: `<svg ${common}><path d="M7 7h7v7H7zM18 7h7v7h-7zM7 18h7v7H7zM18 18h7v7h-7z"/></svg>`,
   }
   return icons[name] || icons.more
 }
 
-function findOriginalStat(label: string) {
-  return Array.from(document.querySelectorAll<HTMLButtonElement>('.unified-home-stats > .service-tile:not(.home-hub-tile)'))
+function originalStatIn(stats: HTMLElement, label: string) {
+  return Array.from(stats.querySelectorAll<HTMLButtonElement>(':scope > .service-tile:not(.home-hub-tile)'))
     .find((button) => normalizedText(button.querySelector('strong')).includes(label)) || null
 }
 
-function readStatNumber(label: string) {
-  const tile = findOriginalStat(label)
-  const value = tile?.querySelector('.service-icon')?.textContent?.trim() || ''
+function findOriginalStat(label: string) {
+  const stats = document.querySelector<HTMLElement>('.app-services.unified-home-stats')
+  return stats ? originalStatIn(stats, label) : null
+}
+
+function readStatNumber(stats: HTMLElement, label: string) {
+  const value = originalStatIn(stats, label)?.querySelector('.service-icon')?.textContent?.trim() || ''
   return /^\d+$/.test(value) ? value : ''
 }
 
@@ -144,17 +146,6 @@ function makeShortcut(item: HubItem, isHome = false) {
   icon.className = 'home-hub-icon'
   icon.innerHTML = svgIcon(item.icon)
 
-  if (isHome) {
-    const countLabel = item.action === 'families' ? 'الأسر' : item.action === 'people' ? 'الأفراد' : ''
-    const count = countLabel ? readStatNumber(countLabel) : ''
-    if (count) {
-      const badge = document.createElement('small')
-      badge.className = 'home-hub-count'
-      badge.textContent = count
-      icon.appendChild(badge)
-    }
-  }
-
   const copy = document.createElement('span')
   copy.className = 'home-hub-copy'
   const label = document.createElement('strong')
@@ -175,18 +166,47 @@ function makeShortcut(item: HubItem, isHome = false) {
   return button
 }
 
+function syncShortcutCount(stats: HTMLElement, action: 'families' | 'people', label: string) {
+  const shortcut = stats.querySelector<HTMLButtonElement>(`.home-hub-tile[data-hub-action="${action}"]`)
+  const icon = shortcut?.querySelector<HTMLElement>('.home-hub-icon')
+  if (!icon) return
+
+  const value = readStatNumber(stats, label)
+  const existing = icon.querySelector<HTMLElement>('.home-hub-count')
+
+  if (!value) {
+    existing?.remove()
+    return
+  }
+
+  if (existing) {
+    if (existing.textContent !== value) existing.textContent = value
+    return
+  }
+
+  const badge = document.createElement('small')
+  badge.className = 'home-hub-count'
+  badge.textContent = value
+  icon.appendChild(badge)
+}
+
+function syncShortcutCounts(stats: HTMLElement) {
+  syncShortcutCount(stats, 'families', 'الأسر')
+  syncShortcutCount(stats, 'people', 'الأفراد')
+}
+
 function hasAdminNavigation() {
   return Boolean(findNavButton('الإدارة'))
 }
 
-function openHub(pushHistory = true) {
+function openHub(updateHistory = true) {
   if (hubActive) return
 
   const main = document.querySelector<HTMLElement>('.app-shell > main')
   if (!main) return
 
   hubActive = true
-  if (pushHistory) {
+  if (updateHistory) {
     const url = new URL(window.location.href)
     url.searchParams.set('screen', 'menu')
     window.history.pushState(window.history.state, '', url.toString())
@@ -224,144 +244,38 @@ function openHub(pushHistory = true) {
 }
 
 function enhanceStats(stats: HTMLElement) {
-  if (enhancedStats.has(stats)) return
-  enhancedStats.add(stats)
   stats.classList.add('home-icon-menu')
 
-  const fragment = document.createDocumentFragment()
-  HOME_SHORTCUTS.forEach((item) => fragment.appendChild(makeShortcut(item, true)))
-  stats.prepend(fragment)
+  if (!stats.querySelector(':scope > .home-hub-tile')) {
+    const fragment = document.createDocumentFragment()
+    HOME_SHORTCUTS.forEach((item) => fragment.appendChild(makeShortcut(item, true)))
+    stats.prepend(fragment)
+  }
+
+  syncShortcutCounts(stats)
 }
 
-function requestedHashRoute() {
-  const raw = window.location.hash
-  if (!raw.startsWith('#/')) return ''
-  return decodeURIComponent(raw.replace(/^#\/?/, '')).split('/')[0] || ''
-}
+function attachAllNow() {
+  document.querySelectorAll<HTMLElement>('.app-services.unified-home-stats').forEach(enhanceStats)
 
-function refreshNeedsGuard() {
-  const screen = new URL(window.location.href).searchParams.get('screen')
-  if (screen === 'menu' || screen === 'ancestors') return true
-  const route = requestedHashRoute()
-  return Boolean(route && route !== 'home')
-}
-
-function activeNavContains(...labels: string[]) {
-  const active = Array.from(document.querySelectorAll<HTMLElement>('.desktop-nav .active, .mobile-bottom-nav .active'))
-  return active.some((item) => {
-    const text = normalizedText(item)
-    return labels.some((label) => text === label || text.includes(label))
-  })
-}
-
-function requestedRouteIsReady() {
-  const screen = new URL(window.location.href).searchParams.get('screen')
-  if (screen === 'menu') return Boolean(document.querySelector('.home-navigation-hub-screen'))
-  if (screen === 'ancestors') return Boolean(document.querySelector('.top-ancestors-screen'))
-
-  const route = requestedHashRoute()
-  if (!route || route === 'home') return Boolean(document.querySelector('.home-search-hero'))
-  if (route === 'person' || route === 'family') return Boolean(document.querySelector('.detail-page'))
-  if (route === 'news') return activeNavContains('الأخبار')
-  if (route === 'search') return activeNavContains('البحث', 'الأفراد')
-  if (route === 'tree') return activeNavContains('شجرة العائلة', 'الشجرة')
-  if (route === 'add') return activeNavContains('إضافة')
-  if (route === 'admin') return activeNavContains('الإدارة')
-  if (route === 'account') return Boolean(document.querySelector('.account-page'))
-  return true
-}
-
-function finishRefreshGuard() {
-  document.documentElement.classList.remove('family-route-refreshing')
-  refreshGuardObserver?.disconnect()
-  refreshGuardObserver = null
-  if (refreshGuardTimer) window.clearTimeout(refreshGuardTimer)
-  refreshGuardTimer = 0
-}
-
-function checkRefreshGuard() {
-  if (!document.documentElement.classList.contains('family-route-refreshing')) return
-  if (requestedRouteIsReady()) finishRefreshGuard()
-}
-
-function installRefreshGuard() {
-  if (!refreshNeedsGuard()) return
-
-  document.documentElement.classList.add('family-route-refreshing')
-
-  const style = document.createElement('style')
-  style.dataset.familyRouteRefreshGuard = 'true'
-  style.textContent = `
-    html.family-route-refreshing body { overflow: hidden !important; }
-    html.family-route-refreshing #root { visibility: hidden !important; }
-    html.family-route-refreshing body::before {
-      content: 'جارٍ تحديث الصفحة…';
-      position: fixed;
-      z-index: 2147483647;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      padding-top: 54px;
-      background: #f7faf8;
-      color: #456577;
-      font-family: inherit;
-      font-size: .88rem;
-      font-weight: 700;
-    }
-    html.family-route-refreshing body::after {
-      content: '';
-      position: fixed;
-      z-index: 2147483647;
-      top: calc(50% - 25px);
-      left: calc(50% - 16px);
-      width: 30px;
-      height: 30px;
-      border: 3px solid rgba(49, 132, 119, .18);
-      border-top-color: #318477;
-      border-radius: 50%;
-      animation: family-route-refresh-spin .7s linear infinite;
-    }
-    @keyframes family-route-refresh-spin { to { transform: rotate(360deg); } }
-  `
-  document.head.appendChild(style)
-
-  refreshGuardObserver = new MutationObserver(checkRefreshGuard)
-  refreshGuardObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
-
-  // Never leave the application hidden if a protected/deleted route cannot be restored.
-  refreshGuardTimer = window.setTimeout(finishRefreshGuard, 9000)
+  const menuRequested = new URL(window.location.href).searchParams.get('screen') === 'menu'
+  if (menuRequested && !hubActive) openHub(false)
+  if (!menuRequested && hubActive) closeHub(false)
 }
 
 function attachAll() {
-  document.querySelectorAll<HTMLElement>('.app-services.unified-home-stats').forEach(enhanceStats)
-  syncHubFromUrl()
-  checkRefreshGuard()
-}
-
-function syncHubFromUrl() {
-  const active = new URL(window.location.href).searchParams.get('screen') === 'menu'
-  if (active && !hubActive) {
-    openHub(false)
-    return
-  }
-  if (!active && hubActive) closeHub(false)
+  window.cancelAnimationFrame(attachFrame)
+  attachFrame = window.requestAnimationFrame(attachAllNow)
 }
 
 if (typeof document !== 'undefined') {
-  // Run before React mounts so a browser refresh never paints the home screen
-  // while the application is restoring a different URL route.
-  installRefreshGuard()
-
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attachAll, { once: true })
   else attachAll()
 
   const observer = new MutationObserver(attachAll)
-  observer.observe(document.documentElement, { childList: true, subtree: true })
+  observer.observe(document.documentElement, { childList: true, characterData: true, subtree: true })
 
-  window.addEventListener('popstate', () => {
-    syncHubFromUrl()
-    checkRefreshGuard()
-  })
+  window.addEventListener('popstate', attachAll)
 
   document.addEventListener('click', (event) => {
     if (!hubActive) return

@@ -50,6 +50,10 @@ function textFrom(root: Element | null, selector: string) {
   return normalizedName(root?.querySelector(selector)?.textContent)
 }
 
+function householdNameToPersonName(value: string) {
+  return normalizedName(value.replace(/^أسرة\s+/u, ''))
+}
+
 function collectBindings(): AvatarBinding[] {
   const bindings: AvatarBinding[] = []
   const seen = new Set<HTMLElement>()
@@ -64,23 +68,44 @@ function collectBindings(): AvatarBinding[] {
     })
   }
 
+  // Main person profile and signed-in account avatar.
   add('.detail-hero .detail-avatar', (avatar) => textFrom(avatar.closest('.detail-hero'), 'h1'))
   add('.account-area .account-profile-button', (avatar) => textFrom(avatar.closest('.account-area'), '.account-copy strong'))
+
+  // Directory, pickers and family/person lists.
   add('.directory-person-card .directory-avatar', (avatar) => textFrom(avatar.closest('.directory-person-card'), '.directory-card-copy strong'))
   add('.people-picker-selected .people-picker-avatar', (avatar) => textFrom(avatar.closest('.people-picker-selected'), 'strong'))
   add('.people-picker-menu > button .people-picker-avatar', (avatar) => textFrom(avatar.closest('button'), 'strong'))
   add('.family-member-card .family-member-avatar', (avatar) => textFrom(avatar.closest('.family-member-card'), 'strong'))
   add('.family-overview-person > span:first-child', (avatar) => textFrom(avatar.closest('.family-overview-person'), 'strong'))
+  add('.duplicate-result-card .duplicate-avatar', (avatar) => textFrom(avatar.closest('.duplicate-result-card'), '.duplicate-copy strong'))
+  add('.direct-relation-person > span:first-child', (avatar) => textFrom(avatar.closest('.direct-relation-person'), '.direct-relation-copy strong'))
+
+  // Tree, kinship path and relationship-network avatars.
   add('.tree-focus-summary .tree-focus-avatar', (avatar) => textFrom(avatar.closest('.tree-focus-summary'), 'strong'))
   add('.kin-node .kin-avatar', (avatar) => textFrom(avatar.closest('.kin-node'), '.kin-copy strong'))
   add('.kin-self .kin-self-ring > b', (avatar) => textFrom(avatar.closest('.kin-self'), 'strong'))
+  add('.path-person-node > span:first-child', (avatar) => textFrom(avatar.closest('.path-person-node'), 'strong'))
+  add('.kinship-branch-node > span:first-child', (avatar) => textFrom(avatar.closest('.kinship-branch-node'), 'strong'))
+
+  // Lineage hierarchy: root, branches, expanded nodes, spouses and family groups.
   add('.lineage-spouse-rail > button > span:first-child', (avatar) => textFrom(avatar.closest('button'), 'strong'))
   add('.lineage-expand-main .lineage-expand-avatar', (avatar) => textFrom(avatar.closest('.lineage-expand-main'), '.lineage-expand-copy strong'))
   add('.lineage-household-group > header button > span:first-child', (avatar) => textFrom(avatar.closest('button'), 'strong'))
   add('.lineage-root-node > span', (avatar) => textFrom(avatar.closest('.lineage-root-node'), 'strong'))
-  add('.kinship-branch-node > span:first-child', (avatar) => textFrom(avatar.closest('.kinship-branch-node'), 'strong'))
+  add('.lineage-branch-strip > button > span:first-child', (avatar) => {
+    const button = avatar.closest('button')
+    const branchLabel = textFrom(button, 'strong')
+    return normalizedName(branchLabel.replace(/^فرع\s+/u, ''))
+  })
   add('.lineage-person-chip > span:first-child', (avatar) => textFrom(avatar.closest('.lineage-person-chip'), 'strong'))
   add('.lineage-family-spouses button > span:first-child', (avatar) => textFrom(avatar.closest('button'), 'b'))
+
+  // Household profile and household cards.
+  add('.household-profile-hero .household-profile-avatar', (avatar) => textFrom(avatar.closest('.household-profile-hero'), '.household-open-husband strong'))
+  add('.household-spouse-heading > button > span:first-child', (avatar) => textFrom(avatar.closest('button'), 'strong'))
+  add('.household-child-grid > button > span:first-child', (avatar) => textFrom(avatar.closest('button'), 'strong'))
+  add('.household-home-card .card-symbol', (avatar) => householdNameToPersonName(textFrom(avatar.closest('.household-home-card'), 'h3')))
 
   return bindings
 }

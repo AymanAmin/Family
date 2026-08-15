@@ -18,6 +18,12 @@ type AvatarBinding = {
   name: string
 }
 
+type NamePhotoGroup = {
+  recordCount: number
+  urls: Set<string>
+  missingPhoto: boolean
+}
+
 const PHOTO_CACHE_TTL = 5 * 60_000
 const photoByName = new Map<string, PhotoCacheEntry>()
 const originalMarkup = new WeakMap<HTMLElement, string>()
@@ -119,7 +125,7 @@ function applyPhoto(binding: AvatarBinding, url: string | null) {
 async function fetchPhotos(names: string[]) {
   if (!supabase || !names.length) return
   const requestId = ++requestSerial
-  const groups = new Map<string, Set<string>>()
+  const groups = new Map<string, NamePhotoGroup>()
 
   for (let index = 0; index < names.length; index += 40) {
     const chunk = names.slice(index, index + 40)
@@ -136,18 +142,22 @@ async function fetchPhotos(names: string[]) {
       const name = normalizedName(row.full_name)
       if (!name) continue
       const url = safePhotoUrl(row.photo_url)
-      const bucket = groups.get(name) ?? new Set<string>()
-      if (url) bucket.add(url)
-      groups.set(name, bucket)
+      const group = groups.get(name) ?? { recordCount: 0, urls: new Set<string>(), missingPhoto: false }
+      group.recordCount += 1
+      if (url) group.urls.add(url)
+      else group.missingPhoto = true
+      groups.set(name, group)
     }
   }
 
   const now = Date.now()
   names.forEach((name) => {
-    const urls = groups.get(name)
-    // If two different records have the exact same name but different photos,
-    // do not guess. Keeping the fallback avatar is safer than showing a wrong person.
-    photoByName.set(name, { url: urls?.size === 1 ? [...urls][0] : null, savedAt: now })
+    const group = groups.get(name)
+    const safeUniqueUrl = group && !group.missingPhoto && group.urls.size === 1 ? Array.from(group.urls)[0] ?? null : null
+    // Exact duplicate names are intentionally conservative: if one duplicate has
+    // no image or the duplicates have different images, keep the fallback avatar
+    // rather than risking showing the wrong person's photo.
+    photoByName.set(name, { url: safeUniqueUrl, savedAt: now })
   })
 }
 
@@ -186,7 +196,7 @@ export function notifyPersonPhotoUpdated(fullName: string, photoUrl: string | nu
   }
 }
 
-export default function PersonPhotoEverywhere() {
+export default function PersonPhotoEverywhere(): null {
   useEffect(() => {
     const observer = new MutationObserver(() => scheduleScan())
     observer.observe(document.body, { childList: true, subtree: true })

@@ -26,6 +26,7 @@ import HouseholdPortalLifecycleFix from './components/HouseholdPortalLifecycleFi
 import StructuredScopeExperience from './components/StructuredScopeExperience'
 import AdminScopeAssignments from './components/AdminScopeAssignments'
 import PersonPhotoEverywhere from './components/PersonPhotoEverywhere'
+import TopAncestorsScreen from './components/TopAncestorsScreen'
 import './styles.css'
 import './mobile-app.css'
 import './mobile-fixes.css'
@@ -273,6 +274,7 @@ createRoot(rootElement).render(
   <StrictMode>
     <App />
     <PersonPhotoEverywhere />
+    <TopAncestorsScreen />
     <HomeKinshipShortcut />
     <HouseholdExperienceUpgrade />
     <HouseholdPortalLifecycleFix />

@@ -10,7 +10,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: family-android-apk
+  cancel-in-progress: true
 
 jobs:
   build-apk:
@@ -41,13 +45,47 @@ jobs:
         working-directory: android
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Prepare Family APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk Family.apk
+      - name: Validate generated APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -20
+          echo "APK size: $(stat -c%s "$APK") bytes"
+          sha256sum "$APK"
 
-      - name: Upload APK artifact
+      - name: Publish exact APK file to website
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          mkdir -p public/downloads downloads
+          cp -f "$APK" public/downloads/Family.apk
+          cp -f "$APK" downloads/Family.apk
+          sha256sum "$APK" | awk '{print $1}' > downloads/Family.apk.sha256
+          sha256sum "$APK" | awk '{print $1}' > public/downloads/Family.apk.sha256
+
+          cmp -s "$APK" downloads/Family.apk
+          cmp -s "$APK" public/downloads/Family.apk
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add downloads/Family.apk downloads/Family.apk.sha256 public/downloads/Family.apk public/downloads/Family.apk.sha256
+
+          if git diff --cached --quiet; then
+            echo "Published APK is already current."
+          else
+            git commit -m "Publish validated Family APK [skip ci]"
+            git push
+          fi
+
+      - name: Upload verified APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Family-Android-APK
-          path: Family.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 90

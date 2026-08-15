@@ -188,16 +188,18 @@
     grid-column: 1 / -1;
   }
 
-  /* Person profile actions: compact two-column layout that saves vertical space. */
+  /* Five person-profile actions fit in exactly two compact rows:
+     3 actions on the first row, 2 balanced actions on the second row. */
   .detail-page .detail-hero > .record-action-group {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
     gap: 5px !important;
     align-items: stretch !important;
   }
 
   .detail-page .record-action-group .record-share-wrap {
     order: 1;
-    grid-column: auto !important;
+    grid-column: span 2 !important;
     width: 100% !important;
     min-width: 0 !important;
     margin: 0 !important;
@@ -205,55 +207,50 @@
 
   .detail-page .record-action-group .record-edit-trigger {
     order: 2;
-  }
-
-  .detail-page .record-action-group .person-photo-admin-trigger:not(.person-google-photo-trigger) {
-    order: 3;
-  }
-
-  .detail-page .record-action-group .person-google-photo-trigger {
-    order: 4;
+    grid-column: span 2 !important;
   }
 
   .detail-page .record-action-group .record-archive-trigger {
-    order: 5;
-    grid-column: 1 / -1 !important;
+    order: 3;
+    grid-column: span 2 !important;
     margin-top: 0 !important;
+  }
+
+  .detail-page .record-action-group .person-photo-admin-trigger:not(.person-google-photo-trigger) {
+    order: 4;
+    grid-column: span 3 !important;
+  }
+
+  .detail-page .record-action-group .person-google-photo-trigger {
+    order: 5;
+    grid-column: span 3 !important;
   }
 
   .detail-page .record-action-group .record-share-trigger,
   .detail-page .record-action-group .record-edit-trigger,
+  .detail-page .record-action-group .record-archive-trigger,
   .detail-page .record-action-group .person-photo-admin-trigger {
     width: 100% !important;
     min-width: 0 !important;
-    min-height: 40px !important;
-    height: auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
     margin: 0 !important;
-    padding: 5px 7px !important;
+    padding: 4px 6px !important;
     border-radius: 10px !important;
-    font-size: .61rem !important;
-    line-height: 1.2 !important;
-    box-sizing: border-box !important;
-  }
-
-  .detail-page .record-action-group .record-archive-trigger {
-    width: 100% !important;
-    min-width: 0 !important;
-    min-height: 36px !important;
-    height: auto !important;
-    margin: 0 !important;
-    padding: 4px 8px !important;
-    border-radius: 10px !important;
-    font-size: .6rem !important;
+    font-size: .59rem !important;
     line-height: 1.15 !important;
     box-sizing: border-box !important;
   }
 
+  .detail-page .record-action-group .record-share-trigger {
+    gap: 3px !important;
+  }
+
   .detail-page .record-action-group .record-share-icon {
-    width: 20px !important;
-    height: 20px !important;
-    border-radius: 7px !important;
-    font-size: .7rem !important;
+    width: 19px !important;
+    height: 19px !important;
+    border-radius: 6px !important;
+    font-size: .68rem !important;
   }
 
   .detail-page .record-action-group .person-photo-admin-trigger {
@@ -262,6 +259,6 @@
 
   .detail-page .record-action-group .person-photo-admin-trigger > span {
     flex: 0 0 auto;
-    font-size: .7rem !important;
+    font-size: .68rem !important;
   }
 }

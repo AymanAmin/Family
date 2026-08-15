@@ -101,38 +101,41 @@ body.home-navigation-hub-active main > *:not(.home-navigation-hub-screen) {
 
 .home-navigation-hub-screen {
   width: min(1050px, calc(100% - 32px));
-  margin: 24px auto 80px;
+  margin: 18px auto 80px;
   direction: rtl;
 }
 
+/* Deliberately compact: this is navigation chrome, not page content. */
 .home-navigation-hub-header {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 18px;
-  align-items: start;
-  padding: 24px 26px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 15px 18px;
   border: 1px solid rgba(112, 145, 158, .16);
-  border-radius: 28px;
+  border-radius: 22px;
   background: linear-gradient(140deg, rgba(235, 248, 245, .95), rgba(255, 255, 255, .98));
-  box-shadow: 0 14px 38px rgba(46, 78, 92, .07);
+  box-shadow: 0 10px 28px rgba(46, 78, 92, .055);
 }
 
 .home-navigation-hub-header > div > span {
   color: #318477;
-  font-size: .76rem;
+  font-size: .69rem;
   font-weight: 800;
 }
 
 .home-navigation-hub-header h1 {
-  margin: 5px 0 6px;
+  margin: 2px 0 3px;
   color: #264d6b;
-  font-size: clamp(1.55rem, 4vw, 2.35rem);
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  line-height: 1.25;
 }
 
 .home-navigation-hub-header p {
   margin: 0;
   color: #75858b;
-  line-height: 1.7;
+  font-size: .78rem;
+  line-height: 1.5;
 }
 
 .home-navigation-hub-back {
@@ -140,9 +143,9 @@ body.home-navigation-hub-active main > *:not(.home-navigation-hub-screen) {
   border-radius: 999px;
   background: #fff;
   color: #315b70;
-  padding: 9px 13px;
+  padding: 8px 11px;
   font: inherit;
-  font-size: .76rem;
+  font-size: .72rem;
   cursor: pointer;
 }
 
@@ -150,7 +153,27 @@ body.home-navigation-hub-active main > *:not(.home-navigation-hub-screen) {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 15px;
-  margin-top: 18px;
+  margin-top: 16px;
+}
+
+.home-navigation-hub-group-title {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-top: 5px;
+  padding: 3px 4px 0;
+  color: #315b70;
+}
+
+.home-navigation-hub-group-title span {
+  color: #318477;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.home-navigation-hub-group-title strong {
+  font-size: .9rem;
 }
 
 .home-navigation-hub-item {
@@ -203,6 +226,76 @@ body.home-navigation-hub-active main > *:not(.home-navigation-hub-screen) {
   line-height: 1.5;
 }
 
+/* Every management feature now behaves like its own screen. The original
+   admin console remains mounted only as the data/action host so permissions and
+   existing business logic stay unchanged. */
+body.admin-standalone-active .admin-console > .admin-console-hero,
+body.admin-standalone-active .admin-console > .admin-console-tabs,
+body.admin-standalone-active .admin-console > .admin-pending-dashboard-mount {
+  display: none !important;
+}
+
+body.admin-standalone-active .admin-console {
+  padding-top: 0 !important;
+}
+
+body.admin-standalone-active .admin-console-panel {
+  margin-top: 0 !important;
+}
+
+body.admin-standalone-external .admin-console {
+  display: none !important;
+}
+
+.admin-standalone-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(112, 145, 158, .14);
+  border-radius: 20px;
+  background: linear-gradient(140deg, rgba(235, 248, 245, .9), rgba(255, 255, 255, .98));
+}
+
+.admin-standalone-header > div {
+  min-width: 0;
+}
+
+.admin-standalone-header span {
+  display: block;
+  color: #318477;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.admin-standalone-header h1 {
+  margin: 2px 0;
+  color: #264d6b;
+  font-size: clamp(1.18rem, 3vw, 1.55rem);
+  line-height: 1.3;
+}
+
+.admin-standalone-header p {
+  margin: 0;
+  color: #7a898e;
+  font-size: .74rem;
+  line-height: 1.5;
+}
+
+.admin-standalone-header > button {
+  flex: 0 0 auto;
+  border: 1px solid rgba(66, 111, 126, .13);
+  border-radius: 999px;
+  background: #fff;
+  color: #315b70;
+  padding: 8px 11px;
+  font: inherit;
+  font-size: .7rem;
+  cursor: pointer;
+}
+
 /* Give the welcome card and shortcuts enough visual breathing room. */
 .nasab-dashboard {
   row-gap: 24px;
@@ -248,32 +341,49 @@ body.home-navigation-hub-active main > *:not(.home-navigation-hub-screen) {
 
   .home-navigation-hub-screen {
     width: calc(100% - 24px);
-    margin: 14px auto 105px;
+    margin: 10px auto 105px;
   }
 
   .home-navigation-hub-header {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 20px 18px;
-    border-radius: 24px;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 9px;
+    padding: 11px 13px;
+    border-radius: 19px;
   }
 
   .home-navigation-hub-back {
-    justify-self: start;
+    align-self: center;
+    padding: 7px 9px;
+    font-size: .66rem;
+  }
+
+  .home-navigation-hub-header > div > span {
+    font-size: .62rem;
   }
 
   .home-navigation-hub-header h1 {
-    font-size: 1.65rem;
+    margin: 1px 0 2px;
+    font-size: 1.22rem;
   }
 
   .home-navigation-hub-header p {
-    font-size: .78rem;
+    font-size: .68rem;
+    line-height: 1.4;
   }
 
   .home-navigation-hub-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 9px;
-    margin-top: 13px;
+    margin-top: 11px;
+  }
+
+  .home-navigation-hub-group-title {
+    margin-top: 3px;
+    padding-top: 2px;
+  }
+
+  .home-navigation-hub-group-title strong {
+    font-size: .78rem;
   }
 
   .home-navigation-hub-item {
@@ -301,6 +411,26 @@ body.home-navigation-hub-active main > *:not(.home-navigation-hub-screen) {
 
   .home-navigation-hub-item .home-hub-copy small {
     font-size: .6rem;
+  }
+
+  .admin-standalone-header {
+    gap: 9px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 17px;
+  }
+
+  .admin-standalone-header h1 {
+    font-size: 1.08rem;
+  }
+
+  .admin-standalone-header p {
+    font-size: .65rem;
+  }
+
+  .admin-standalone-header > button {
+    padding: 7px 9px;
+    font-size: .63rem;
   }
 
   .nasab-dashboard {
@@ -334,5 +464,13 @@ body.home-navigation-hub-active main > *:not(.home-navigation-hub-screen) {
 @media (max-width: 390px) {
   .home-navigation-hub-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-navigation-hub-header {
+    grid-template-columns: 1fr;
+  }
+
+  .home-navigation-hub-back {
+    justify-self: start;
   }
 }

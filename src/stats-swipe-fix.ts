@@ -31,6 +31,8 @@ const HUB_ITEMS: HubItem[] = [
 const enhancedStats = new WeakSet<HTMLElement>()
 let hubScreen: HTMLElement | null = null
 let hubActive = false
+let refreshGuardObserver: MutationObserver | null = null
+let refreshGuardTimer = 0
 
 function normalizedText(element: Element | null) {
   return element?.textContent?.replace(/\s+/g, ' ').trim() || ''
@@ -49,7 +51,7 @@ function svgIcon(name: string) {
     kinship: `<svg ${common}><circle cx="8" cy="9" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="16" cy="23" r="3"/><path d="m10.5 11.5 4 8M21.5 11.5l-4 8M11 9h10"/></svg>`,
     add: `<svg ${common}><circle cx="16" cy="16" r="11"/><path d="M16 10v12M10 16h12"/></svg>`,
     account: `<svg ${common}><circle cx="16" cy="10" r="4"/><path d="M8 25c1-5 3.5-7.5 8-7.5s7 2.5 8 7.5"/></svg>`,
-    admin: `<svg ${common}><path d="M7 7h7v7H7zM18 7h7v7h-7zM7 18h7v7H7zM18 18h7v7h-7z"/></svg>`,
+    admin: `<svg ${common}><path d="M7 7h7v7H7zM18 7h7v7h-7zM7 18h7v7H7zM18 18h7v7H18z"/></svg>`,
   }
   return icons[name] || icons.more
 }
@@ -99,7 +101,6 @@ function clickWhenReady(getButton: () => HTMLButtonElement | null, attempts = 0)
 
 function runAction(action: HubAction) {
   if (action === 'search' && hubActive) {
-    // Inside the full menu, "البحث" means the actual directory search.
     closeHub(true)
     window.requestAnimationFrame(() => findNavButton('البحث')?.click())
     return
@@ -168,7 +169,7 @@ function makeShortcut(item: HubItem, isHome = false) {
 
   button.append(icon, copy)
   button.addEventListener('click', () => {
-    if (isHome && item.label === 'المزيد') openHub()
+    if (isHome && item.label === 'المزيد') openHub(true)
     else runAction(item.action)
   })
   return button
@@ -178,19 +179,18 @@ function hasAdminNavigation() {
   return Boolean(findNavButton('الإدارة'))
 }
 
-function openHub() {
+function openHub(pushHistory = true) {
   if (hubActive) return
-  hubActive = true
 
   const main = document.querySelector<HTMLElement>('.app-shell > main')
-  if (!main) {
-    hubActive = false
-    return
-  }
+  if (!main) return
 
-  const url = new URL(window.location.href)
-  url.searchParams.set('screen', 'menu')
-  window.history.pushState(window.history.state, '', url.toString())
+  hubActive = true
+  if (pushHistory) {
+    const url = new URL(window.location.href)
+    url.searchParams.set('screen', 'menu')
+    window.history.pushState(window.history.state, '', url.toString())
+  }
 
   const screen = document.createElement('section')
   screen.className = 'home-navigation-hub-screen'
@@ -233,23 +233,135 @@ function enhanceStats(stats: HTMLElement) {
   stats.prepend(fragment)
 }
 
+function requestedHashRoute() {
+  const raw = window.location.hash
+  if (!raw.startsWith('#/')) return ''
+  return decodeURIComponent(raw.replace(/^#\/?/, '')).split('/')[0] || ''
+}
+
+function refreshNeedsGuard() {
+  const screen = new URL(window.location.href).searchParams.get('screen')
+  if (screen === 'menu' || screen === 'ancestors') return true
+  const route = requestedHashRoute()
+  return Boolean(route && route !== 'home')
+}
+
+function activeNavContains(...labels: string[]) {
+  const active = Array.from(document.querySelectorAll<HTMLElement>('.desktop-nav .active, .mobile-bottom-nav .active'))
+  return active.some((item) => {
+    const text = normalizedText(item)
+    return labels.some((label) => text === label || text.includes(label))
+  })
+}
+
+function requestedRouteIsReady() {
+  const screen = new URL(window.location.href).searchParams.get('screen')
+  if (screen === 'menu') return Boolean(document.querySelector('.home-navigation-hub-screen'))
+  if (screen === 'ancestors') return Boolean(document.querySelector('.top-ancestors-screen'))
+
+  const route = requestedHashRoute()
+  if (!route || route === 'home') return Boolean(document.querySelector('.home-search-hero'))
+  if (route === 'person' || route === 'family') return Boolean(document.querySelector('.detail-page'))
+  if (route === 'news') return activeNavContains('الأخبار')
+  if (route === 'search') return activeNavContains('البحث', 'الأفراد')
+  if (route === 'tree') return activeNavContains('شجرة العائلة', 'الشجرة')
+  if (route === 'add') return activeNavContains('إضافة')
+  if (route === 'admin') return activeNavContains('الإدارة')
+  if (route === 'account') return Boolean(document.querySelector('.account-page'))
+  return true
+}
+
+function finishRefreshGuard() {
+  document.documentElement.classList.remove('family-route-refreshing')
+  refreshGuardObserver?.disconnect()
+  refreshGuardObserver = null
+  if (refreshGuardTimer) window.clearTimeout(refreshGuardTimer)
+  refreshGuardTimer = 0
+}
+
+function checkRefreshGuard() {
+  if (!document.documentElement.classList.contains('family-route-refreshing')) return
+  if (requestedRouteIsReady()) finishRefreshGuard()
+}
+
+function installRefreshGuard() {
+  if (!refreshNeedsGuard()) return
+
+  document.documentElement.classList.add('family-route-refreshing')
+
+  const style = document.createElement('style')
+  style.dataset.familyRouteRefreshGuard = 'true'
+  style.textContent = `
+    html.family-route-refreshing body { overflow: hidden !important; }
+    html.family-route-refreshing #root { visibility: hidden !important; }
+    html.family-route-refreshing body::before {
+      content: 'جارٍ تحديث الصفحة…';
+      position: fixed;
+      z-index: 2147483647;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding-top: 54px;
+      background: #f7faf8;
+      color: #456577;
+      font-family: inherit;
+      font-size: .88rem;
+      font-weight: 700;
+    }
+    html.family-route-refreshing body::after {
+      content: '';
+      position: fixed;
+      z-index: 2147483647;
+      top: calc(50% - 25px);
+      left: calc(50% - 16px);
+      width: 30px;
+      height: 30px;
+      border: 3px solid rgba(49, 132, 119, .18);
+      border-top-color: #318477;
+      border-radius: 50%;
+      animation: family-route-refresh-spin .7s linear infinite;
+    }
+    @keyframes family-route-refresh-spin { to { transform: rotate(360deg); } }
+  `
+  document.head.appendChild(style)
+
+  refreshGuardObserver = new MutationObserver(checkRefreshGuard)
+  refreshGuardObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
+
+  // Never leave the application hidden if a protected/deleted route cannot be restored.
+  refreshGuardTimer = window.setTimeout(finishRefreshGuard, 9000)
+}
+
 function attachAll() {
   document.querySelectorAll<HTMLElement>('.app-services.unified-home-stats').forEach(enhanceStats)
+  syncHubFromUrl()
+  checkRefreshGuard()
 }
 
 function syncHubFromUrl() {
   const active = new URL(window.location.href).searchParams.get('screen') === 'menu'
+  if (active && !hubActive) {
+    openHub(false)
+    return
+  }
   if (!active && hubActive) closeHub(false)
 }
 
 if (typeof document !== 'undefined') {
+  // Run before React mounts so a browser refresh never paints the home screen
+  // while the application is restoring a different URL route.
+  installRefreshGuard()
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attachAll, { once: true })
   else attachAll()
 
   const observer = new MutationObserver(attachAll)
   observer.observe(document.documentElement, { childList: true, subtree: true })
 
-  window.addEventListener('popstate', syncHubFromUrl)
+  window.addEventListener('popstate', () => {
+    syncHubFromUrl()
+    checkRefreshGuard()
+  })
 
   document.addEventListener('click', (event) => {
     if (!hubActive) return

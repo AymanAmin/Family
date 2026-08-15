@@ -1,158 +1,163 @@
-/* Full news screen: use the same visual card language as the home latest-news carousel.
-   The only structural difference is that every news card occupies its own row. */
+/* All news uses the exact same card structure and visual rules as the home carousel.
+   Only the list behavior changes: one card per row instead of horizontal scrolling. */
 
-.news-page .news-grid {
+.news-page .news-home-card-list {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) !important;
-  gap: 16px !important;
+  grid-template-columns: 1fr !important;
+  justify-items: end !important;
+  gap: 14px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
 }
 
-.news-page .news-card {
-  --news-home-strip: linear-gradient(135deg, #efd7aa, #dfbd7e);
-  --news-home-art: linear-gradient(145deg, #d2a45b, #9b6d30);
+.news-page .news-home-card-list > .event-card {
   position: relative !important;
-  width: 100% !important;
-  min-width: 0 !important;
+  display: flex !important;
+  box-sizing: border-box !important;
+  width: 208px !important;
+  max-width: 208px !important;
+  min-width: 208px !important;
+  min-height: 390px !important;
+  height: auto !important;
+  flex-direction: column !important;
+  align-self: stretch !important;
   overflow: hidden !important;
-  padding: 0 !important;
+  margin: 0 !important;
+  padding: 0 0 42px !important;
   border: 1px solid #e9e2da !important;
-  border-radius: 22px !important;
+  border-radius: 20px !important;
+  color: #252c36 !important;
   background: #fff !important;
-  box-shadow: 0 9px 26px rgb(49 48 61 / 6%) !important;
+  box-shadow: 0 8px 22px rgb(49 48 61 / 6%) !important;
   transform: none !important;
 }
 
-.news-page .news-card::before,
-.news-page .news-card::after {
+.news-page .news-home-card-list .event-card .event-top {
+  position: static !important;
+  z-index: 3 !important;
+  order: 1 !important;
+  display: flex !important;
+  width: 100% !important;
+  min-height: 44px !important;
+  box-sizing: border-box !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  margin: 0 !important;
+  padding: 8px 9px !important;
+  border: 0 !important;
+  background: #f1ede7 !important;
+}
+
+.news-page .news-home-card-list .event-card .event-top > span {
+  display: block !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #1f2530 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: .72rem !important;
+  font-weight: 900 !important;
+  line-height: 1.35 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+.news-page .news-home-card-list .event-card .event-top > time {
+  display: none !important;
+}
+
+.news-page .news-home-card-list .event-card::before {
+  position: static !important;
+  z-index: 1 !important;
+  order: 2 !important;
+  display: grid !important;
+  width: 100% !important;
+  height: 168px !important;
+  min-height: 168px !important;
+  box-sizing: border-box !important;
+  place-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  background:
+    radial-gradient(circle at 22% 18%, rgb(255 255 255 / 34%) 0 22px, transparent 23px),
+    radial-gradient(circle at 84% 80%, rgb(255 255 255 / 17%) 0 38px, transparent 39px),
+    linear-gradient(145deg, #c8b99f, #9f8663) !important;
+  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 5%) !important;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif !important;
+  font-size: 74px !important;
+  line-height: 1 !important;
+  content: '📰' !important;
+  text-shadow: 0 10px 24px rgb(30 39 57 / 18%) !important;
+}
+
+.news-page .news-home-card-list .event-card::after {
   display: none !important;
   content: none !important;
 }
 
-.news-page .news-card-body {
-  display: flex !important;
-  min-width: 0 !important;
-  flex-direction: column !important;
-  padding: 0 !important;
+.news-page .news-home-card-list .event-type-wedding .event-top { background: linear-gradient(135deg, #f0d8d9, #e7bec4) !important; }
+.news-page .news-home-card-list .event-type-wedding::before {
+  content: '💍' !important;
+  background: radial-gradient(circle at 78% 22%, rgb(255 255 255 / 28%) 0 30px, transparent 31px), linear-gradient(145deg, #d999a4, #b76672) !important;
 }
-
-/* Same colored type strip used on the home cards. */
-.news-page .news-card-kicker {
-  order: 1 !important;
-  display: flex !important;
-  width: 100% !important;
-  min-height: 48px !important;
-  box-sizing: border-box !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin: 0 !important;
-  padding: 9px 12px !important;
-  background: var(--news-home-strip) !important;
+.news-page .news-home-card-list .event-type-birth .event-top { background: linear-gradient(135deg, #dff2ef, #c6e8e4) !important; }
+.news-page .news-home-card-list .event-type-birth::before {
+  content: '👶' !important;
+  background: radial-gradient(circle at 18% 78%, rgb(255 255 255 / 26%) 0 30px, transparent 31px), linear-gradient(145deg, #8bcfc5, #5ba9ae) !important;
 }
-
-.news-page .news-card-type {
-  display: flex !important;
-  width: 100% !important;
-  justify-content: center !important;
+.news-page .news-home-card-list .event-type-naming .event-top { background: linear-gradient(135deg, #e7f1e6, #cfdfcc) !important; }
+.news-page .news-home-card-list .event-type-naming::before {
+  content: '🍼' !important;
+  background: radial-gradient(circle at 82% 18%, rgb(255 255 255 / 26%) 0 28px, transparent 29px), linear-gradient(145deg, #9fc9a7, #699883) !important;
 }
-
-.news-page .news-card-glyph,
-.news-page .news-card-kicker time {
-  display: none !important;
+.news-page .news-home-card-list .event-type-graduation .event-top { background: linear-gradient(135deg, #dbb56f, #c89949) !important; }
+.news-page .news-home-card-list .event-type-graduation::before {
+  content: '🎓' !important;
+  background: radial-gradient(circle at 18% 18%, rgb(223 182 100 / 25%) 0 32px, transparent 33px), linear-gradient(145deg, #435473, #202f4d) !important;
 }
-
-.news-page .news-type-pill {
-  max-width: 100% !important;
-  overflow: hidden !important;
-  color: #202633 !important;
-  font-size: .75rem !important;
-  font-weight: 900 !important;
-  text-align: center !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
+.news-page .news-home-card-list .event-type-death .event-top { background: linear-gradient(135deg, #e5e7ea, #ced3d9) !important; }
+.news-page .news-home-card-list .event-type-death::before {
+  content: '🕊️' !important;
+  background: radial-gradient(circle at 80% 20%, rgb(255 255 255 / 12%) 0 32px, transparent 33px), linear-gradient(145deg, #75808b, #414b57) !important;
 }
-
-/* Large shared artwork/icon area, identical in principle to the home carousel. */
-.news-page .news-card-body::before {
-  order: 2 !important;
-  display: grid !important;
-  width: 100% !important;
-  height: 220px !important;
-  min-height: 220px !important;
-  box-sizing: border-box !important;
-  place-items: center !important;
-  color: #fff !important;
-  background:
-    radial-gradient(circle at 20% 22%, rgb(255 255 255 / 25%) 0 44px, transparent 45px),
-    radial-gradient(circle at 84% 76%, rgb(255 255 255 / 14%) 0 64px, transparent 65px),
-    var(--news-home-art) !important;
-  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 5%) !important;
-  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif !important;
-  font-size: 86px !important;
-  line-height: 1 !important;
-  text-shadow: 0 12px 30px rgb(30 39 57 / 18%) !important;
+.news-page .news-home-card-list .event-type-general .event-top,
+.news-page .news-home-card-list .event-type-other .event-top { background: linear-gradient(135deg, #efd7aa, #dfbd7e) !important; }
+.news-page .news-home-card-list .event-type-general::before {
   content: '📰' !important;
+  background: radial-gradient(circle at 20% 24%, rgb(255 255 255 / 23%) 0 28px, transparent 29px), linear-gradient(145deg, #d2a45b, #9b6d30) !important;
+}
+.news-page .news-home-card-list .event-type-other::before {
+  content: '🎉' !important;
+  background: radial-gradient(circle at 82% 22%, rgb(255 255 255 / 22%) 0 28px, transparent 29px), linear-gradient(145deg, #c9a262, #8e6e3a) !important;
 }
 
-.news-page .news-type-wedding {
-  --news-home-strip: linear-gradient(135deg, #f0d8d9, #e7bec4);
-  --news-home-art: linear-gradient(145deg, #d999a4, #b76672);
-}
-.news-page .news-type-wedding .news-card-body::before { content: '💍' !important; }
-
-.news-page .news-type-birth {
-  --news-home-strip: linear-gradient(135deg, #dff2ef, #c6e8e4);
-  --news-home-art: linear-gradient(145deg, #8bcfc5, #5ba9ae);
-}
-.news-page .news-type-birth .news-card-body::before { content: '👶' !important; }
-
-.news-page .news-type-naming {
-  --news-home-strip: linear-gradient(135deg, #e7f1e6, #cfdfcc);
-  --news-home-art: linear-gradient(145deg, #9fc9a7, #699883);
-}
-.news-page .news-type-naming .news-card-body::before { content: '🍼' !important; }
-
-.news-page .news-type-graduation {
-  --news-home-strip: linear-gradient(135deg, #dbb56f, #c89949);
-  --news-home-art: linear-gradient(145deg, #435473, #202f4d);
-}
-.news-page .news-type-graduation .news-card-body::before { content: '🎓' !important; }
-
-.news-page .news-type-death {
-  --news-home-strip: linear-gradient(135deg, #e5e7ea, #ced3d9);
-  --news-home-art: linear-gradient(145deg, #75808b, #414b57);
-}
-.news-page .news-type-death .news-card-body::before { content: '🕊️' !important; }
-
-.news-page .news-type-general {
-  --news-home-strip: linear-gradient(135deg, #efd7aa, #dfbd7e);
-  --news-home-art: linear-gradient(145deg, #d2a45b, #9b6d30);
-}
-.news-page .news-type-general .news-card-body::before { content: '📰' !important; }
-
-.news-page .news-type-other {
-  --news-home-strip: linear-gradient(135deg, #ead8b5, #d4b276);
-  --news-home-art: linear-gradient(145deg, #c9a262, #8e6e3a);
-}
-.news-page .news-type-other .news-card-body::before { content: '🎉' !important; }
-
-/* Linked people come immediately below the artwork, matching the home card. */
-.news-page .news-people {
+.news-page .news-home-card-list .event-card .event-mention-chips {
   order: 3 !important;
   display: flex !important;
   width: 100% !important;
+  min-height: 27px !important;
   box-sizing: border-box !important;
   align-items: center !important;
-  gap: 7px !important;
   margin: 0 !important;
-  padding: 12px 16px 0 !important;
+  padding: 9px 12px 0 !important;
   overflow: hidden !important;
-  flex-wrap: nowrap !important;
 }
 
-.news-page .news-people button {
-  min-width: 0 !important;
+.news-page .news-home-card-list .event-card .event-mention-chip {
+  display: block !important;
   max-width: 100% !important;
-  min-height: 0 !important;
+  min-width: 0 !important;
+  height: auto !important;
   overflow: hidden !important;
   padding: 0 !important;
   border: 0 !important;
@@ -160,91 +165,84 @@
   color: #26334f !important;
   background: transparent !important;
   box-shadow: none !important;
-  font-size: .72rem !important;
+  font-size: .66rem !important;
   font-weight: 900 !important;
+  text-align: right !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
-.news-page .news-people button::before { content: '@ '; }
 
-.news-page .news-card h2 {
-  order: 4 !important;
-  margin: 9px 16px 0 !important;
-  color: #222936 !important;
-  font-family: inherit !important;
-  font-size: 1.02rem !important;
-  font-weight: 900 !important;
-  line-height: 1.65 !important;
+.news-page .news-home-card-list .event-card .event-mention-chip:not(:first-child) {
+  display: none !important;
 }
 
-.news-page .news-description {
+.news-page .news-home-card-list .event-card h3 {
+  order: 4 !important;
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  margin: 7px 12px 0 !important;
+  color: #222936 !important;
+  font-size: .82rem !important;
+  font-weight: 900 !important;
+  line-height: 1.55 !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+  line-clamp: 2 !important;
+}
+
+.news-page .news-home-card-list .event-card > p {
   order: 5 !important;
   display: -webkit-box !important;
   overflow: hidden !important;
-  margin: 9px 16px 0 !important;
+  margin: 7px 12px 0 !important;
   color: #666a70 !important;
-  font-size: .78rem !important;
-  line-height: 1.9 !important;
+  font-size: .65rem !important;
+  line-height: 1.72 !important;
   -webkit-box-orient: vertical !important;
   -webkit-line-clamp: 3 !important;
   line-clamp: 3 !important;
 }
 
-.news-page .news-meta {
+.news-page .news-home-card-list .event-card > small {
   order: 6 !important;
-  display: flex !important;
-  box-sizing: border-box !important;
-  align-items: center !important;
-  gap: 8px 14px !important;
-  margin: 9px 16px 13px !important;
-  color: #8b8985 !important;
-  font-size: .66rem !important;
-}
-
-.news-page .news-meta span {
-  min-width: 0 !important;
+  display: block !important;
   overflow: hidden !important;
+  margin: 8px 12px 9px !important;
+  color: #8b8985 !important;
+  font-size: .57rem !important;
+  line-height: 1.5 !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
 
-/* Same compact two-part bottom action bar as the home card. */
-.news-page .news-card-actions {
-  order: 7 !important;
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  width: 100% !important;
-  min-height: 44px !important;
-  margin: auto 0 0 !important;
+.news-page .news-home-card-list .event-card > .event-share-wrap {
+  position: absolute !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 5 !important;
+  display: block !important;
+  width: 50% !important;
+  height: 40px !important;
+  margin: 0 !important;
   padding: 0 !important;
   border-top: 1px solid #ece7e1 !important;
   background: #fff !important;
 }
 
-.news-page .news-card-actions > .event-share-wrap,
-.news-page .news-card-actions > .news-admin-edit {
-  display: flex !important;
-  min-width: 0 !important;
-  min-height: 44px !important;
-  align-items: stretch !important;
-  justify-content: stretch !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-.news-page .news-card-actions > .news-admin-edit {
-  border-inline-start: 1px solid #ece7e1 !important;
-}
-
-.news-page .news-card-actions .event-share-button,
-.news-page .news-card-actions .record-action-group,
-.news-page .news-card-actions .record-edit-trigger {
+.news-page .news-home-card-list .event-card:not(:has(> .record-action-group)) > .event-share-wrap {
   width: 100% !important;
-  min-width: 0 !important;
-  height: 44px !important;
-  min-height: 44px !important;
+}
+
+.news-page .news-home-card-list .event-card > .event-share-wrap .event-share-button {
+  display: flex !important;
+  width: 100% !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
   margin: 0 !important;
-  padding: 0 8px !important;
+  padding: 0 5px !important;
   border: 0 !important;
   border-radius: 0 !important;
   color: #293554 !important;
@@ -252,93 +250,120 @@
   box-shadow: none !important;
 }
 
-.news-page .news-card-actions .record-action-group {
+.news-page .news-home-card-list .event-card > .event-share-wrap .event-share-button > span { font-size: .82rem !important; }
+.news-page .news-home-card-list .event-card > .event-share-wrap .event-share-button > b {
+  font-size: .6rem !important;
+  font-weight: 850 !important;
+  white-space: nowrap !important;
+}
+.news-page .news-home-card-list .event-card > .event-share-wrap .event-share-button > small { display: none !important; }
+
+.news-page .news-home-card-list .event-card > .record-action-group {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  z-index: 5 !important;
   display: flex !important;
+  width: 50% !important;
+  height: 40px !important;
+  align-items: stretch !important;
+  margin: 0 !important;
   padding: 0 !important;
+  border-top: 1px solid #ece7e1 !important;
+  border-right: 1px solid #ece7e1 !important;
+  background: #fff !important;
 }
 
-.news-page .news-card-actions .event-share-button {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 6px !important;
-}
-
-.news-page .news-card-actions .event-share-button b,
-.news-page .news-card-actions .record-edit-trigger {
-  font-size: .68rem !important;
-  font-weight: 900 !important;
-}
-
-.news-page .news-card-actions .event-share-button small,
-.news-page .news-card-actions .event-share-message {
-  display: none !important;
+.news-page .news-home-card-list .event-card > .record-action-group .record-edit-trigger {
+  width: 100% !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+  padding: 0 4px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #293554 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: .6rem !important;
+  font-weight: 850 !important;
 }
 
 .news-page .news-skeleton-grid {
   grid-template-columns: 1fr !important;
 }
 
-@media (max-width: 720px) {
-  .news-page .news-grid {
+@media (max-width: 760px) {
+  .news-page .news-home-card-list {
+    justify-items: end !important;
     gap: 14px !important;
   }
 
-  .news-page .news-card {
-    border-radius: 19px !important;
+  .news-page .news-home-card-list > .event-card {
+    width: clamp(220px, 65vw, 300px) !important;
+    max-width: clamp(220px, 65vw, 300px) !important;
+    min-width: clamp(220px, 65vw, 300px) !important;
+    min-height: 350px !important;
+    border-radius: 18px !important;
+    padding-bottom: 38px !important;
   }
 
-  .news-page .news-card-kicker {
-    min-height: 43px !important;
-    padding: 8px 10px !important;
-  }
-
-  .news-page .news-type-pill {
-    font-size: .68rem !important;
-  }
-
-  .news-page .news-card-body::before {
-    height: 190px !important;
-    min-height: 190px !important;
-    font-size: 76px !important;
-  }
-
-  .news-page .news-people {
-    padding: 10px 13px 0 !important;
-  }
-
-  .news-page .news-people button {
-    font-size: .65rem !important;
-  }
-
-  .news-page .news-card h2 {
-    margin: 7px 13px 0 !important;
-    font-size: .9rem !important;
-  }
-
-  .news-page .news-description {
-    margin: 7px 13px 0 !important;
-    font-size: .7rem !important;
-    line-height: 1.82 !important;
-  }
-
-  .news-page .news-meta {
-    margin: 8px 13px 11px !important;
-    font-size: .6rem !important;
-  }
-
-  .news-page .news-card-actions,
-  .news-page .news-card-actions > .event-share-wrap,
-  .news-page .news-card-actions > .news-admin-edit,
-  .news-page .news-card-actions .event-share-button,
-  .news-page .news-card-actions .record-action-group,
-  .news-page .news-card-actions .record-edit-trigger {
+  .news-page .news-home-card-list .event-card .event-top {
     min-height: 40px !important;
-    height: 40px !important;
+    padding: 7px !important;
   }
 
-  .news-page .news-card-actions .event-share-button b,
-  .news-page .news-card-actions .record-edit-trigger {
-    font-size: .62rem !important;
+  .news-page .news-home-card-list .event-card .event-top > span {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    font-size: .64rem !important;
+    text-overflow: ellipsis !important;
   }
+
+  .news-page .news-home-card-list .event-card::before {
+    height: 146px !important;
+    min-height: 146px !important;
+    font-size: 64px !important;
+  }
+
+  .news-page .news-home-card-list .event-card .event-mention-chips {
+    min-height: 24px !important;
+    padding: 8px 10px 0 !important;
+  }
+
+  .news-page .news-home-card-list .event-card .event-mention-chip { font-size: .58rem !important; }
+
+  .news-page .news-home-card-list .event-card h3 {
+    margin: 6px 10px 0 !important;
+    font-size: .74rem !important;
+    line-height: 1.52 !important;
+  }
+
+  .news-page .news-home-card-list .event-card > p {
+    margin: 6px 10px 0 !important;
+    font-size: .6rem !important;
+    line-height: 1.66 !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+  }
+
+  .news-page .news-home-card-list .event-card > small {
+    margin: 7px 10px 8px !important;
+    font-size: .52rem !important;
+  }
+
+  .news-page .news-home-card-list .event-card > .event-share-wrap,
+  .news-page .news-home-card-list .event-card > .record-action-group {
+    height: 37px !important;
+  }
+
+  .news-page .news-home-card-list .event-card > .event-share-wrap .event-share-button,
+  .news-page .news-home-card-list .event-card > .record-action-group .record-edit-trigger {
+    height: 37px !important;
+    min-height: 37px !important;
+  }
+
+  .news-page .news-home-card-list .event-card > .event-share-wrap .event-share-button > span { font-size: .7rem !important; }
+  .news-page .news-home-card-list .event-card > .event-share-wrap .event-share-button > b,
+  .news-page .news-home-card-list .event-card > .record-action-group .record-edit-trigger { font-size: .53rem !important; }
 }

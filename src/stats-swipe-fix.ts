@@ -53,7 +53,7 @@ const HOME_SHORTCUTS: HubItem[] = [
   { action: 'ancestors', label: 'الأجداد الأعلى', description: 'أصول النسب', icon: 'ancestors' },
   { action: 'families', label: 'الأسر', description: 'دليل الأسر', icon: 'families' },
   { action: 'people', label: 'الأفراد', description: 'دليل الأشخاص', icon: 'people' },
-  { action: 'search', label: 'المزيد', description: 'كل الأقسام', icon: 'more' },
+  { action: 'news', label: 'آخر الأخبار', description: 'الأخبار والمناسبات', icon: 'news' },
 ]
 
 const HUB_ITEMS: HubItem[] = [

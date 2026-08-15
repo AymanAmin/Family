@@ -6,8 +6,25 @@ function installHomeNewsLayoutFix() {
   const style = document.createElement('style')
   style.id = STYLE_ID
   style.textContent = `
-/* Home latest-news carousel inspired by the supplied family-app reference.
-   Each event type gets one reusable large visual/icon instead of a unique image. */
+/* Home latest-news carousel: match the supplied reference structure.
+   Narrow portrait cards, colored title strip, large reusable type artwork,
+   compact copy and a single bottom action bar. */
+main .section-block.soft {
+  overflow: hidden !important;
+}
+
+/* Reference heading: آخر الأخبار / العائلة */
+main .section-block.soft .section-title h2 {
+  font-size: 0 !important;
+}
+main .section-block.soft .section-title h2::after {
+  content: 'العائلة' !important;
+  color: #293554 !important;
+  font-size: clamp(1.18rem, 3.4vw, 1.55rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.35 !important;
+}
+
 main .section-block.soft .cards-grid.event-grid,
 main .section-block.soft .event-grid {
   display: flex !important;
@@ -17,18 +34,17 @@ main .section-block.soft .event-grid {
   height: auto !important;
   min-height: 0 !important;
   flex-direction: row !important;
-  align-items: flex-start !important;
-  gap: 14px !important;
-  padding: 2px 2px 10px 18px !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+  padding: 2px 2px 10px 14px !important;
   overflow-x: auto !important;
-  overflow-y: visible !important;
-  scroll-snap-type: x proximity !important;
+  overflow-y: hidden !important;
+  scroll-snap-type: x mandatory !important;
   scroll-padding-inline: 2px !important;
   scroll-behavior: smooth !important;
   overscroll-behavior-inline: contain !important;
   -webkit-overflow-scrolling: touch !important;
   scrollbar-width: none !important;
-  transform: none !important;
 }
 
 main .section-block.soft .cards-grid.event-grid::-webkit-scrollbar,
@@ -39,213 +55,376 @@ main .section-block.soft .event-grid::-webkit-scrollbar {
 main .section-block.soft .cards-grid.event-grid > .event-card,
 main .section-block.soft .event-grid > .event-card {
   position: relative !important;
-  display: block !important;
+  display: flex !important;
   box-sizing: border-box !important;
-  width: 286px !important;
-  max-width: 286px !important;
-  min-width: 286px !important;
+  width: 208px !important;
+  max-width: 208px !important;
+  min-width: 208px !important;
+  min-height: 390px !important;
   height: auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  flex: 0 0 286px !important;
-  align-self: flex-start !important;
+  flex: 0 0 208px !important;
+  flex-direction: column !important;
+  align-self: stretch !important;
   overflow: hidden !important;
   margin: 0 !important;
-  padding: 0 0 14px !important;
-  border: 1px solid #e9e1d8 !important;
-  border-radius: 22px !important;
+  padding: 0 0 42px !important;
+  border: 1px solid #e9e2da !important;
+  border-radius: 20px !important;
+  color: #252c36 !important;
   background: #fff !important;
-  box-shadow: 0 10px 26px rgb(49 48 61 / 7%) !important;
+  box-shadow: 0 8px 22px rgb(49 48 61 / 6%) !important;
   scroll-snap-align: start !important;
   transform: none !important;
 }
 
-/* Reusable visual area. */
-main .section-block.soft .event-card::before {
-  display: block !important;
+/* Colored card title strip, like the reference. */
+main .section-block.soft .event-card .event-top {
+  position: static !important;
+  z-index: 3 !important;
+  order: 1 !important;
+  display: flex !important;
   width: 100% !important;
-  height: 156px !important;
+  min-height: 44px !important;
+  box-sizing: border-box !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
   margin: 0 !important;
+  padding: 8px 9px !important;
+  border: 0 !important;
+  background: #f1ede7 !important;
+}
+
+main .section-block.soft .event-card .event-top > span {
+  display: block !important;
+  min-height: 0 !important;
+  padding: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
+  color: #1f2530 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: .72rem !important;
+  font-weight: 900 !important;
+  line-height: 1.35 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+/* The reference strip does not show a separate date badge. */
+main .section-block.soft .event-card .event-top > time {
+  display: none !important;
+}
+
+/* Large reusable visual per type. This replaces unique photos while preserving the same card shape. */
+main .section-block.soft .event-card::before {
+  position: static !important;
+  z-index: 1 !important;
+  order: 2 !important;
+  display: grid !important;
+  width: 100% !important;
+  height: 168px !important;
+  min-height: 168px !important;
+  box-sizing: border-box !important;
+  place-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #fff !important;
   background:
-    radial-gradient(circle at 20% 24%, rgb(255 255 255 / 30%) 0 20px, transparent 21px),
-    radial-gradient(circle at 78% 78%, rgb(255 255 255 / 18%) 0 38px, transparent 39px),
-    linear-gradient(145deg, #eef1f6, #dde3ec) !important;
-  content: '' !important;
+    radial-gradient(circle at 22% 18%, rgb(255 255 255 / 34%) 0 22px, transparent 23px),
+    radial-gradient(circle at 84% 80%, rgb(255 255 255 / 17%) 0 38px, transparent 39px),
+    linear-gradient(145deg, #c8b99f, #9f8663) !important;
+  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 5%) !important;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif !important;
+  font-size: 74px !important;
+  line-height: 1 !important;
+  content: '📰' !important;
+  text-shadow: 0 10px 24px rgb(30 39 57 / 18%) !important;
 }
 
 main .section-block.soft .event-card::after {
-  position: absolute !important;
-  top: 42px !important;
-  left: 50% !important;
-  z-index: 2 !important;
-  display: grid !important;
-  width: 82px !important;
-  height: 82px !important;
-  place-items: center !important;
-  border: 5px solid rgb(255 255 255 / 72%) !important;
-  border-radius: 50% !important;
-  color: #fff !important;
-  background: rgb(255 255 255 / 20%) !important;
-  box-shadow: 0 12px 28px rgb(32 42 67 / 14%) !important;
-  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif !important;
-  font-size: 43px !important;
-  line-height: 1 !important;
-  transform: translateX(-50%) !important;
-  content: '📰' !important;
-  pointer-events: none !important;
+  display: none !important;
+  content: none !important;
 }
 
-/* One generic artwork/icon per news type. */
+/* Per-type reusable artwork + matching title strip. */
+main .section-block.soft .event-type-wedding .event-top { background: linear-gradient(135deg, #f0d8d9, #e7bec4) !important; }
 main .section-block.soft .event-type-wedding::before {
-  background: radial-gradient(circle at 18% 18%, rgb(255 255 255 / 34%) 0 24px, transparent 25px), linear-gradient(145deg, #d9a27e, #b86670) !important;
+  content: '💍' !important;
+  background: radial-gradient(circle at 78% 22%, rgb(255 255 255 / 28%) 0 30px, transparent 31px), linear-gradient(145deg, #d999a4, #b76672) !important;
 }
-main .section-block.soft .event-type-wedding::after { content: '💍' !important; }
 
+main .section-block.soft .event-type-birth .event-top { background: linear-gradient(135deg, #dff2ef, #c6e8e4) !important; }
 main .section-block.soft .event-type-birth::before {
-  background: radial-gradient(circle at 82% 22%, rgb(255 255 255 / 38%) 0 24px, transparent 25px), linear-gradient(145deg, #91d3c9, #5aa9ad) !important;
+  content: '👶' !important;
+  background: radial-gradient(circle at 18% 78%, rgb(255 255 255 / 26%) 0 30px, transparent 31px), linear-gradient(145deg, #8bcfc5, #5ba9ae) !important;
 }
-main .section-block.soft .event-type-birth::after { content: '👶' !important; }
 
+main .section-block.soft .event-type-naming .event-top { background: linear-gradient(135deg, #e7f1e6, #cfdfcc) !important; }
 main .section-block.soft .event-type-naming::before {
-  background: radial-gradient(circle at 18% 78%, rgb(255 255 255 / 30%) 0 30px, transparent 31px), linear-gradient(145deg, #a8d0b1, #6fa38a) !important;
+  content: '🍼' !important;
+  background: radial-gradient(circle at 82% 18%, rgb(255 255 255 / 26%) 0 28px, transparent 29px), linear-gradient(145deg, #9fc9a7, #699883) !important;
 }
-main .section-block.soft .event-type-naming::after { content: '🍼' !important; }
 
+main .section-block.soft .event-type-graduation .event-top { background: linear-gradient(135deg, #dbb56f, #c89949) !important; }
 main .section-block.soft .event-type-graduation::before {
-  background: radial-gradient(circle at 80% 20%, rgb(245 199 117 / 38%) 0 28px, transparent 29px), linear-gradient(145deg, #344668, #1f2e4c) !important;
+  content: '🎓' !important;
+  background: radial-gradient(circle at 18% 18%, rgb(223 182 100 / 25%) 0 32px, transparent 33px), linear-gradient(145deg, #435473, #202f4d) !important;
 }
-main .section-block.soft .event-type-graduation::after { content: '🎓' !important; }
 
+main .section-block.soft .event-type-death .event-top { background: linear-gradient(135deg, #e5e7ea, #ced3d9) !important; }
 main .section-block.soft .event-type-death::before {
-  background: radial-gradient(circle at 22% 24%, rgb(255 255 255 / 12%) 0 32px, transparent 33px), linear-gradient(145deg, #6f7a86, #3e4856) !important;
+  content: '🕊️' !important;
+  background: radial-gradient(circle at 80% 20%, rgb(255 255 255 / 12%) 0 32px, transparent 33px), linear-gradient(145deg, #75808b, #414b57) !important;
 }
-main .section-block.soft .event-type-death::after { content: '🕊️' !important; }
 
-main .section-block.soft .event-type-general::before,
+main .section-block.soft .event-type-general .event-top,
+main .section-block.soft .event-type-other .event-top { background: linear-gradient(135deg, #efd7aa, #dfbd7e) !important; }
+main .section-block.soft .event-type-general::before {
+  content: '📰' !important;
+  background: radial-gradient(circle at 20% 24%, rgb(255 255 255 / 23%) 0 28px, transparent 29px), linear-gradient(145deg, #d2a45b, #9b6d30) !important;
+}
 main .section-block.soft .event-type-other::before {
-  background: radial-gradient(circle at 78% 24%, rgb(255 255 255 / 24%) 0 26px, transparent 27px), linear-gradient(145deg, #d3a65f, #9c6c2d) !important;
+  content: '🎉' !important;
+  background: radial-gradient(circle at 82% 22%, rgb(255 255 255 / 22%) 0 28px, transparent 29px), linear-gradient(145deg, #c9a262, #8e6e3a) !important;
 }
-main .section-block.soft .event-type-general::after { content: '📰' !important; }
-main .section-block.soft .event-type-other::after { content: '✨' !important; }
 
-/* Type/date badges sit over the artwork. */
-main .section-block.soft .event-card .event-top {
-  position: absolute !important;
-  top: 12px !important;
-  right: 12px !important;
-  left: 12px !important;
-  z-index: 3 !important;
+/* Put the linked person before the title, like the reference cards. */
+main .section-block.soft .event-card .event-mention-chips {
+  order: 3 !important;
   display: flex !important;
+  width: 100% !important;
+  min-height: 27px !important;
+  box-sizing: border-box !important;
   align-items: center !important;
-  justify-content: space-between !important;
-  gap: 8px !important;
   margin: 0 !important;
-  pointer-events: none !important;
+  padding: 9px 12px 0 !important;
+  overflow: hidden !important;
 }
 
-main .section-block.soft .event-card .event-top > span,
-main .section-block.soft .event-card .event-top > time {
-  min-height: 28px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  padding: 4px 9px !important;
-  border: 1px solid rgb(255 255 255 / 55%) !important;
-  border-radius: 999px !important;
-  color: #27344f !important;
-  background: rgb(255 255 255 / 88%) !important;
-  box-shadow: 0 5px 14px rgb(31 46 76 / 9%) !important;
-  font-size: .63rem !important;
+main .section-block.soft .event-card .event-mention-chip {
+  display: block !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #26334f !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: .66rem !important;
   font-weight: 900 !important;
-  backdrop-filter: blur(8px) !important;
+  text-align: right !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+main .section-block.soft .event-card .event-mention-chip:not(:first-child) {
+  display: none !important;
 }
 
 main .section-block.soft .event-card h3 {
-  margin: 14px 15px 7px !important;
-  color: #293554 !important;
-  font-size: .94rem !important;
+  order: 4 !important;
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  margin: 7px 12px 0 !important;
+  color: #222936 !important;
+  font-size: .82rem !important;
   font-weight: 900 !important;
-  line-height: 1.65 !important;
+  line-height: 1.55 !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+  line-clamp: 2 !important;
 }
 
 main .section-block.soft .event-card > p {
+  order: 5 !important;
   display: -webkit-box !important;
   overflow: hidden !important;
-  margin: 0 15px !important;
-  color: #666b73 !important;
-  font-size: .74rem !important;
-  line-height: 1.85 !important;
+  margin: 7px 12px 0 !important;
+  color: #666a70 !important;
+  font-size: .65rem !important;
+  line-height: 1.72 !important;
   -webkit-box-orient: vertical !important;
   -webkit-line-clamp: 3 !important;
   line-clamp: 3 !important;
 }
 
-main .section-block.soft .event-card .event-mention-chips {
-  display: flex !important;
-  max-width: 100% !important;
-  margin: 10px 14px 0 !important;
-  flex-wrap: nowrap !important;
-  gap: 5px !important;
-  overflow: hidden !important;
-}
-
-main .section-block.soft .event-card .event-mention-chip {
-  max-width: 150px !important;
-  min-width: 0 !important;
-  flex: 0 1 auto !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-}
-
 main .section-block.soft .event-card > small {
+  order: 6 !important;
   display: block !important;
-  margin: 9px 15px 0 !important;
   overflow: hidden !important;
-  color: #98918a !important;
-  font-size: .62rem !important;
+  margin: 8px 12px 9px !important;
+  color: #8b8985 !important;
+  font-size: .57rem !important;
+  line-height: 1.5 !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
 
-/* Keep action buttons compact at the bottom like the reference cards. */
-main .section-block.soft .event-card > button,
-main .section-block.soft .event-card > .record-edit-button,
-main .section-block.soft .event-card > [class*="share"] {
-  margin-top: 10px !important;
+/* Flatten share/edit into one compact bottom action bar. */
+main .section-block.soft .event-card > .event-share-wrap {
+  position: absolute !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 5 !important;
+  display: block !important;
+  width: 50% !important;
+  height: 40px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-top: 1px solid #ece7e1 !important;
+  background: #fff !important;
+}
+
+main .section-block.soft .event-card:not(:has(> .record-action-group)) > .event-share-wrap {
+  width: 100% !important;
+}
+
+main .section-block.soft .event-card > .event-share-wrap .event-share-button {
+  display: flex !important;
+  width: 100% !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  margin: 0 !important;
+  padding: 0 5px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #293554 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+main .section-block.soft .event-card > .event-share-wrap .event-share-button > span {
+  font-size: .82rem !important;
+}
+main .section-block.soft .event-card > .event-share-wrap .event-share-button > b {
+  font-size: .6rem !important;
+  font-weight: 850 !important;
+  white-space: nowrap !important;
+}
+main .section-block.soft .event-card > .event-share-wrap .event-share-button > small {
+  display: none !important;
+}
+
+main .section-block.soft .event-card > .record-action-group {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  z-index: 5 !important;
+  display: flex !important;
+  width: 50% !important;
+  height: 40px !important;
+  align-items: stretch !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-top: 1px solid #ece7e1 !important;
+  border-right: 1px solid #ece7e1 !important;
+  background: #fff !important;
+}
+main .section-block.soft .event-card > .record-action-group .record-edit-trigger {
+  width: 100% !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+  padding: 0 4px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #293554 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: .6rem !important;
+  font-weight: 850 !important;
 }
 
 @media (max-width: 760px) {
   main .section-block.soft {
-    overflow: hidden !important;
+    padding-inline: 14px !important;
   }
 
   main .section-block.soft .cards-grid.event-grid,
   main .section-block.soft .event-grid {
-    width: calc(100% + 18px) !important;
-    max-width: calc(100% + 18px) !important;
-    margin-inline-end: -18px !important;
-    padding-inline-end: 18px !important;
+    width: calc(100% + 14px) !important;
+    max-width: calc(100% + 14px) !important;
+    margin-inline-end: -14px !important;
+    gap: 8px !important;
+    padding-inline-end: 14px !important;
   }
 
+  /* Three compact portrait cards are visible across a phone, like the reference. */
   main .section-block.soft .cards-grid.event-grid > .event-card,
   main .section-block.soft .event-grid > .event-card {
-    width: min(78vw, 300px) !important;
-    max-width: min(78vw, 300px) !important;
-    min-width: min(78vw, 300px) !important;
-    flex-basis: min(78vw, 300px) !important;
+    width: clamp(108px, 29vw, 138px) !important;
+    max-width: clamp(108px, 29vw, 138px) !important;
+    min-width: clamp(108px, 29vw, 138px) !important;
+    min-height: 318px !important;
+    flex-basis: clamp(108px, 29vw, 138px) !important;
+    border-radius: 16px !important;
+    padding-bottom: 36px !important;
+  }
+
+  main .section-block.soft .event-card .event-top {
+    min-height: 38px !important;
+    padding: 6px 5px !important;
+  }
+  main .section-block.soft .event-card .event-top > span {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    font-size: .58rem !important;
+    text-overflow: ellipsis !important;
   }
 
   main .section-block.soft .event-card::before {
-    height: 148px !important;
+    height: 128px !important;
+    min-height: 128px !important;
+    font-size: 56px !important;
   }
 
-  main .section-block.soft .event-card::after {
-    top: 39px !important;
-    width: 78px !important;
-    height: 78px !important;
-    font-size: 40px !important;
+  main .section-block.soft .event-card .event-mention-chips {
+    min-height: 22px !important;
+    padding: 7px 8px 0 !important;
+  }
+  main .section-block.soft .event-card .event-mention-chip {
+    font-size: .52rem !important;
+  }
+
+  main .section-block.soft .event-card h3 {
+    margin: 5px 8px 0 !important;
+    font-size: .67rem !important;
+    line-height: 1.5 !important;
+  }
+  main .section-block.soft .event-card > p {
+    margin: 5px 8px 0 !important;
+    font-size: .55rem !important;
+    line-height: 1.62 !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+  }
+  main .section-block.soft .event-card > small {
+    margin: 6px 8px 7px !important;
+    font-size: .48rem !important;
+  }
+
+  main .section-block.soft .event-card > .event-share-wrap,
+  main .section-block.soft .event-card > .record-action-group {
+    height: 35px !important;
+  }
+  main .section-block.soft .event-card > .event-share-wrap .event-share-button,
+  main .section-block.soft .event-card > .record-action-group .record-edit-trigger {
+    height: 35px !important;
+    min-height: 35px !important;
+  }
+  main .section-block.soft .event-card > .event-share-wrap .event-share-button > span {
+    font-size: .66rem !important;
+  }
+  main .section-block.soft .event-card > .event-share-wrap .event-share-button > b,
+  main .section-block.soft .event-card > .record-action-group .record-edit-trigger {
+    font-size: .49rem !important;
   }
 }
 `

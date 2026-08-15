@@ -80,7 +80,7 @@
     display: flex !important;
     width: min(100%, 460px) !important;
     height: auto !important;
-    min-height: 0 !important;
+    min-height: min(40dvh, 360px) !important;
     max-height: none !important;
     overflow: visible !important;
     margin: 0 auto !important;

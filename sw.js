@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sila-v16'
+const CACHE_VERSION = 'sila-v17'
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 
 function appUrl(path = '') {
@@ -77,6 +77,11 @@ self.addEventListener('fetch', (event) => {
 
   const requestUrl = new URL(request.url)
   if (requestUrl.origin !== self.location.origin) return
+
+  if (requestUrl.pathname.toLowerCase().endsWith('.apk')) {
+    event.respondWith(fetch(request, { cache: 'no-store' }))
+    return
+  }
 
   if (request.mode === 'navigate') {
     event.respondWith(

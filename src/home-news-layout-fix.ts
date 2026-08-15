@@ -356,14 +356,14 @@ main .section-block.soft .event-card > .record-action-group .record-edit-trigger
     padding-inline-end: 14px !important;
   }
 
-  /* Wider cards: roughly 1.5–2 cards remain visible on a phone. */
+  /* Wider cards: about 65% of the phone width, leaving the next card partially visible. */
   main .section-block.soft .cards-grid.event-grid > .event-card,
   main .section-block.soft .event-grid > .event-card {
-    width: clamp(170px, 47vw, 220px) !important;
-    max-width: clamp(170px, 47vw, 220px) !important;
-    min-width: clamp(170px, 47vw, 220px) !important;
+    width: clamp(220px, 65vw, 300px) !important;
+    max-width: clamp(220px, 65vw, 300px) !important;
+    min-width: clamp(220px, 65vw, 300px) !important;
     min-height: 350px !important;
-    flex-basis: clamp(170px, 47vw, 220px) !important;
+    flex-basis: clamp(220px, 65vw, 300px) !important;
     border-radius: 18px !important;
     padding-bottom: 38px !important;
   }

@@ -1,4 +1,5 @@
 import './add-action-menu.css'
+import './mobile-sections-nav'
 
 type AddMode = 'family' | 'person' | 'event' | 'relationship'
 

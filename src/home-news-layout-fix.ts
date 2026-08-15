@@ -352,79 +352,79 @@ main .section-block.soft .event-card > .record-action-group .record-edit-trigger
     width: calc(100% + 14px) !important;
     max-width: calc(100% + 14px) !important;
     margin-inline-end: -14px !important;
-    gap: 8px !important;
+    gap: 10px !important;
     padding-inline-end: 14px !important;
   }
 
-  /* Three compact portrait cards are visible across a phone, like the reference. */
+  /* Wider cards: roughly 1.5–2 cards remain visible on a phone. */
   main .section-block.soft .cards-grid.event-grid > .event-card,
   main .section-block.soft .event-grid > .event-card {
-    width: clamp(108px, 29vw, 138px) !important;
-    max-width: clamp(108px, 29vw, 138px) !important;
-    min-width: clamp(108px, 29vw, 138px) !important;
-    min-height: 318px !important;
-    flex-basis: clamp(108px, 29vw, 138px) !important;
-    border-radius: 16px !important;
-    padding-bottom: 36px !important;
+    width: clamp(170px, 47vw, 220px) !important;
+    max-width: clamp(170px, 47vw, 220px) !important;
+    min-width: clamp(170px, 47vw, 220px) !important;
+    min-height: 350px !important;
+    flex-basis: clamp(170px, 47vw, 220px) !important;
+    border-radius: 18px !important;
+    padding-bottom: 38px !important;
   }
 
   main .section-block.soft .event-card .event-top {
-    min-height: 38px !important;
-    padding: 6px 5px !important;
+    min-height: 40px !important;
+    padding: 7px 7px !important;
   }
   main .section-block.soft .event-card .event-top > span {
     max-width: 100% !important;
     overflow: hidden !important;
-    font-size: .58rem !important;
+    font-size: .64rem !important;
     text-overflow: ellipsis !important;
   }
 
   main .section-block.soft .event-card::before {
-    height: 128px !important;
-    min-height: 128px !important;
-    font-size: 56px !important;
+    height: 146px !important;
+    min-height: 146px !important;
+    font-size: 64px !important;
   }
 
   main .section-block.soft .event-card .event-mention-chips {
-    min-height: 22px !important;
-    padding: 7px 8px 0 !important;
+    min-height: 24px !important;
+    padding: 8px 10px 0 !important;
   }
   main .section-block.soft .event-card .event-mention-chip {
-    font-size: .52rem !important;
+    font-size: .58rem !important;
   }
 
   main .section-block.soft .event-card h3 {
-    margin: 5px 8px 0 !important;
-    font-size: .67rem !important;
-    line-height: 1.5 !important;
+    margin: 6px 10px 0 !important;
+    font-size: .74rem !important;
+    line-height: 1.52 !important;
   }
   main .section-block.soft .event-card > p {
-    margin: 5px 8px 0 !important;
-    font-size: .55rem !important;
-    line-height: 1.62 !important;
+    margin: 6px 10px 0 !important;
+    font-size: .6rem !important;
+    line-height: 1.66 !important;
     -webkit-line-clamp: 3 !important;
     line-clamp: 3 !important;
   }
   main .section-block.soft .event-card > small {
-    margin: 6px 8px 7px !important;
-    font-size: .48rem !important;
+    margin: 7px 10px 8px !important;
+    font-size: .52rem !important;
   }
 
   main .section-block.soft .event-card > .event-share-wrap,
   main .section-block.soft .event-card > .record-action-group {
-    height: 35px !important;
+    height: 37px !important;
   }
   main .section-block.soft .event-card > .event-share-wrap .event-share-button,
   main .section-block.soft .event-card > .record-action-group .record-edit-trigger {
-    height: 35px !important;
-    min-height: 35px !important;
+    height: 37px !important;
+    min-height: 37px !important;
   }
   main .section-block.soft .event-card > .event-share-wrap .event-share-button > span {
-    font-size: .66rem !important;
+    font-size: .7rem !important;
   }
   main .section-block.soft .event-card > .event-share-wrap .event-share-button > b,
   main .section-block.soft .event-card > .record-action-group .record-edit-trigger {
-    font-size: .49rem !important;
+    font-size: .53rem !important;
   }
 }
 `

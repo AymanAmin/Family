@@ -1,3 +1,5 @@
+@import './unified-theme-v3.css';
+
 /* Keep edit dialogs reachable at the top of the viewport, even when opened inside transformed cards. */
 .record-edit-overlay {
   position: fixed !important;
@@ -55,14 +57,6 @@
     top: 0 !important;
   }
 
-  /*
-   * Person-profile contextual add dialog:
-   * Android WebView/installed PWA can stop dispatching pan gestures to a nested
-   * overflow container when the gesture starts on a button (the duplicate-name
-   * result cards are buttons). Make the fixed overlay itself the only vertical
-   * scroll container on phones. This keeps scrolling alive regardless of where
-   * the finger starts and avoids competing nested scroll regions.
-   */
   .record-edit-overlay.person-add-overlay {
     display: block !important;
     overflow-x: hidden !important;
@@ -107,8 +101,6 @@
     -webkit-overflow-scrolling: touch !important;
   }
 
-  /* A drag may begin directly on a similar-person result card. Explicitly
-     allow vertical panning there so the browser hands the gesture to overlay. */
   .person-add-sheet .duplicate-person-check,
   .person-add-sheet .duplicate-results,
   .person-add-sheet .duplicate-result-card,
@@ -124,7 +116,6 @@
     max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 92px) !important;
   }
 
-  /* The person-add overlay remains the scroll owner even on short screens. */
   .record-edit-sheet.person-add-sheet {
     min-height: 0 !important;
     max-height: none !important;
@@ -132,8 +123,6 @@
   }
 }
 
-/* The PeoplePicker already shows the selected tree focus person. Avoid repeating
-   the same person in a second card with add-person and add-relation buttons. */
 .family-tree-page .tree-focus-summary {
   display: none !important;
 }

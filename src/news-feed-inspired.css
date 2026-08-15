@@ -1,0 +1,272 @@
+/* Social-style family news feed inspired by the compact mobile reference. */
+.news-page.page-section {
+  width: min(100%, 780px) !important;
+  margin-inline: auto !important;
+  padding-inline: clamp(12px, 3vw, 22px) !important;
+  padding-bottom: 118px !important;
+}
+
+.news-page.page-section .news-page-header {
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  gap: 10px !important;
+  margin-bottom: 10px !important;
+  padding: 12px 14px !important;
+  border-radius: 19px !important;
+  background: rgb(255 255 255 / 78%) !important;
+  box-shadow: 0 7px 22px rgb(35 74 120 / 5%) !important;
+}
+
+.news-page.page-section .news-title-block h1 {
+  margin: 0 !important;
+  font-size: clamp(1.05rem, 4.5vw, 1.45rem) !important;
+}
+
+.news-page.page-section .news-title-block p {
+  display: none !important;
+}
+
+.news-page.page-section .news-title-block .eyebrow {
+  font-size: .62rem !important;
+}
+
+.news-page.page-section .news-back,
+.news-page.page-section .news-add {
+  min-height: 38px !important;
+  padding: 6px 10px !important;
+  border-radius: 12px !important;
+}
+
+.news-page.page-section .news-toolbar {
+  width: min(100%, 720px) !important;
+  margin: 0 auto 14px !important;
+}
+
+.news-page.page-section .news-search-field {
+  min-height: 48px !important;
+  border-radius: 16px !important;
+  box-shadow: 0 6px 18px rgb(35 74 120 / 4%) !important;
+}
+
+.news-page.page-section .news-toolbar-status {
+  padding-inline: 6px !important;
+  font-size: .64rem !important;
+}
+
+.news-page.page-section .news-grid,
+.news-page.page-section .news-skeleton-grid {
+  width: min(100%, 720px) !important;
+  margin-inline: auto !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 14px !important;
+}
+
+.news-page.page-section .news-card {
+  --feed-accent: var(--news-accent, #4d8796);
+  overflow: hidden !important;
+  border: 1px solid rgb(50 96 120 / 10%) !important;
+  border-radius: 24px !important;
+  background: #fff !important;
+  box-shadow: 0 10px 26px rgb(35 74 120 / 6%) !important;
+}
+
+.news-page.page-section .news-card::before {
+  display: none !important;
+}
+
+.news-page.page-section .news-card:hover {
+  transform: none !important;
+}
+
+.news-page.page-section .news-card-body {
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 17px 18px 15px !important;
+}
+
+/* Make the card top feel like a social post header. */
+.news-page.page-section .news-card-kicker {
+  order: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin: 0 0 12px !important;
+}
+
+.news-page.page-section .news-card-type {
+  justify-self: start !important;
+  gap: 8px !important;
+}
+
+.news-page.page-section .news-card-glyph {
+  width: 50px !important;
+  height: 50px !important;
+  flex-basis: 50px !important;
+  border-radius: 15px !important;
+  font-size: 1.2rem !important;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 55%) !important;
+}
+
+.news-page.page-section .news-type-pill {
+  max-width: 12rem !important;
+  font-size: .72rem !important;
+}
+
+.news-page.page-section .news-card-kicker time {
+  justify-self: end !important;
+  padding: 5px 9px !important;
+  border-radius: 999px !important;
+  color: #8c9798 !important;
+  background: #f5f7f7 !important;
+  font-size: .62rem !important;
+  font-weight: 800 !important;
+}
+
+.news-page.page-section .news-card h2 {
+  order: 1 !important;
+  margin: 2px 0 8px !important;
+  color: #173e6d !important;
+  font-size: clamp(1rem, 4vw, 1.18rem) !important;
+  line-height: 1.65 !important;
+}
+
+.news-page.page-section .news-description {
+  order: 2 !important;
+  display: block !important;
+  overflow: visible !important;
+  margin: 0 !important;
+  color: #2d3638 !important;
+  font-size: clamp(.88rem, 3.7vw, 1.03rem) !important;
+  font-weight: 700 !important;
+  line-height: 2 !important;
+  -webkit-line-clamp: unset !important;
+}
+
+.news-page.page-section .news-meta {
+  order: 3 !important;
+  gap: 8px !important;
+  margin-top: 13px !important;
+}
+
+.news-page.page-section .news-meta span {
+  min-height: 28px !important;
+  padding: 4px 9px !important;
+  border-radius: 999px !important;
+  background: #f4f8f7 !important;
+}
+
+.news-page.page-section .news-people {
+  order: 4 !important;
+  position: relative !important;
+  gap: 7px !important;
+  margin-top: 12px !important;
+  padding-top: 11px !important;
+  border-top: 1px solid #eef1f1 !important;
+}
+
+.news-page.page-section .news-people::before {
+  display: grid !important;
+  width: 31px !important;
+  height: 31px !important;
+  flex: 0 0 31px !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+  color: #4d8390 !important;
+  background: #edf5f3 !important;
+  content: '○' !important;
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
+}
+
+.news-page.page-section .news-people button {
+  min-height: 31px !important;
+  padding: 5px 11px !important;
+  border: 0 !important;
+  color: #244e71 !important;
+  background: #f3f7f7 !important;
+  font-size: .68rem !important;
+}
+
+.news-page.page-section .news-card-actions {
+  order: 5 !important;
+  margin-top: 12px !important;
+  padding-top: 10px !important;
+  border-top: 1px solid #eff2f2 !important;
+}
+
+.news-page.page-section .news-card-actions button {
+  min-height: 34px !important;
+}
+
+.news-page.page-section .news-load-more-wrap {
+  width: min(100%, 720px) !important;
+  margin-inline: auto !important;
+}
+
+/* Event identity colors, close to the reference's small illustrated category tile. */
+.news-page.page-section .news-type-birth .news-card-glyph,
+.news-page.page-section .news-type-naming .news-card-glyph {
+  color: #c76b83 !important;
+  background: #fff0f4 !important;
+}
+
+.news-page.page-section .news-type-wedding .news-card-glyph {
+  color: #a76078 !important;
+  background: #faeef2 !important;
+}
+
+.news-page.page-section .news-type-death .news-card-glyph {
+  color: #536071 !important;
+  background: #eef0f3 !important;
+}
+
+.news-page.page-section .news-type-graduation .news-card-glyph {
+  color: #315f8d !important;
+  background: #edf4fb !important;
+}
+
+.news-page.page-section .news-type-general .news-card-glyph {
+  color: #2f7a70 !important;
+  background: #edf8f5 !important;
+}
+
+@media (max-width: 640px) {
+  .news-page.page-section {
+    padding-inline: 10px !important;
+  }
+
+  .news-page.page-section .news-page-header {
+    padding: 10px 11px !important;
+  }
+
+  .news-page.page-section .news-back b,
+  .news-page.page-section .news-add b {
+    display: none !important;
+  }
+
+  .news-page.page-section .news-back,
+  .news-page.page-section .news-add {
+    width: 38px !important;
+    min-width: 38px !important;
+    padding: 0 !important;
+  }
+
+  .news-page.page-section .news-card {
+    border-radius: 21px !important;
+  }
+
+  .news-page.page-section .news-card-body {
+    padding: 15px 15px 14px !important;
+  }
+
+  .news-page.page-section .news-card-glyph {
+    width: 46px !important;
+    height: 46px !important;
+    flex-basis: 46px !important;
+  }
+
+  .news-page.page-section .news-description {
+    font-size: .92rem !important;
+    line-height: 1.95 !important;
+  }
+}

@@ -3,7 +3,10 @@
   overflow: hidden !important;
   padding: 0 !important;
   color: transparent !important;
-  background-image: none !important;
+  background-image: var(--person-photo-background) !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: cover !important;
 }
 
 .person-photo-inline {

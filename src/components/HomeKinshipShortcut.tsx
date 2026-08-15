@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import PersonPhotoEverywhere from './PersonPhotoEverywhere'
+import PersonPhotoAdminControl from './PersonPhotoAdminControl'
 import '../home-kinship-shortcut.css'
 
 function buttonText(button: Element) {
@@ -107,33 +109,41 @@ export default function HomeKinshipShortcut() {
     }
   }, [])
 
-  if (!host) return null
+  const globalPersonPhotoExperience = <>
+    <PersonPhotoEverywhere />
+    <PersonPhotoAdminControl />
+  </>
 
-  return createPortal(
-    <section className="home-kinship-shortcut" aria-label="اختصار معرفة صلة القرابة">
-      <button type="button" className="home-kinship-shortcut-button" onClick={openKinshipPath}>
-        <span className="home-kinship-shortcut-icon" aria-hidden="true">
-          <svg viewBox="0 0 48 48" fill="none">
-            <circle cx="14" cy="14" r="6" />
-            <circle cx="34" cy="14" r="6" />
-            <circle cx="24" cy="34" r="6" />
-            <path d="M18.5 17.5 22 28M29.5 17.5 26 28M20 14h8" />
-          </svg>
-        </span>
-        <span className="home-kinship-shortcut-copy">
-          <strong>صلة القرابة</strong>
-          <small>اعرف صلة شخص بآخر مباشرة</small>
-        </span>
-        <span className="home-kinship-shortcut-action" aria-hidden="true">
-          <svg viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="7" r="3.5" />
-            <circle cx="8" cy="24" r="3.5" />
-            <circle cx="24" cy="24" r="3.5" />
-            <path d="M16 10.5v5.5M8 20.5v-4.5h16v4.5" />
-          </svg>
-        </span>
-      </button>
-    </section>,
-    host,
-  )
+  if (!host) return globalPersonPhotoExperience
+
+  return <>
+    {globalPersonPhotoExperience}
+    {createPortal(
+      <section className="home-kinship-shortcut" aria-label="اختصار معرفة صلة القرابة">
+        <button type="button" className="home-kinship-shortcut-button" onClick={openKinshipPath}>
+          <span className="home-kinship-shortcut-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none">
+              <circle cx="14" cy="14" r="6" />
+              <circle cx="34" cy="14" r="6" />
+              <circle cx="24" cy="34" r="6" />
+              <path d="M18.5 17.5 22 28M29.5 17.5 26 28M20 14h8" />
+            </svg>
+          </span>
+          <span className="home-kinship-shortcut-copy">
+            <strong>صلة القرابة</strong>
+            <small>اعرف صلة شخص بآخر مباشرة</small>
+          </span>
+          <span className="home-kinship-shortcut-action" aria-hidden="true">
+            <svg viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="7" r="3.5" />
+              <circle cx="8" cy="24" r="3.5" />
+              <circle cx="24" cy="24" r="3.5" />
+              <path d="M16 10.5v5.5M8 20.5v-4.5h16v4.5" />
+            </svg>
+          </span>
+        </button>
+      </section>,
+      host,
+    )}
+  </>
 }

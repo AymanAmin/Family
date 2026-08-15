@@ -65,6 +65,7 @@ function collectBindings(): AvatarBinding[] {
   }
 
   add('.detail-hero .detail-avatar', (avatar) => textFrom(avatar.closest('.detail-hero'), 'h1'))
+  add('.account-area .account-profile-button', (avatar) => textFrom(avatar.closest('.account-area'), '.account-copy strong'))
   add('.directory-person-card .directory-avatar', (avatar) => textFrom(avatar.closest('.directory-person-card'), '.directory-card-copy strong'))
   add('.people-picker-selected .people-picker-avatar', (avatar) => textFrom(avatar.closest('.people-picker-selected'), 'strong'))
   add('.people-picker-menu > button .people-picker-avatar', (avatar) => textFrom(avatar.closest('button'), 'strong'))

@@ -26,7 +26,8 @@ type NamePhotoGroup = {
 
 const PHOTO_CACHE_TTL = 5 * 60_000
 const photoByName = new Map<string, PhotoCacheEntry>()
-const originalMarkup = new WeakMap<HTMLElement, string>()
+const loadedPhotoUrls = new Set<string>()
+const photoLoadPromises = new Map<string, Promise<boolean>>()
 let scanFrame = 0
 let requestSerial = 0
 
@@ -111,12 +112,42 @@ function collectBindings(): AvatarBinding[] {
 }
 
 function restoreAvatar(avatar: HTMLElement) {
-  const original = originalMarkup.get(avatar)
-  if (typeof original === 'string' && avatar.classList.contains('person-photo-enhanced')) {
-    avatar.innerHTML = original
-  }
   avatar.classList.remove('person-photo-enhanced')
   avatar.removeAttribute('data-person-photo-url')
+  avatar.removeAttribute('data-person-photo-pending-url')
+  avatar.style.removeProperty('--person-photo-background')
+}
+
+function commitPhoto(avatar: HTMLElement, url: string) {
+  avatar.style.setProperty('--person-photo-background', `url(${JSON.stringify(url)})`)
+  avatar.classList.add('person-photo-enhanced')
+  avatar.dataset.personPhotoUrl = url
+  avatar.removeAttribute('data-person-photo-pending-url')
+}
+
+function preloadPhoto(url: string): Promise<boolean> {
+  if (loadedPhotoUrls.has(url)) return Promise.resolve(true)
+
+  const existing = photoLoadPromises.get(url)
+  if (existing) return existing
+
+  const request = new Promise<boolean>((resolve) => {
+    const image = new Image()
+    image.decoding = 'async'
+    image.onload = () => {
+      loadedPhotoUrls.add(url)
+      photoLoadPromises.delete(url)
+      resolve(true)
+    }
+    image.onerror = () => {
+      photoLoadPromises.delete(url)
+      resolve(false)
+    }
+    image.src = url
+  })
+
+  photoLoadPromises.set(url, request)
+  return request
 }
 
 function applyPhoto(binding: AvatarBinding, url: string | null) {
@@ -126,26 +157,30 @@ function applyPhoto(binding: AvatarBinding, url: string | null) {
     return
   }
 
-  const currentImage = avatar.querySelector<HTMLImageElement>('img.person-photo-inline')
-  if (avatar.dataset.personPhotoUrl === url && currentImage) return
+  if (avatar.dataset.personPhotoUrl === url && avatar.classList.contains('person-photo-enhanced')) return
 
-  if (!originalMarkup.has(avatar)) originalMarkup.set(avatar, avatar.innerHTML)
+  // If the browser already decoded this image once, applying it as a background is
+  // immediate and does not replace React-managed children. This prevents the avatar
+  // from flashing empty during route/state re-renders.
+  if (loadedPhotoUrls.has(url)) {
+    commitPhoto(avatar, url)
+    return
+  }
 
-  avatar.innerHTML = ''
-  avatar.classList.add('person-photo-enhanced')
-  avatar.dataset.personPhotoUrl = url
+  if (avatar.dataset.personPhotoPendingUrl === url) return
+  avatar.dataset.personPhotoPendingUrl = url
 
-  const image = document.createElement('img')
-  image.className = 'person-photo-inline'
-  image.src = url
-  image.alt = `صورة ${name}`
-  image.loading = 'lazy'
-  image.decoding = 'async'
-  image.addEventListener('error', () => {
-    photoByName.set(name, { url: null, savedAt: Date.now() })
-    restoreAvatar(avatar)
-  }, { once: true })
-  avatar.appendChild(image)
+  void preloadPhoto(url).then((loaded) => {
+    if (!avatar.isConnected || avatar.dataset.personPhotoPendingUrl !== url) return
+
+    if (!loaded) {
+      photoByName.set(name, { url: null, savedAt: Date.now() })
+      restoreAvatar(avatar)
+      return
+    }
+
+    commitPhoto(avatar, url)
+  })
 }
 
 async function fetchPhotos(names: string[]) {

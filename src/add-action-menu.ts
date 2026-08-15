@@ -41,7 +41,8 @@ const segmentLabels: Record<AddMode, string> = {
 let pickerLayer: HTMLElement | null = null
 let sourceButton: HTMLButtonElement | null = null
 let bypassAddClick = false
-let pendingMode: AddMode | null = readStoredMode()
+let pendingMode: AddMode | null = null
+let restoreMode: AddMode | null = window.location.hash.startsWith('#/add') ? readStoredMode() : null
 let enhanceFrame = 0
 
 function normalizedText(element: Element | null) {
@@ -58,7 +59,6 @@ function readStoredMode(): AddMode | null {
 }
 
 function storeMode(mode: AddMode) {
-  pendingMode = mode
   try { window.sessionStorage.setItem(MODE_STORAGE_KEY, mode) } catch { /* storage can be disabled */ }
 }
 
@@ -147,6 +147,7 @@ function selectModeInReact(mode: AddMode, attempts = 0) {
     .find((item) => normalizedText(item) === segmentLabels[mode])
 
   if (button && !button.classList.contains('active')) button.click()
+  else pendingMode = null
   storeMode(mode)
   scheduleEnhance()
 }
@@ -159,6 +160,8 @@ function triggerNativeAddNavigation() {
 }
 
 function chooseMode(mode: AddMode) {
+  pendingMode = mode
+  restoreMode = null
   storeMode(mode)
   closePicker()
   triggerNativeAddNavigation()
@@ -203,14 +206,20 @@ function enhanceAddScreen() {
 
   section.classList.add('add-standalone-screen')
   const mode = activeMode(control)
+  const requestedMode = pendingMode || restoreMode
 
-  if (pendingMode && pendingMode !== mode) {
+  if (requestedMode && requestedMode !== mode) {
     const target = Array.from(control.querySelectorAll<HTMLButtonElement>('button'))
-      .find((button) => normalizedText(button) === segmentLabels[pendingMode as AddMode])
+      .find((button) => normalizedText(button) === segmentLabels[requestedMode])
     if (target) {
       target.click()
       return
     }
+  }
+
+  if (requestedMode === mode) {
+    pendingMode = null
+    restoreMode = null
   }
 
   storeMode(mode)

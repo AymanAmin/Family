@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { getApplicationUrl, supabase, supabaseConfiguration } from './lib/supabase'
 import RecordEditButton from './components/RecordEditButton'
@@ -232,6 +232,13 @@ function App() {
   const [schemaReady, setSchemaReady] = useState(true)
   const [view, setView] = useState<View>('home')
   const [routeReady, setRouteReady] = useState(false)
+  const [directoryLaunchTerm, setDirectoryLaunchTerm] = useState('')
+  const [treeLaunchPersonId, setTreeLaunchPersonId] = useState<string | null>(null)
+  const [keptScreens, setKeptScreens] = useState({ news: false, search: false, tree: false })
+  const [screenEpochs, setScreenEpochs] = useState({ news: 0, search: 0, tree: 0 })
+  const screenScrollRef = useRef<Partial<Record<View, number>>>({})
+  const personHistoryCacheRef = useRef(new Map<string, { person: Person; relationships: PersonRelationship[] }>())
+  const familyHistoryCacheRef = useRef(new Map<string, Family>())
   const [authMode, setAuthMode] = useState<AuthMode>('signin')
   const [addMode, setAddMode] = useState<AddMode>('family')
   const [adminTab, setAdminTab] = useState<AdminTab>('requests')
@@ -420,6 +427,69 @@ function App() {
     setPendingLoadingMore(false)
   }, [canModerate])
 
+  function keepScreen(target: View) {
+    if (target !== 'news' && target !== 'search' && target !== 'tree') return
+    setKeptScreens((current) => current[target] ? current : { ...current, [target]: true })
+  }
+
+  function rememberCurrentScroll() {
+    screenScrollRef.current[view] = window.scrollY
+  }
+
+  function navigateFresh(
+    target: View,
+    options: {
+      directoryTerm?: string
+      directoryTab?: 'all' | 'people' | 'families'
+      treePersonId?: string | null
+    } = {},
+  ) {
+    rememberCurrentScroll()
+
+    if (target === 'search') {
+      setDirectoryLaunchTerm(options.directoryTerm ?? '')
+      if (options.directoryTab) setDirectoryInitialTab(options.directoryTab)
+    }
+    if (target === 'tree') {
+      setTreeLaunchPersonId(options.treePersonId ?? profile?.linked_person_id ?? selectedPerson?.id ?? null)
+    }
+
+    if (target === 'news' || target === 'search' || target === 'tree') {
+      keepScreen(target)
+      setScreenEpochs((current) => ({ ...current, [target]: current[target] + 1 }))
+    }
+
+    if (target === 'home') void loadCommunityData()
+    if (target === 'admin') void loadPending()
+    if (target === 'account' && session) void loadProfile(session)
+
+    setView(target)
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'auto' }))
+  }
+
+  function restoreCachedView(target: View, historyScrollY?: number) {
+    rememberCurrentScroll()
+    keepScreen(target)
+    setView(target)
+    const top = typeof historyScrollY === 'number'
+      ? historyScrollY
+      : (screenScrollRef.current[target] ?? 0)
+    window.requestAnimationFrame(() => window.scrollTo({ top, left: 0, behavior: 'auto' }))
+  }
+
+  function goBackCached(fallback: View) {
+    const state = window.history.state as { __familyDepth?: number } | null
+    if (typeof state?.__familyDepth === 'number' && state.__familyDepth > 0) {
+      window.history.back()
+      return
+    }
+    restoreCachedView(fallback)
+  }
+
+  useEffect(() => {
+    if (view === 'news' || view === 'search' || view === 'tree') keepScreen(view)
+  }, [view])
+
   useEffect(() => {
     if (!supabase) {
       setSessionLoading(false)
@@ -495,7 +565,10 @@ function App() {
         await openPersonById(id)
       } else if (target === 'family' && id) {
         await openFamilyById(id)
-      } else if (target === 'news' || target === 'search' || target === 'tree' || target === 'add' || target === 'admin' || target === 'account') {
+      } else if (target === 'tree') {
+        setTreeLaunchPersonId(profile?.linked_person_id ?? selectedPerson?.id ?? null)
+        setView('tree')
+      } else if (target === 'news' || target === 'search' || target === 'add' || target === 'admin' || target === 'account') {
         setView(target as View)
       } else {
         setView('home')
@@ -520,6 +593,47 @@ function App() {
       window.history.replaceState(null, '', nextHash)
     }
   }, [routeReady, view, selectedPerson?.id, selectedFamily?.id])
+
+  useEffect(() => {
+    if (!routeReady) return
+
+    const handleHistoryNavigation = (event: Event) => {
+      const detail = (event as CustomEvent<{ direction?: 'back' | 'forward' | 'unknown'; scrollY?: number }>).detail
+      const rawHash = window.location.hash
+      if (!rawHash.startsWith('#/')) return
+
+      const route = decodeURIComponent(rawHash.replace(/^#\/?/, ''))
+      const [target, id] = route.split('/')
+      const restore = detail?.direction !== 'forward'
+      const scrollY = detail?.scrollY
+
+      if (target === 'person' && id) {
+        void openPersonById(id, { restore, scrollY })
+        return
+      }
+      if (target === 'family' && id) {
+        void openFamilyById(id, { restore, scrollY })
+        return
+      }
+
+      const nextView: View = target === 'news' || target === 'search' || target === 'tree' || target === 'add' || target === 'admin' || target === 'account'
+        ? target
+        : 'home'
+
+      if (restore) {
+        restoreCachedView(nextView, scrollY)
+      } else {
+        navigateFresh(nextView, {
+          directoryTerm: nextView === 'search' ? directoryLaunchTerm : undefined,
+          directoryTab: nextView === 'search' ? directoryInitialTab : undefined,
+          treePersonId: nextView === 'tree' ? treeLaunchPersonId : undefined,
+        })
+      }
+    }
+
+    window.addEventListener('sila:history-navigation', handleHistoryNavigation as EventListener)
+    return () => window.removeEventListener('sila:history-navigation', handleHistoryNavigation as EventListener)
+  }, [routeReady, view, directoryLaunchTerm, directoryInitialTab, treeLaunchPersonId, profile?.linked_person_id, selectedPerson?.id])
 
   const visibleFamilies = useMemo(() => families.filter((item) => item.status === 'approved' || item.status === 'pending'), [families])
   const approvedPeople = useMemo(() => people.filter((item) => item.status === 'approved'), [people])
@@ -605,8 +719,7 @@ function App() {
   async function runSearch(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault()
     if (!schemaReady) return
-    setDirectoryInitialTab('all')
-    setView('search')
+    navigateFresh('search', { directoryTerm: searchTerm, directoryTab: 'all' })
   }
 
   function requireAccount(): boolean {
@@ -821,16 +934,22 @@ function App() {
     void loadCommunityData()
   }
 
-  function openFamily(item: Family) {
+  function openFamily(item: Family, options: { restore?: boolean; scrollY?: number } = {}) {
+    rememberCurrentScroll()
+    familyHistoryCacheRef.current.set(item.id, item)
     setSelectedFamily(item)
     setView('family')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    const top = options.restore ? (options.scrollY ?? screenScrollRef.current.family ?? 0) : 0
+    window.requestAnimationFrame(() => window.scrollTo({ top, left: 0, behavior: 'auto' }))
   }
-  async function openFamilyById(id: string) {
-    const cached = families.find((item) => item.id === id)
-    if (cached) {
-      openFamily(cached)
-      return
+
+  async function openFamilyById(id: string, options: { restore?: boolean; scrollY?: number } = {}) {
+    if (options.restore) {
+      const cached = familyHistoryCacheRef.current.get(id) ?? families.find((item) => item.id === id)
+      if (cached) {
+        openFamily(cached, options)
+        return
+      }
     }
     if (!supabase) return
 
@@ -841,15 +960,27 @@ function App() {
       .maybeSingle()
 
     if (error) return showMessage(friendlyError(error.message), 'error')
-    if (data) openFamily(data as Family)
+    if (data) openFamily(data as Family, options)
   }
 
-  async function openPerson(item: Person) {
+  async function openPerson(
+    item: Person,
+    options: { restore?: boolean; scrollY?: number; cachedRelationships?: PersonRelationship[] } = {},
+  ) {
+    rememberCurrentScroll()
     setSelectedPerson(item)
     setView('person')
+
+    if (options.restore && options.cachedRelationships) {
+      setRelationsLoading(false)
+      setRelationships(options.cachedRelationships)
+      const top = options.scrollY ?? screenScrollRef.current.person ?? 0
+      window.requestAnimationFrame(() => window.scrollTo({ top, left: 0, behavior: 'auto' }))
+      return
+    }
+
     setRelationsLoading(true)
     setRelationships([])
-    window.scrollTo({ top: 0, behavior: 'smooth' })
     if (!supabase) {
       setRelationsLoading(false)
       return
@@ -863,14 +994,20 @@ function App() {
 
     setRelationsLoading(false)
     if (error) return showMessage(friendlyError(error.message), 'error')
-    setRelationships((data ?? []) as PersonRelationship[])
+    const resolvedRelationships = (data ?? []) as PersonRelationship[]
+    setRelationships(resolvedRelationships)
+    personHistoryCacheRef.current.set(item.id, { person: item, relationships: resolvedRelationships })
+    const top = options.restore ? (options.scrollY ?? screenScrollRef.current.person ?? 0) : 0
+    window.requestAnimationFrame(() => window.scrollTo({ top, left: 0, behavior: 'auto' }))
   }
 
-  async function openPersonById(id: string) {
-    const cached = people.find((item) => item.id === id)
-    if (cached) {
-      await openPerson(cached)
-      return
+  async function openPersonById(id: string, options: { restore?: boolean; scrollY?: number } = {}) {
+    if (options.restore) {
+      const cached = personHistoryCacheRef.current.get(id)
+      if (cached) {
+        await openPerson(cached.person, { ...options, cachedRelationships: cached.relationships })
+        return
+      }
     }
     if (!supabase) return
 
@@ -881,7 +1018,7 @@ function App() {
       .maybeSingle()
 
     if (error) return showMessage(friendlyError(error.message), 'error')
-    if (data) await openPerson(data as Person)
+    if (data) await openPerson(data as Person, options)
   }
 
   async function resyncSelectedPersonRelationships() {
@@ -995,23 +1132,23 @@ function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <button className="brand" type="button" onClick={() => setView('home')}>
+        <button className="brand" type="button" onClick={() => navigateFresh('home')}>
           <span className="brand-mark">ص</span>
           <span><strong>صلة المنطقة</strong><small>سجل أهالي المنطقة</small></span>
         </button>
         <nav className="desktop-nav">
-          <button onClick={() => setView('home')} className={view === 'home' ? 'active' : ''}>الرئيسية</button>
-          <button onClick={() => setView('news')} className={view === 'news' ? 'active' : ''}>الأخبار</button>
-          <button onClick={() => { setDirectoryInitialTab('all'); setView('search') }} className={view === 'search' ? 'active' : ''}>البحث</button>
-          <button onClick={() => setView('tree')} className={view === 'tree' ? 'active' : ''}>شجرة العائلة</button>
-          <button onClick={() => requireAccount() && setView('add')} className={view === 'add' ? 'active' : ''}>إضافة</button>
-          {canModerate && <button onClick={() => setView('admin')} className={view === 'admin' ? 'active' : ''}>الإدارة</button>}
+          <button onClick={() => navigateFresh('home')} className={view === 'home' ? 'active' : ''}>الرئيسية</button>
+          <button onClick={() => navigateFresh('news')} className={view === 'news' ? 'active' : ''}>الأخبار</button>
+          <button onClick={() => navigateFresh('search', { directoryTerm: '', directoryTab: 'all' })} className={view === 'search' ? 'active' : ''}>البحث</button>
+          <button onClick={() => navigateFresh('tree')} className={view === 'tree' ? 'active' : ''}>شجرة العائلة</button>
+          <button onClick={() => requireAccount() && navigateFresh('add')} className={view === 'add' ? 'active' : ''}>إضافة</button>
+          {canModerate && <button onClick={() => navigateFresh('admin')} className={view === 'admin' ? 'active' : ''}>الإدارة</button>}
         </nav>
         <div className="account-area">
           {sessionLoading ? <span className="loading-dot" /> : session ? (
             <>
-              <button className="account-profile-button" type="button" onClick={() => setView('account')} aria-label="فتح حسابي">{userName.slice(0, 1)}</button>
-              <button className="account-copy account-link" type="button" onClick={() => setView('account')}><strong>{userName}</strong><small>{roleLabels[profile?.role || 'member']}</small></button>
+              <button className="account-profile-button" type="button" onClick={() => navigateFresh('account')} aria-label="فتح حسابي">{userName.slice(0, 1)}</button>
+              <button className="account-copy account-link" type="button" onClick={() => navigateFresh('account')}><strong>{userName}</strong><small>{roleLabels[profile?.role || 'member']}</small></button>
 
             </>
           ) : <button className="primary small" onClick={() => document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' })}>دخول</button>}
@@ -1019,11 +1156,11 @@ function App() {
       </header>
 
       <nav className="mobile-bottom-nav" aria-label="التنقل الرئيسي">
-        <button type="button" onClick={() => setView('home')} className={view === 'home' ? 'active' : ''}><span className="mobile-nav-icon">⌂</span><span>الرئيسية</span></button>
-        <button type="button" onClick={() => { setDirectoryInitialTab('all'); setView('search') }} className={view === 'search' ? 'active' : ''}><span className="mobile-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span>الأفراد</span></button>
-        <button type="button" onClick={() => requireAccount() && setView('add')} className={view === 'add' ? 'active add-nav-action' : 'add-nav-action'}><span className="mobile-nav-icon">＋</span><span>إضافة</span></button>
-        <button type="button" onClick={() => setView('tree')} className={view === 'tree' ? 'active' : ''}><span className="mobile-nav-icon">⌘</span><span>الشجرة</span></button>
-        {canModerate ? <button type="button" onClick={() => setView('admin')} className={view === 'admin' ? 'active' : ''}><span className="mobile-nav-icon">▦</span><span>الإدارة</span></button> : <button type="button" onClick={() => { if (session) setView('account'); else { setView('home'); window.setTimeout(() => document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' }), 60) } }} className={view === 'account' ? 'active' : ''}><span className="mobile-nav-icon">◉</span><span>{session ? 'حسابي' : 'دخول'}</span></button>}
+        <button type="button" onClick={() => navigateFresh('home')} className={view === 'home' ? 'active' : ''}><span className="mobile-nav-icon">⌂</span><span>الرئيسية</span></button>
+        <button type="button" onClick={() => navigateFresh('search', { directoryTerm: '', directoryTab: 'all' })} className={view === 'search' ? 'active' : ''}><span className="mobile-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span>الأفراد</span></button>
+        <button type="button" onClick={() => requireAccount() && navigateFresh('add')} className={view === 'add' ? 'active add-nav-action' : 'add-nav-action'}><span className="mobile-nav-icon">＋</span><span>إضافة</span></button>
+        <button type="button" onClick={() => navigateFresh('tree')} className={view === 'tree' ? 'active' : ''}><span className="mobile-nav-icon">⌘</span><span>الشجرة</span></button>
+        {canModerate ? <button type="button" onClick={() => navigateFresh('admin')} className={view === 'admin' ? 'active' : ''}><span className="mobile-nav-icon">▦</span><span>الإدارة</span></button> : <button type="button" onClick={() => { if (session) navigateFresh('account'); else { navigateFresh('home'); window.setTimeout(() => document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' }), 60) } }} className={view === 'account' ? 'active' : ''}><span className="mobile-nav-icon">◉</span><span>{session ? 'حسابي' : 'دخول'}</span></button>}
       </nav>
 
       {message && <div className={`global-message ${messageTone}`} role="status"><span>{message}</span><button onClick={() => setMessage('')}>×</button></div>}
@@ -1054,10 +1191,10 @@ function App() {
 
             <section className="nasab-dashboard">
               <div className="app-services unified-home-stats" aria-label="اختصارات وإحصائيات المنصة">
-                <button className="service-tile stat-service-tile" type="button" onClick={() => { setDirectoryInitialTab('families'); setView('search') }}><span className="service-icon">{platformStats?.approved_families ?? '—'}</span><span><strong>الأسر</strong><small>الأسر المنشأة تلقائيًا</small></span></button>
-                <button className="service-tile stat-service-tile" type="button" onClick={() => { setDirectoryInitialTab('people'); setView('search') }}><span className="service-icon">{platformStats?.approved_people ?? '—'}</span><span><strong>الأفراد</strong><small>ملفات الأشخاص الموثقة</small></span></button>
-                <button className="service-tile stat-service-tile" type="button" onClick={() => setView('news')}><span className="service-icon">{platformStats?.approved_events ?? '—'}</span><span><strong>المناسبات</strong><small>الأخبار والمناسبات المنشورة</small></span></button>
-                <button className="service-tile" type="button" onClick={() => setView('tree')}><span className="service-icon">ش</span><span><strong>شجرة العائلة</strong><small>استكشف القرابة ومسارات النسب</small></span></button>
+                <button className="service-tile stat-service-tile" type="button" onClick={() => navigateFresh('search', { directoryTerm: '', directoryTab: 'families' })}><span className="service-icon">{platformStats?.approved_families ?? '—'}</span><span><strong>الأسر</strong><small>الأسر المنشأة تلقائيًا</small></span></button>
+                <button className="service-tile stat-service-tile" type="button" onClick={() => navigateFresh('search', { directoryTerm: '', directoryTab: 'people' })}><span className="service-icon">{platformStats?.approved_people ?? '—'}</span><span><strong>الأفراد</strong><small>ملفات الأشخاص الموثقة</small></span></button>
+                <button className="service-tile stat-service-tile" type="button" onClick={() => navigateFresh('news')}><span className="service-icon">{platformStats?.approved_events ?? '—'}</span><span><strong>المناسبات</strong><small>الأخبار والمناسبات المنشورة</small></span></button>
+                <button className="service-tile" type="button" onClick={() => navigateFresh('tree')}><span className="service-icon">ش</span><span><strong>شجرة العائلة</strong><small>استكشف القرابة ومسارات النسب</small></span></button>
                 {isAdmin && <button className="service-tile stat-service-tile" type="button" onClick={() => { setAdminTab('requests'); setView('admin') }}><span className="service-icon">{pending.length}</span><span><strong>بانتظار الاعتماد</strong><small>الطلبات التي تحتاج مراجعة</small></span></button>}
                 <button className="service-tile" type="button" onClick={() => session ? setView('account') : document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth' })}><span className="service-icon">{session ? userName[0] : 'د'}</span><span><strong>{session ? 'حسابي' : 'الدخول'}</strong><small>{session ? 'الربط والملف الشخصي' : 'ساهم في توثيق العائلة'}</small></span></button>
               </div>
@@ -1070,7 +1207,7 @@ function App() {
             </section>
 
             <section className="section-block soft">
-              <div className="section-title"><div><span className="eyebrow">آخر الأخبار</span><h2>المناسبات المعتمدة</h2></div><button className="text-link" type="button" onClick={() => setView('news')}>كل الأخبار</button></div>
+              <div className="section-title"><div><span className="eyebrow">آخر الأخبار</span><h2>المناسبات المعتمدة</h2></div><button className="text-link" type="button" onClick={() => navigateFresh('news')}>كل الأخبار</button></div>
               {approvedEvents.length ? (
                 <div className="cards-grid event-grid">
                   {approvedEvents.slice(0, 6).map((item) => (
@@ -1094,7 +1231,7 @@ function App() {
 
             <section className="home-content-grid home-tree-only">
               <article className="family-tree-preview">
-                <div className="home-section-heading"><h2>شجرة العائلة</h2><button type="button" onClick={() => setView('tree')}>فتح الشجرة</button></div>
+                <div className="home-section-heading"><h2>شجرة العائلة</h2><button type="button" onClick={() => navigateFresh('tree')}>فتح الشجرة</button></div>
                 <div className="tree-orbit" aria-label="معاينة رمزية لشجرة العائلة"><span className="tree-root">صلة</span><span className="tree-node n1">جد</span><span className="tree-node n2">أب</span><span className="tree-node n3">أم</span><span className="tree-node n4">ابن</span><span className="tree-node n5">ابنة</span></div>
               </article>
             </section>
@@ -1105,30 +1242,38 @@ function App() {
           </>
         )}
 
-        {schemaReady && view === 'news' && (
+        {schemaReady && (keptScreens.news || view === 'news') && (
+          <div style={{ display: view === 'news' ? 'contents' : 'none' }}>
           <Suspense fallback={<div className="page-section"><LazyPanelFallback /></div>}>
             <NewsScreen
-              onBack={() => setView('home')}
+              key={`news-${screenEpochs.news}`}
+              onBack={() => goBackCached('home')}
               onAdd={() => { if (!requireAccount()) return; setAddMode('event'); setView('add') }}
               onOpenPerson={(personId) => openPersonById(personId)}
             />
           </Suspense>
+          </div>
         )}
 
-        {schemaReady && view === 'search' && (
+        {schemaReady && (keptScreens.search || view === 'search') && (
+          <div style={{ display: view === 'search' ? 'contents' : 'none' }}>
           <Suspense fallback={<LazyPanelFallback />}>
             <DirectoryScreen
-              initialTerm={searchTerm}
+              key={`search-${screenEpochs.search}`}
+              initialTerm={directoryLaunchTerm}
               initialTab={directoryInitialTab}
               onOpenPerson={(item) => void openPersonById(item.id)}
             />
           </Suspense>
+          </div>
         )}
 
-        {schemaReady && view === 'tree' && (
+        {schemaReady && (keptScreens.tree || view === 'tree') && (
+          <div style={{ display: view === 'tree' ? 'contents' : 'none' }}>
           <Suspense fallback={<LazyPanelFallback />}>
             <FamilyTreeScreen
-              initialPersonId={profile?.linked_person_id || selectedPerson?.id || null}
+              key={`tree-${screenEpochs.tree}`}
+              initialPersonId={treeLaunchPersonId}
               onOpenPerson={(id) => void openPersonById(id)}
               onAddPerson={(id) => {
                 if (!requireAccount()) return
@@ -1144,11 +1289,12 @@ function App() {
               }}
             />
           </Suspense>
+          </div>
         )}
 
         {schemaReady && view === 'family' && selectedFamily && (
           <section className="page-section detail-page">
-            <button className="back-button" type="button" onClick={() => setView('search')}>→ العودة للدليل</button>
+            <button className="back-button" type="button" onClick={() => goBackCached('search')}>→ العودة للدليل</button>
             <div className="detail-hero">
               <span className="detail-avatar family-avatar">{selectedFamily.name[0]}</span>
               <div><span className="eyebrow">ملف العائلة</span><h1>{selectedFamily.name}</h1><p>{selectedFamily.description || 'لا توجد نبذة مضافة لهذه العائلة حتى الآن.'}</p></div>
@@ -1175,7 +1321,7 @@ function App() {
 
         {schemaReady && view === 'person' && selectedPerson && (
           <section className="page-section detail-page">
-            <button className="back-button" type="button" onClick={() => setView('search')}>→ العودة للدليل</button>
+            <button className="back-button" type="button" onClick={() => goBackCached('search')}>→ العودة للدليل</button>
             <div className="detail-hero">
               <span className="detail-avatar">{selectedPerson.full_name[0]}</span>
               <div><span className="eyebrow">ملف شخص</span><div className="person-title-line"><h1>{selectedPerson.full_name}</h1><PersonVerifiedBadge personId={selectedPerson.id} /></div><p>{selectedPerson.description || 'لا توجد نبذة مضافة لهذا الشخص.'}</p></div>
@@ -1230,13 +1376,13 @@ function App() {
 
         {schemaReady && view === 'account' && session && (
           <section className="page-section narrow account-page">
-            <button className="back-button" type="button" onClick={() => setView('home')}>→ العودة للرئيسية</button>
+            <button className="back-button" type="button" onClick={() => navigateFresh('home')}>→ العودة للرئيسية</button>
             <div className="detail-hero account-hero"><span className="detail-avatar">{userName[0]}</span><div><span className="eyebrow">حسابي</span><h1>{userName}</h1><p>{session.user.email}</p></div></div>
             <div className="account-status-card">
               <span className={`status ${profile?.linked_person_id ? 'approved' : ownLinkRequest?.status === 'pending' ? 'pending' : ''}`}>{profile?.linked_person_id ? 'مرتبط' : ownLinkRequest?.status === 'pending' ? 'قيد المراجعة' : 'غير مرتبط'}</span>
               <h2>{profile?.linked_person_id ? 'الحساب مرتبط بسجل شخص' : ownLinkRequest?.status === 'pending' ? 'طلب الربط قيد المراجعة' : 'اربط حسابك بسجلك داخل الدليل'}</h2>
               <p>{profile?.linked_person_id ? people.find((item) => item.id === profile.linked_person_id)?.full_name || 'تم اعتماد الربط.' : ownLinkRequest?.status === 'pending' ? `السجل المطلوب: ${personName(ownLinkRequest.people)}` : 'ابحث عن اسمك في الدليل وافتح ملف الشخص ثم اضغط «هذا أنا».'}</p>
-              {!profile?.linked_person_id && ownLinkRequest?.status !== 'pending' && <button className="primary" type="button" onClick={() => { setDirectoryInitialTab('people'); setView('search') }}>البحث عن سجلي</button>}
+              {!profile?.linked_person_id && ownLinkRequest?.status !== 'pending' && <button className="primary" type="button" onClick={() => navigateFresh('search', { directoryTerm: '', directoryTab: 'people' })}>البحث عن سجلي</button>}
             </div>
             <div className="account-logout-card"><div><strong>تسجيل الخروج</strong><small>إنهاء الجلسة الحالية على هذا الجهاز.</small></div><button type="button" disabled={busy} onClick={() => void signOut()}>{busy ? 'جارٍ الخروج…' : 'تسجيل الخروج'}</button></div>
             <Suspense fallback={<LazyPanelFallback />}>

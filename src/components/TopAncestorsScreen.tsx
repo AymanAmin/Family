@@ -72,8 +72,16 @@ export default function TopAncestorsScreen() {
 
   useEffect(() => {
     const sync = () => setActive(isAncestorsScreen())
+    const syncDirection = (event: Event) => {
+      const detail = (event as CustomEvent<{ direction?: string }>).detail
+      if (detail?.direction === 'forward' && isAncestorsScreen()) setLoaded(false)
+    }
     window.addEventListener('popstate', sync)
-    return () => window.removeEventListener('popstate', sync)
+    window.addEventListener('sila:history-navigation', syncDirection as EventListener)
+    return () => {
+      window.removeEventListener('popstate', sync)
+      window.removeEventListener('sila:history-navigation', syncDirection as EventListener)
+    }
   }, [])
 
   useEffect(() => {
@@ -163,11 +171,19 @@ export default function TopAncestorsScreen() {
     const url = new URL(window.location.href)
     url.searchParams.set('screen', 'ancestors')
     url.searchParams.delete('ancestorTree')
-    window.history.pushState(window.history.state, '', url.toString())
+    const current = window.history.state && typeof window.history.state === 'object' ? window.history.state : {}
+    const depth = typeof current.__familyDepth === 'number' ? current.__familyDepth : 0
+    window.history.pushState({ ...current, __familyApp: true, __familyDepth: depth + 1, __familyScrollY: 0 }, '', url.toString())
+    setLoaded(false)
     setActive(true)
   }
 
   function closeScreen() {
+    const state = window.history.state && typeof window.history.state === 'object' ? window.history.state : {}
+    if (typeof state.__familyDepth === 'number' && state.__familyDepth > 0) {
+      window.history.back()
+      return
+    }
     const url = new URL(window.location.href)
     url.searchParams.delete('screen')
     window.history.replaceState(window.history.state, '', url.toString())

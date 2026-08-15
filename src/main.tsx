@@ -75,6 +75,7 @@ import './news-feed-inspired.css'
 type FamilyHistoryState = Record<string, unknown> & {
   __familyApp?: boolean
   __familyDepth?: number
+  __familyScrollY?: number
 }
 
 type PickerScrollGesture = {
@@ -115,8 +116,11 @@ function installAppNavigationHistory() {
 
   const initialState = historyState(window.history.state)
   if (!initialState.__familyApp) {
-    nativeReplaceState({ ...initialState, __familyApp: true, __familyDepth: 0 }, document.title, window.location.href)
+    nativeReplaceState({ ...initialState, __familyApp: true, __familyDepth: 0, __familyScrollY: window.scrollY }, document.title, window.location.href)
   }
+  let lastKnownDepth = typeof historyState(window.history.state).__familyDepth === 'number'
+    ? Number(historyState(window.history.state).__familyDepth)
+    : 0
 
   window.history.replaceState = ((state: unknown, unused: string, url?: string | URL | null) => {
     const isAppRoute = typeof url === 'string' && url.startsWith('#/')
@@ -130,19 +134,32 @@ function installAppNavigationHistory() {
     const currentDepth = typeof current.__familyDepth === 'number' ? current.__familyDepth : 0
 
     if (window.location.hash === url) {
-      nativeReplaceState({ ...incoming, __familyApp: true, __familyDepth: currentDepth }, unused, url)
+      nativeReplaceState({ ...current, ...incoming, __familyApp: true, __familyDepth: currentDepth, __familyScrollY: window.scrollY }, unused, url)
+      lastKnownDepth = currentDepth
       return
     }
 
-    nativePushState({ ...incoming, __familyApp: true, __familyDepth: currentDepth + 1 }, unused, url)
+    nativeReplaceState({ ...current, __familyApp: true, __familyDepth: currentDepth, __familyScrollY: window.scrollY }, document.title, window.location.href)
+    nativePushState({ ...incoming, __familyApp: true, __familyDepth: currentDepth + 1, __familyScrollY: 0 }, unused, url)
+    lastKnownDepth = currentDepth + 1
     scrollAppToTop()
   }) as History['replaceState']
 
-  window.addEventListener('hashchange', scrollAppToTop)
-
   window.addEventListener('popstate', () => {
-    scrollAppToTop()
-    if (window.location.hash.startsWith('#/')) window.location.reload()
+    const state = historyState(window.history.state)
+    const nextDepth = typeof state.__familyDepth === 'number' ? state.__familyDepth : lastKnownDepth
+    const direction = nextDepth < lastKnownDepth ? 'back' : nextDepth > lastKnownDepth ? 'forward' : 'unknown'
+    lastKnownDepth = nextDepth
+
+    if (window.location.hash.startsWith('#/')) {
+      window.dispatchEvent(new CustomEvent('sila:history-navigation', {
+        detail: {
+          direction,
+          depth: nextDepth,
+          scrollY: typeof state.__familyScrollY === 'number' ? state.__familyScrollY : 0,
+        },
+      }))
+    }
   })
 
   document.addEventListener('click', (event) => {

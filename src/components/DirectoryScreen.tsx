@@ -154,11 +154,11 @@ function hasNextPage(receivedLength: number, count: number | null, from: number)
   return receivedLength > PAGE_SIZE || (count != null && from + PAGE_SIZE < count)
 }
 
-async function fetchPeoplePage(page: number, queryTerm: string): Promise<PeoplePage> {
+async function fetchPeoplePage(page: number, queryTerm: string, forceFresh = false): Promise<PeoplePage> {
   if (!supabase) return { rows: [], count: null, hasMore: false }
   const key = cacheKey(queryTerm, page)
   const cached = peopleCache.get(key)
-  if (cached && Date.now() - cached.savedAt < CACHE_TTL) return cached
+  if (!forceFresh && cached && Date.now() - cached.savedAt < CACHE_TTL) return cached
 
   const from = page * PAGE_SIZE
   const normalizedTerm = queryTerm.trim()
@@ -198,11 +198,11 @@ async function fetchPeoplePage(page: number, queryTerm: string): Promise<PeopleP
   return value
 }
 
-async function fetchHouseholdPage(page: number, queryTerm: string): Promise<HouseholdPage> {
+async function fetchHouseholdPage(page: number, queryTerm: string, forceFresh = false): Promise<HouseholdPage> {
   if (!supabase) return { rows: [], count: null, hasMore: false }
   const key = cacheKey(queryTerm, page)
   const cached = householdCache.get(key)
-  if (cached && Date.now() - cached.savedAt < CACHE_TTL) return cached
+  if (!forceFresh && cached && Date.now() - cached.savedAt < CACHE_TTL) return cached
 
   const from = page * PAGE_SIZE
   const { data, error } = await supabase.rpc('list_households_v1', {
@@ -240,13 +240,17 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
   const requestRef = useRef(0)
   const debounceRef = useRef<number | null>(null)
 
-  const reload = useCallback(async (queryTerm: string) => {
+  const reload = useCallback(async (queryTerm: string, forceFresh = false) => {
     if (!supabase) return
+    if (forceFresh) {
+      peopleCache.clear()
+      householdCache.clear()
+    }
     const requestId = ++requestRef.current
     setLoading(true)
     setError('')
     try {
-      const [peopleResult, householdResult] = await Promise.all([fetchPeoplePage(0, queryTerm), fetchHouseholdPage(0, queryTerm)])
+      const [peopleResult, householdResult] = await Promise.all([fetchPeoplePage(0, queryTerm, forceFresh), fetchHouseholdPage(0, queryTerm, forceFresh)])
       if (requestId !== requestRef.current) return
       setPeople(peopleResult.rows)
       setPeopleCount(peopleResult.count)
@@ -268,7 +272,7 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
     const value = initialTerm.trim()
     setTerm(initialTerm)
     setSubmittedTerm(value)
-    void reload(value)
+    void reload(value, true)
   }, [initialTerm, reload])
 
   useEffect(() => setTab(initialTab), [initialTab])

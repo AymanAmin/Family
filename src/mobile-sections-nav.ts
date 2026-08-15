@@ -15,10 +15,6 @@ const sectionsIcon = `
 
 let enhanceFrame = 0
 
-function normalizedText(element: Element | null) {
-  return element?.textContent?.replace(/\s+/g, ' ').trim() || ''
-}
-
 function currentScreen() {
   return new URL(window.location.href).searchParams.get('screen')
 }
@@ -27,9 +23,13 @@ function findSectionsButton() {
   return document.querySelector<HTMLButtonElement>('.mobile-bottom-nav .mobile-sections-nav')
 }
 
-function enhanceMobileSectionsButton() {
+function candidateSectionsButton() {
   const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.mobile-bottom-nav > button'))
-  const button = findSectionsButton() || buttons.find((item) => normalizedText(item).includes('الإدارة')) || null
+  return findSectionsButton() || buttons.at(-1) || null
+}
+
+function enhanceMobileSectionsButton() {
+  const button = candidateSectionsButton()
   if (!button) return
 
   button.classList.add('mobile-sections-nav')
@@ -53,9 +53,6 @@ function scheduleEnhance() {
 }
 
 function notifySectionsHost() {
-  // stats-swipe-fix owns the actual "كل الأقسام" screen. Triggering a tiny DOM
-  // mutation makes its observer immediately re-read the screen query without a
-  // page reload or a detour through the home screen.
   const signal = document.createElement('i')
   signal.hidden = true
   signal.dataset.sectionsNavigationSignal = 'true'
@@ -69,8 +66,12 @@ function openSections() {
     url.searchParams.set('screen', SECTIONS_SCREEN)
     window.history.pushState(window.history.state, '', url.toString())
   }
+
   enhanceMobileSectionsButton()
   notifySectionsHost()
+
+  window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }))
+  window.requestAnimationFrame(notifySectionsHost)
 }
 
 if (typeof document !== 'undefined') {

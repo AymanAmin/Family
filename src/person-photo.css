@@ -187,4 +187,67 @@
   .person-photo-admin-actions .primary {
     grid-column: 1 / -1;
   }
+
+  /* Person profile actions: keep common actions together, photo actions together,
+     and isolate the destructive action on its own row. */
+  .detail-page .detail-hero > .record-action-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+
+  .detail-page .record-action-group .record-share-wrap {
+    order: 1;
+    grid-column: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  .detail-page .record-action-group .record-edit-trigger {
+    order: 2;
+  }
+
+  .detail-page .record-action-group .person-photo-admin-trigger:not(.person-google-photo-trigger) {
+    order: 3;
+  }
+
+  .detail-page .record-action-group .person-google-photo-trigger {
+    order: 4;
+  }
+
+  .detail-page .record-action-group .record-archive-trigger {
+    order: 5;
+    grid-column: 1 / -1 !important;
+    margin-top: 2px !important;
+  }
+
+  .detail-page .record-action-group .record-share-trigger,
+  .detail-page .record-action-group .record-edit-trigger,
+  .detail-page .record-action-group .person-photo-admin-trigger {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 48px !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 8px 10px !important;
+    border-radius: 13px !important;
+    font-size: .67rem !important;
+    line-height: 1.35 !important;
+    box-sizing: border-box !important;
+  }
+
+  .detail-page .record-action-group .record-archive-trigger {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 42px !important;
+    height: auto !important;
+    padding: 7px 10px !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  .detail-page .record-action-group .person-photo-admin-trigger > span {
+    flex: 0 0 auto;
+  }
 }

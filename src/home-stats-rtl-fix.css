@@ -17,9 +17,34 @@
   .unified-home-stats {
     direction: rtl !important;
     scroll-padding-inline-start: 12px;
+    margin-top: 8px !important;
   }
 
   .nasab-dashboard {
-    row-gap: 18px !important;
+    row-gap: 26px !important;
+  }
+
+  /* Keep the welcome card comfortably inside the phone viewport and reduce its height. */
+  .compact-family-welcome {
+    width: calc(100% - 14px) !important;
+    min-height: 166px !important;
+    margin-inline: auto !important;
+    padding: 18px 18px 17px !important;
+    border-radius: 22px !important;
+  }
+
+  .compact-family-welcome .eyebrow {
+    font-size: .62rem !important;
+  }
+
+  .compact-family-welcome h2 {
+    margin: 8px 0 6px !important;
+    font-size: 1.17rem !important;
+    line-height: 1.55 !important;
+  }
+
+  .compact-family-welcome p {
+    font-size: .75rem !important;
+    line-height: 1.68 !important;
   }
 }

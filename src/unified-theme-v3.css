@@ -1,0 +1,1109 @@
+/* Sila unified theme v3
+   Final visual compatibility layer for legacy screens.
+   Keeps functionality intact while bringing directories, profiles, tree,
+   administration, forms, overlays and the sections hub into the warm Sila theme. */
+
+:root {
+  --sila-bg: #f8f5ed;
+  --sila-surface: #fffdf9;
+  --sila-surface-soft: #f4f8f5;
+  --sila-cream: #f7efe0;
+  --sila-mint: #e8f4ef;
+  --sila-navy: #293957;
+  --sila-navy-strong: #203557;
+  --sila-teal: #4d9198;
+  --sila-teal-deep: #2f7885;
+  --sila-gold: #aa7b35;
+  --sila-gold-soft: #ead6ad;
+  --sila-text: #2e3441;
+  --sila-muted: #7d817d;
+  --sila-line: #e7e1d7;
+  --sila-line-teal: #d4e7e2;
+  --sila-danger: #9e4248;
+  --sila-radius-xl: 30px;
+  --sila-radius-lg: 24px;
+  --sila-radius-md: 18px;
+  --sila-shadow: 0 14px 38px rgb(48 55 65 / 5%);
+}
+
+body,
+.app-shell {
+  background:
+    radial-gradient(circle at 94% 8%, rgb(77 145 152 / 5%), transparent 25rem),
+    radial-gradient(circle at 8% 30%, rgb(170 123 53 / 5%), transparent 24rem),
+    var(--sila-bg) !important;
+  color: var(--sila-text);
+}
+
+.app-shell > main {
+  position: relative;
+}
+
+/* Shared new-theme surfaces */
+.directory-v2-page,
+.family-tree-page,
+.page-section.detail-page,
+.page-section.account-page,
+.page-section.admin-console,
+.page-section.narrow:not(.news-page),
+.home-navigation-hub-screen {
+  color: var(--sila-text) !important;
+}
+
+.directory-v2-hero,
+.family-tree-hero,
+.detail-page > .detail-hero,
+.account-page > .detail-hero,
+.admin-console-hero,
+.page-section.narrow > .page-heading,
+.home-navigation-hub-header,
+.household-profile-hero {
+  border: 1px solid var(--sila-line-teal) !important;
+  border-radius: var(--sila-radius-xl) !important;
+  background:
+    radial-gradient(circle at 12% 80%, rgb(170 123 53 / 6%) 0 82px, transparent 83px),
+    linear-gradient(135deg, #fffdfa 0%, #f3faf7 100%) !important;
+  box-shadow: var(--sila-shadow) !important;
+}
+
+.directory-kicker,
+.tree-kicker,
+.detail-hero .eyebrow,
+.admin-console-hero .eyebrow,
+.page-heading .eyebrow,
+.home-navigation-hub-header span,
+.household-profile-title > span,
+.household-profile-context header > span,
+.household-marriages-section > header span {
+  color: var(--sila-teal-deep) !important;
+  font-weight: 900 !important;
+  letter-spacing: 0 !important;
+}
+
+.directory-v2-heading h1,
+.family-tree-hero h1,
+.detail-hero h1,
+.admin-console-hero h1,
+.page-heading h1,
+.home-navigation-hub-header h1,
+.household-profile-title h1 {
+  color: var(--sila-navy-strong) !important;
+  font-weight: 950 !important;
+  letter-spacing: -.025em !important;
+}
+
+.directory-v2-heading p,
+.family-tree-hero p,
+.detail-hero p,
+.admin-console-hero p,
+.page-heading p,
+.home-navigation-hub-header p,
+.household-profile-title p {
+  color: var(--sila-muted) !important;
+  line-height: 1.9 !important;
+}
+
+/* Generic cards used across old screens */
+.detail-facts,
+.detail-facts > article,
+.account-status-card,
+.account-logout-card,
+.data-form,
+.person-relation-card,
+.life-status-card,
+.relationship-sync-card,
+.link-account-card,
+.admin-console-panel,
+.review-row,
+.empty-state,
+.directory-result-section,
+.directory-person-card,
+.directory-family-card,
+.tree-mode-tabs,
+.tree-focus-card,
+.tree-empty-stage,
+.path-picker-card,
+.kinship-engine-card,
+.household-profile-stats,
+.household-profile-context,
+.household-marriage-card,
+.household-unassigned-section,
+.record-edit-sheet,
+.lineage-review-panel,
+.lineage-structure-panel,
+.scope-admin-panel,
+.admin-backup-card,
+.home-navigation-hub-item {
+  border-color: var(--sila-line) !important;
+  background: var(--sila-surface) !important;
+  box-shadow: 0 8px 26px rgb(44 53 63 / 4%) !important;
+}
+
+/* Buttons and fields */
+.page-section:not(.news-page) button,
+.directory-v2-page button,
+.family-tree-page button,
+.household-profile-layer button,
+.home-navigation-hub-screen button {
+  font-family: inherit;
+}
+
+.data-form input,
+.data-form select,
+.data-form textarea,
+.auth-form input,
+.directory-search-box,
+.people-picker,
+.people-picker input,
+.family-picker,
+.family-picker input,
+.record-edit-form input,
+.record-edit-form select,
+.record-edit-form textarea {
+  border-color: #dfddd7 !important;
+  background: #fff !important;
+  color: var(--sila-text) !important;
+  box-shadow: none !important;
+}
+
+.data-form input:focus,
+.data-form select:focus,
+.data-form textarea:focus,
+.auth-form input:focus,
+.directory-search-box:focus-within,
+.people-picker:focus-within,
+.family-picker:focus-within,
+.record-edit-form input:focus,
+.record-edit-form select:focus,
+.record-edit-form textarea:focus {
+  border-color: rgb(77 145 152 / 48%) !important;
+  box-shadow: 0 0 0 4px rgb(77 145 152 / 8%) !important;
+  outline: 0 !important;
+}
+
+.primary,
+.directory-search-submit,
+.path-discover-button,
+.admin-load-more {
+  border: 0 !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--sila-navy-strong), var(--sila-teal)) !important;
+  box-shadow: 0 10px 22px rgb(37 70 91 / 14%) !important;
+}
+
+.secondary,
+.back-button,
+.directory-more,
+.tree-card-heading button,
+.home-navigation-hub-back {
+  border: 1px solid var(--sila-line) !important;
+  color: var(--sila-navy) !important;
+  background: #fffaf2 !important;
+  box-shadow: none !important;
+}
+
+/* Directory: people + households */
+.directory-v2-page {
+  display: grid !important;
+  gap: 18px !important;
+}
+
+.directory-v2-hero {
+  padding: 30px !important;
+  overflow: hidden !important;
+}
+
+.directory-v2-heading {
+  max-width: 760px !important;
+}
+
+.directory-v2-heading h1 {
+  max-width: 720px !important;
+  margin: 6px 0 8px !important;
+  font-size: clamp(2rem, 5vw, 3.35rem) !important;
+  line-height: 1.2 !important;
+}
+
+.directory-search-box {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto auto !important;
+  align-items: center !important;
+  min-height: 68px !important;
+  margin-top: 22px !important;
+  padding: 7px 9px !important;
+  border: 1px solid var(--sila-line-teal) !important;
+  border-radius: 22px !important;
+}
+
+.directory-search-box input {
+  min-width: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 1rem !important;
+}
+
+.directory-search-submit {
+  min-width: 112px !important;
+  min-height: 52px !important;
+  border-radius: 16px !important;
+}
+
+.directory-search-icon {
+  color: var(--sila-teal-deep) !important;
+}
+
+.directory-tabs {
+  display: flex !important;
+  gap: 8px !important;
+  margin-top: 16px !important;
+  padding: 5px !important;
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 18px !important;
+  background: rgb(255 255 255 / 66%) !important;
+}
+
+.directory-tabs button {
+  min-height: 42px !important;
+  padding: 8px 16px !important;
+  border: 0 !important;
+  border-radius: 13px !important;
+  color: #747875 !important;
+  background: transparent !important;
+}
+
+.directory-tabs button.active {
+  color: var(--sila-gold) !important;
+  background: var(--sila-cream) !important;
+  box-shadow: inset 0 -2px 0 var(--sila-gold-soft) !important;
+}
+
+.directory-result-stack {
+  display: grid !important;
+  gap: 18px !important;
+}
+
+.directory-result-section {
+  padding: 22px !important;
+  border-radius: 26px !important;
+}
+
+.directory-result-section > header {
+  margin-bottom: 14px !important;
+}
+
+.directory-result-section > header h2 {
+  margin-top: 5px !important;
+  color: var(--sila-navy) !important;
+  font-size: 1.35rem !important;
+}
+
+.directory-result-section > header > strong {
+  display: grid !important;
+  min-width: 58px !important;
+  min-height: 46px !important;
+  place-items: center !important;
+  border-radius: 15px !important;
+  color: var(--sila-teal-deep) !important;
+  background: var(--sila-mint) !important;
+}
+
+.directory-person-list,
+.directory-family-grid {
+  gap: 10px !important;
+}
+
+.directory-person-card,
+.directory-family-card {
+  min-height: 86px !important;
+  padding: 12px 14px !important;
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 20px !important;
+}
+
+.directory-person-card:active,
+.directory-family-card:active {
+  transform: scale(.995) !important;
+}
+
+.directory-avatar,
+.directory-family-mark {
+  display: grid !important;
+  width: 58px !important;
+  height: 58px !important;
+  place-items: center !important;
+  flex: 0 0 58px !important;
+  border-radius: 18px !important;
+  color: var(--sila-navy) !important;
+  background: var(--sila-mint) !important;
+}
+
+.directory-avatar.female,
+.directory-family-mark {
+  color: #94662c !important;
+  background: #fbefd9 !important;
+}
+
+.directory-card-copy strong {
+  color: var(--sila-navy) !important;
+}
+
+.directory-card-copy small {
+  color: var(--sila-muted) !important;
+}
+
+.directory-arrow {
+  color: var(--sila-teal-deep) !important;
+}
+
+/* Tree and kinship */
+.family-tree-page {
+  display: grid !important;
+  gap: 18px !important;
+}
+
+.family-tree-hero {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 24px !important;
+  padding: 30px !important;
+}
+
+.family-tree-hero > div:last-child {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+}
+
+.tree-hero-mark {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: 108px !important;
+  height: 108px !important;
+  border: 1px solid var(--sila-line-teal) !important;
+  border-radius: 28px !important;
+  background: linear-gradient(145deg, #eef8f4, #e2f0e9) !important;
+  box-shadow: none !important;
+}
+
+.family-tree-hero h1 {
+  margin: 5px 0 8px !important;
+  font-size: clamp(2rem, 5vw, 3rem) !important;
+}
+
+.tree-mode-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  padding: 7px !important;
+  border-radius: 22px !important;
+}
+
+.tree-mode-tabs button {
+  min-height: 74px !important;
+  border: 0 !important;
+  border-radius: 17px !important;
+  color: var(--sila-muted) !important;
+  background: transparent !important;
+}
+
+.tree-mode-tabs button.active {
+  color: var(--sila-navy) !important;
+  background: #fff !important;
+  box-shadow: 0 6px 20px rgb(43 55 66 / 6%) !important;
+}
+
+.tree-mode-tabs button.active > span {
+  color: #fff !important;
+  background: linear-gradient(145deg, var(--sila-navy), var(--sila-teal)) !important;
+}
+
+.tree-workspace,
+.kinship-path-workspace {
+  gap: 18px !important;
+}
+
+.tree-focus-card,
+.tree-empty-stage,
+.path-picker-card,
+.kinship-engine-card {
+  padding: 22px !important;
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 24px !important;
+}
+
+.tree-card-heading h2,
+.kinship-engine-card strong {
+  color: var(--sila-navy) !important;
+}
+
+/* Person / family profile */
+.detail-page {
+  display: grid !important;
+  gap: 16px !important;
+}
+
+.detail-page > .back-button {
+  justify-self: start !important;
+  min-height: 46px !important;
+  padding: 9px 16px !important;
+  border-radius: 15px !important;
+}
+
+.detail-page > .detail-hero {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  gap: 18px !important;
+  align-items: center !important;
+  padding: 26px !important;
+}
+
+.detail-avatar {
+  display: grid !important;
+  width: 94px !important;
+  height: 94px !important;
+  place-items: center !important;
+  border: 0 !important;
+  border-radius: 26px !important;
+  color: #fff !important;
+  background: linear-gradient(145deg, var(--sila-navy), #50aaa4) !important;
+  box-shadow: 0 12px 26px rgb(42 77 89 / 14%) !important;
+}
+
+.detail-page .detail-hero h1 {
+  margin: 4px 0 5px !important;
+  font-size: clamp(1.75rem, 4.7vw, 2.65rem) !important;
+  line-height: 1.28 !important;
+}
+
+.detail-facts {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  overflow: hidden !important;
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 22px !important;
+}
+
+.detail-facts > article {
+  min-height: 108px !important;
+  padding: 16px !important;
+  border: 0 !important;
+  border-inline-start: 1px solid #ece8e1 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.detail-facts > article:first-child {
+  border-inline-start: 0 !important;
+}
+
+.detail-facts span,
+.detail-facts small {
+  color: var(--sila-muted) !important;
+}
+
+.detail-facts strong {
+  color: var(--sila-navy) !important;
+}
+
+.relationship-sync-card,
+.link-account-card,
+.account-status-card,
+.account-logout-card {
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 22px !important;
+}
+
+/* Household profile */
+.household-profile-layer {
+  background: rgb(38 52 66 / 18%) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.household-profile-page {
+  color: var(--sila-text) !important;
+  background: var(--sila-bg) !important;
+}
+
+.household-profile-topbar {
+  border-bottom: 1px solid var(--sila-line) !important;
+  background: rgb(255 253 249 / 92%) !important;
+  backdrop-filter: blur(18px) !important;
+}
+
+.household-profile-topbar button {
+  border: 1px solid var(--sila-line) !important;
+  color: var(--sila-navy) !important;
+  background: #fff !important;
+}
+
+.household-profile-hero {
+  padding: 24px !important;
+}
+
+.household-profile-avatar {
+  color: #fff !important;
+  background: linear-gradient(145deg, var(--sila-navy), #4cad9f) !important;
+  box-shadow: none !important;
+}
+
+.household-open-husband {
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 18px !important;
+  background: rgb(255 255 255 / 72%) !important;
+}
+
+.household-profile-stats {
+  overflow: hidden !important;
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 22px !important;
+}
+
+.household-profile-stats article {
+  border-color: var(--sila-line) !important;
+  background: #fffdf9 !important;
+}
+
+.household-profile-stats strong {
+  color: var(--sila-teal-deep) !important;
+}
+
+.household-profile-context,
+.household-marriage-card,
+.household-unassigned-section {
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 22px !important;
+}
+
+.household-spouse-heading > button {
+  border: 0 !important;
+  border-radius: 16px !important;
+  background: #fff8ee !important;
+}
+
+.household-spouse-heading > button.female {
+  background: #f9edf0 !important;
+}
+
+.household-child-grid button {
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 17px !important;
+  background: #f9fcfa !important;
+}
+
+/* Administration */
+.admin-console {
+  display: grid !important;
+  gap: 16px !important;
+}
+
+.admin-console-hero {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 18px !important;
+  padding: 26px !important;
+}
+
+.admin-console-hero h1 {
+  margin: 4px 0 5px !important;
+  font-size: clamp(1.8rem, 4.5vw, 2.5rem) !important;
+}
+
+.admin-console-count {
+  display: grid !important;
+  width: 104px !important;
+  min-height: 108px !important;
+  place-items: center !important;
+  align-content: center !important;
+  border-radius: 25px !important;
+  color: #fff !important;
+  background: linear-gradient(150deg, var(--sila-navy), var(--sila-teal)) !important;
+  box-shadow: none !important;
+}
+
+.admin-console-tabs {
+  display: flex !important;
+  gap: 7px !important;
+  overflow-x: auto !important;
+  padding: 6px !important;
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 20px !important;
+  background: rgb(255 253 249 / 84%) !important;
+  scrollbar-width: none !important;
+}
+
+.admin-console-tabs::-webkit-scrollbar { display: none !important; }
+
+.admin-console-tabs button {
+  flex: 0 0 auto !important;
+  min-height: 44px !important;
+  padding: 9px 16px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  color: #68716f !important;
+  background: transparent !important;
+  white-space: nowrap !important;
+}
+
+.admin-console-tabs button.active {
+  color: var(--sila-navy) !important;
+  background: var(--sila-cream) !important;
+  box-shadow: inset 0 -2px 0 var(--sila-gold-soft) !important;
+}
+
+.admin-console-panel {
+  padding: 20px !important;
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 25px !important;
+}
+
+.review-list {
+  gap: 11px !important;
+}
+
+.review-row {
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 19px !important;
+}
+
+.review-actions .approve {
+  color: #1b7760 !important;
+  background: #e8f6ef !important;
+}
+
+.review-actions .reject {
+  color: var(--sila-danger) !important;
+  background: #fbefef !important;
+}
+
+.empty-state {
+  border: 1px dashed #d9d1c4 !important;
+  border-radius: 22px !important;
+  color: var(--sila-muted) !important;
+  background: rgb(255 255 255 / 48%) !important;
+}
+
+.empty-state strong { color: var(--sila-navy) !important; }
+
+/* Add, account and legacy forms */
+.page-section.narrow > .page-heading {
+  padding: 24px !important;
+}
+
+.segmented-control {
+  display: flex !important;
+  gap: 6px !important;
+  padding: 5px !important;
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 18px !important;
+  background: #fffdf9 !important;
+}
+
+.segmented-control button {
+  min-height: 42px !important;
+  border: 0 !important;
+  border-radius: 13px !important;
+  color: var(--sila-muted) !important;
+  background: transparent !important;
+}
+
+.segmented-control button.active {
+  color: var(--sila-gold) !important;
+  background: var(--sila-cream) !important;
+}
+
+.data-form {
+  padding: 20px !important;
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 24px !important;
+}
+
+.data-form label > span,
+.record-edit-form label > span {
+  color: var(--sila-navy) !important;
+  font-weight: 800 !important;
+}
+
+.data-form input,
+.data-form select,
+.data-form textarea,
+.record-edit-form input,
+.record-edit-form select,
+.record-edit-form textarea {
+  min-height: 50px !important;
+  border-radius: 14px !important;
+}
+
+.data-form textarea,
+.record-edit-form textarea { min-height: 112px !important; }
+
+.account-status-card,
+.account-logout-card {
+  padding: 20px !important;
+}
+
+/* Record edit + management overlays */
+.record-edit-overlay,
+.lineage-review-overlay,
+.lineage-structure-overlay,
+.scope-admin-overlay {
+  background: rgb(28 43 55 / 28%) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.record-edit-sheet,
+.lineage-review-panel,
+.lineage-structure-panel,
+.scope-admin-panel {
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 25px !important;
+  background: var(--sila-bg) !important;
+}
+
+.record-edit-heading,
+.lineage-review-header,
+.lineage-structure-header,
+.scope-admin-header {
+  border-bottom: 1px solid var(--sila-line) !important;
+  background: #fffdf9 !important;
+}
+
+/* All sections hub */
+body.home-navigation-hub-active .app-shell > main > :not(.home-navigation-hub-screen) {
+  display: none !important;
+}
+
+body.home-navigation-hub-active .app-shell > main > .home-navigation-hub-screen {
+  display: grid !important;
+}
+
+.home-navigation-hub-screen {
+  width: min(100% - 28px, 980px) !important;
+  margin: 18px auto 120px !important;
+  gap: 16px !important;
+}
+
+.home-navigation-hub-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 18px !important;
+  padding: 24px !important;
+}
+
+.home-navigation-hub-back {
+  min-height: 46px !important;
+  padding: 9px 16px !important;
+  border-radius: 15px !important;
+}
+
+.home-navigation-hub-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.home-navigation-hub-item {
+  display: grid !important;
+  grid-template-columns: 56px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 92px !important;
+  padding: 14px !important;
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 20px !important;
+  text-align: right !important;
+}
+
+.home-navigation-hub-item .home-hub-icon {
+  display: grid !important;
+  width: 54px !important;
+  height: 54px !important;
+  place-items: center !important;
+  border-radius: 17px !important;
+  color: var(--sila-teal-deep) !important;
+  background: var(--sila-mint) !important;
+}
+
+.home-navigation-hub-item .home-hub-copy strong {
+  color: var(--sila-navy) !important;
+}
+
+.home-navigation-hub-item .home-hub-copy small {
+  color: var(--sila-muted) !important;
+}
+
+.home-navigation-hub-group-title {
+  grid-column: 1 / -1 !important;
+  padding: 18px 2px 4px !important;
+  color: var(--sila-navy) !important;
+}
+
+/* Standalone admin screens created by navigation hub */
+.admin-standalone-header {
+  margin-bottom: 14px !important;
+  padding: 22px !important;
+  border: 1px solid var(--sila-line-teal) !important;
+  border-radius: 24px !important;
+  background: linear-gradient(135deg, #fffdfa, #f2faf7) !important;
+}
+
+.admin-standalone-header h1 { color: var(--sila-navy) !important; }
+.admin-standalone-header p { color: var(--sila-muted) !important; }
+.admin-standalone-header button {
+  border: 1px solid var(--sila-line) !important;
+  border-radius: 14px !important;
+  color: var(--sila-navy) !important;
+  background: #fffaf2 !important;
+}
+
+/* Preserve current news card design; only normalize surrounding old surfaces. */
+.news-page .news-toolbar,
+.news-page .news-page-header {
+  border-color: var(--sila-line) !important;
+}
+
+@media (max-width: 760px) {
+  .directory-v2-page,
+  .family-tree-page,
+  .page-section.detail-page,
+  .page-section.account-page,
+  .page-section.admin-console,
+  .page-section.narrow:not(.news-page) {
+    width: min(100% - 24px, 720px) !important;
+    margin-inline: auto !important;
+  }
+
+  .directory-v2-hero,
+  .family-tree-hero,
+  .detail-page > .detail-hero,
+  .account-page > .detail-hero,
+  .admin-console-hero,
+  .page-section.narrow > .page-heading,
+  .household-profile-hero {
+    border-radius: 24px !important;
+  }
+
+  .directory-v2-hero {
+    padding: 22px 18px !important;
+  }
+
+  .directory-v2-heading h1 {
+    font-size: 2.15rem !important;
+    line-height: 1.18 !important;
+  }
+
+  .directory-v2-heading p {
+    font-size: .88rem !important;
+  }
+
+  .directory-search-box {
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    min-height: 58px !important;
+    padding: 5px 7px !important;
+    border-radius: 18px !important;
+  }
+
+  .directory-search-submit {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-height: 46px !important;
+    margin-top: 6px !important;
+    border-radius: 14px !important;
+  }
+
+  .directory-tabs {
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+  }
+  .directory-tabs::-webkit-scrollbar { display: none !important; }
+  .directory-tabs button { flex: 0 0 auto !important; }
+
+  .directory-result-section {
+    padding: 16px !important;
+    border-radius: 22px !important;
+  }
+
+  .directory-person-card,
+  .directory-family-card {
+    min-height: 76px !important;
+    border-radius: 17px !important;
+  }
+
+  .directory-avatar,
+  .directory-family-mark {
+    width: 52px !important;
+    height: 52px !important;
+    flex-basis: 52px !important;
+    border-radius: 16px !important;
+  }
+
+  .family-tree-hero {
+    grid-template-columns: minmax(0, 1fr) 80px !important;
+    gap: 13px !important;
+    padding: 20px 18px !important;
+  }
+
+  .tree-hero-mark {
+    width: 80px !important;
+    height: 80px !important;
+    border-radius: 22px !important;
+  }
+
+  .family-tree-hero h1 {
+    font-size: 2rem !important;
+  }
+
+  .family-tree-hero p {
+    font-size: .82rem !important;
+    line-height: 1.75 !important;
+  }
+
+  .tree-mode-tabs button {
+    min-height: 68px !important;
+    padding: 9px !important;
+  }
+
+  .tree-mode-tabs button small {
+    font-size: .63rem !important;
+  }
+
+  .tree-focus-card,
+  .tree-empty-stage,
+  .path-picker-card,
+  .kinship-engine-card {
+    padding: 17px !important;
+    border-radius: 21px !important;
+  }
+
+  .detail-page > .detail-hero {
+    grid-template-columns: 74px minmax(0, 1fr) !important;
+    padding: 19px !important;
+  }
+
+  .detail-avatar {
+    width: 74px !important;
+    height: 74px !important;
+    border-radius: 21px !important;
+  }
+
+  .detail-page .detail-hero h1 {
+    font-size: 1.65rem !important;
+  }
+
+  .detail-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    border-radius: 19px !important;
+  }
+
+  .detail-facts > article {
+    min-height: 94px !important;
+    padding: 13px !important;
+  }
+
+  .admin-console-hero {
+    grid-template-columns: minmax(0, 1fr) 82px !important;
+    padding: 20px 18px !important;
+  }
+
+  .admin-console-count {
+    width: 80px !important;
+    min-height: 84px !important;
+    border-radius: 21px !important;
+  }
+
+  .admin-console-hero h1 {
+    font-size: 1.8rem !important;
+  }
+
+  .admin-console-hero p {
+    font-size: .8rem !important;
+    line-height: 1.7 !important;
+  }
+
+  .admin-console-panel {
+    padding: 14px !important;
+    border-radius: 22px !important;
+  }
+
+  .review-row {
+    border-radius: 17px !important;
+  }
+
+  .household-profile-page {
+    padding-bottom: 108px !important;
+  }
+
+  .household-profile-hero {
+    padding: 18px !important;
+    border-radius: 23px !important;
+  }
+
+  .household-profile-stats,
+  .household-profile-context,
+  .household-marriage-card {
+    border-radius: 19px !important;
+  }
+
+  .home-navigation-hub-screen {
+    width: calc(100% - 24px) !important;
+    margin-top: 14px !important;
+    margin-bottom: 112px !important;
+  }
+
+  .home-navigation-hub-header {
+    align-items: flex-start !important;
+    padding: 19px !important;
+    border-radius: 23px !important;
+  }
+
+  .home-navigation-hub-header h1 {
+    font-size: 1.85rem !important;
+  }
+
+  .home-navigation-hub-header p {
+    font-size: .78rem !important;
+  }
+
+  .home-navigation-hub-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 9px !important;
+  }
+
+  .home-navigation-hub-item {
+    grid-template-columns: 46px minmax(0, 1fr) !important;
+    min-height: 82px !important;
+    gap: 9px !important;
+    padding: 11px !important;
+    border-radius: 18px !important;
+  }
+
+  .home-navigation-hub-item .home-hub-icon {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 14px !important;
+  }
+
+  .home-navigation-hub-item .home-hub-copy strong {
+    font-size: .78rem !important;
+  }
+
+  .home-navigation-hub-item .home-hub-copy small {
+    font-size: .62rem !important;
+  }
+
+  .page-section.narrow > .page-heading,
+  .data-form,
+  .account-status-card,
+  .account-logout-card {
+    padding: 17px !important;
+  }
+
+  .record-edit-sheet,
+  .lineage-review-panel,
+  .lineage-structure-panel,
+  .scope-admin-panel {
+    border-radius: 21px !important;
+  }
+}

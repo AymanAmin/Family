@@ -467,10 +467,119 @@ body.admin-standalone-external .admin-console {
   }
 
   .home-navigation-hub-header {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto minmax(0, 1fr) !important;
   }
 
   .home-navigation-hub-back {
     justify-self: start;
+  }
+}
+
+/* Compact the top-ancestors header as well. */
+.top-ancestors-screen {
+  margin-top: 16px !important;
+}
+
+.top-ancestors-hero {
+  grid-template-columns: auto minmax(0, 1fr) 74px !important;
+  gap: 14px !important;
+  padding: 18px 20px !important;
+  border-radius: 22px !important;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, .065) !important;
+}
+
+.top-ancestors-back {
+  align-self: center !important;
+  padding: 8px 11px !important;
+  font-size: .72rem !important;
+}
+
+.top-ancestors-title h1 {
+  margin: 2px 0 4px !important;
+  font-size: clamp(24px, 3vw, 34px) !important;
+  line-height: 1.18 !important;
+}
+
+.top-ancestors-title p {
+  font-size: .78rem !important;
+  line-height: 1.55 !important;
+}
+
+.top-ancestors-title .eyebrow {
+  font-size: .68rem !important;
+}
+
+.top-ancestors-mark {
+  width: 74px !important;
+  height: 74px !important;
+  border-radius: 20px !important;
+}
+
+.top-ancestors-mark > span {
+  width: 42px !important;
+  height: 42px !important;
+  font-size: 21px !important;
+}
+
+.top-ancestors-mark i,
+.top-ancestors-mark b {
+  bottom: 10px !important;
+  height: 28px !important;
+}
+
+@media (max-width: 900px) {
+  .top-ancestors-hero {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    gap: 10px !important;
+    padding: 13px 15px !important;
+    border-radius: 19px !important;
+  }
+
+  .top-ancestors-back {
+    grid-column: auto !important;
+    justify-self: auto !important;
+  }
+
+  .top-ancestors-mark {
+    display: none !important;
+  }
+
+  .top-ancestors-title h1 {
+    font-size: 1.32rem !important;
+  }
+
+  .top-ancestors-title p {
+    font-size: .7rem !important;
+    line-height: 1.42 !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .top-ancestors-screen {
+    margin-top: 8px !important;
+  }
+
+  .top-ancestors-hero {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+    border-radius: 17px !important;
+  }
+
+  .top-ancestors-back {
+    padding: 7px 9px !important;
+    font-size: .64rem !important;
+  }
+
+  .top-ancestors-title h1 {
+    margin: 1px 0 2px !important;
+    font-size: 1.16rem !important;
+  }
+
+  .top-ancestors-title p {
+    font-size: .64rem !important;
+  }
+
+  .top-ancestors-title .eyebrow {
+    font-size: .58rem !important;
   }
 }

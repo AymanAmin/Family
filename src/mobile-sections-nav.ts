@@ -1,4 +1,5 @@
 import './android-apk-install'
+import './feedback-auto-dismiss'
 
 const SECTIONS_SCREEN = 'menu'
 
@@ -31,7 +32,17 @@ function findSectionsButton() {
 
 function candidateSectionsButton() {
   const buttons = navButtons()
-  return findSectionsButton() || buttons.at(-1) || null
+  const existing = findSectionsButton()
+  if (existing) return existing
+
+  // The fifth mobile slot used to be الإدارة for moderators and حسابي/دخول for members.
+  // Prefer matching that semantic slot explicitly, then fall back to the final nav button.
+  const legacySlot = buttons.find((button) => {
+    const label = button.querySelector<HTMLElement>(':scope > span:last-child')?.textContent?.trim()
+    return label === 'الإدارة' || label === 'حسابي' || label === 'دخول' || label === 'الأقسام'
+  })
+
+  return legacySlot || buttons.at(-1) || null
 }
 
 function syncExclusiveSectionsState(button: HTMLButtonElement) {
@@ -49,6 +60,7 @@ function enhanceMobileSectionsButton() {
 
   button.classList.add('mobile-sections-nav')
   button.setAttribute('aria-label', 'الأقسام')
+  button.setAttribute('title', 'الأقسام')
 
   const icon = button.querySelector<HTMLElement>('.mobile-nav-icon')
   if (icon && icon.dataset.sectionsIcon !== 'true') {
@@ -57,7 +69,7 @@ function enhanceMobileSectionsButton() {
   }
 
   const label = button.querySelector<HTMLElement>(':scope > span:last-child')
-  if (label && label.textContent !== 'الأقسام') label.textContent = 'الأقسام'
+  if (label && label.textContent?.trim() !== 'الأقسام') label.textContent = 'الأقسام'
 
   syncExclusiveSectionsState(button)
 }
@@ -103,6 +115,10 @@ if (typeof document !== 'undefined') {
     const navButton = target.closest<HTMLButtonElement>('.mobile-bottom-nav > button')
     if (!navButton) return
 
+    // Re-enhance before deciding so a freshly rendered legacy الإدارة/حسابي button
+    // is converted even if React replaced the DOM node immediately before the tap.
+    enhanceMobileSectionsButton()
+
     if (navButton.classList.contains('mobile-sections-nav')) {
       event.preventDefault()
       event.stopPropagation()
@@ -123,6 +139,7 @@ if (typeof document !== 'undefined') {
 
   window.addEventListener('popstate', scheduleEnhance)
   window.addEventListener('hashchange', scheduleEnhance)
+  window.addEventListener('pageshow', scheduleEnhance)
 }
 
 export {}

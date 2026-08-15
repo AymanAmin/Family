@@ -8,9 +8,18 @@
   text-align: right;
 }
 
+/* Give the welcome card and statistics strip enough visual breathing room. */
+.nasab-dashboard {
+  row-gap: 24px;
+}
+
 @media (max-width: 760px) {
   .unified-home-stats {
     direction: rtl !important;
     scroll-padding-inline-start: 12px;
+  }
+
+  .nasab-dashboard {
+    row-gap: 18px !important;
   }
 }

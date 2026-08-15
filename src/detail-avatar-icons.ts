@@ -1,3 +1,4 @@
+import './home-news-layout-fix'
 import { supabase } from './lib/supabase'
 import './admin-person-attribution'
 

@@ -1,0 +1,344 @@
+/* Full news screen: use the same visual card language as the home latest-news carousel.
+   The only structural difference is that every news card occupies its own row. */
+
+.news-page .news-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 16px !important;
+}
+
+.news-page .news-card {
+  --news-home-strip: linear-gradient(135deg, #efd7aa, #dfbd7e);
+  --news-home-art: linear-gradient(145deg, #d2a45b, #9b6d30);
+  position: relative !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  border: 1px solid #e9e2da !important;
+  border-radius: 22px !important;
+  background: #fff !important;
+  box-shadow: 0 9px 26px rgb(49 48 61 / 6%) !important;
+  transform: none !important;
+}
+
+.news-page .news-card::before,
+.news-page .news-card::after {
+  display: none !important;
+  content: none !important;
+}
+
+.news-page .news-card-body {
+  display: flex !important;
+  min-width: 0 !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+}
+
+/* Same colored type strip used on the home cards. */
+.news-page .news-card-kicker {
+  order: 1 !important;
+  display: flex !important;
+  width: 100% !important;
+  min-height: 48px !important;
+  box-sizing: border-box !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 9px 12px !important;
+  background: var(--news-home-strip) !important;
+}
+
+.news-page .news-card-type {
+  display: flex !important;
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+.news-page .news-card-glyph,
+.news-page .news-card-kicker time {
+  display: none !important;
+}
+
+.news-page .news-type-pill {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  color: #202633 !important;
+  font-size: .75rem !important;
+  font-weight: 900 !important;
+  text-align: center !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Large shared artwork/icon area, identical in principle to the home carousel. */
+.news-page .news-card-body::before {
+  order: 2 !important;
+  display: grid !important;
+  width: 100% !important;
+  height: 220px !important;
+  min-height: 220px !important;
+  box-sizing: border-box !important;
+  place-items: center !important;
+  color: #fff !important;
+  background:
+    radial-gradient(circle at 20% 22%, rgb(255 255 255 / 25%) 0 44px, transparent 45px),
+    radial-gradient(circle at 84% 76%, rgb(255 255 255 / 14%) 0 64px, transparent 65px),
+    var(--news-home-art) !important;
+  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 5%) !important;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif !important;
+  font-size: 86px !important;
+  line-height: 1 !important;
+  text-shadow: 0 12px 30px rgb(30 39 57 / 18%) !important;
+  content: '📰' !important;
+}
+
+.news-page .news-type-wedding {
+  --news-home-strip: linear-gradient(135deg, #f0d8d9, #e7bec4);
+  --news-home-art: linear-gradient(145deg, #d999a4, #b76672);
+}
+.news-page .news-type-wedding .news-card-body::before { content: '💍' !important; }
+
+.news-page .news-type-birth {
+  --news-home-strip: linear-gradient(135deg, #dff2ef, #c6e8e4);
+  --news-home-art: linear-gradient(145deg, #8bcfc5, #5ba9ae);
+}
+.news-page .news-type-birth .news-card-body::before { content: '👶' !important; }
+
+.news-page .news-type-naming {
+  --news-home-strip: linear-gradient(135deg, #e7f1e6, #cfdfcc);
+  --news-home-art: linear-gradient(145deg, #9fc9a7, #699883);
+}
+.news-page .news-type-naming .news-card-body::before { content: '🍼' !important; }
+
+.news-page .news-type-graduation {
+  --news-home-strip: linear-gradient(135deg, #dbb56f, #c89949);
+  --news-home-art: linear-gradient(145deg, #435473, #202f4d);
+}
+.news-page .news-type-graduation .news-card-body::before { content: '🎓' !important; }
+
+.news-page .news-type-death {
+  --news-home-strip: linear-gradient(135deg, #e5e7ea, #ced3d9);
+  --news-home-art: linear-gradient(145deg, #75808b, #414b57);
+}
+.news-page .news-type-death .news-card-body::before { content: '🕊️' !important; }
+
+.news-page .news-type-general {
+  --news-home-strip: linear-gradient(135deg, #efd7aa, #dfbd7e);
+  --news-home-art: linear-gradient(145deg, #d2a45b, #9b6d30);
+}
+.news-page .news-type-general .news-card-body::before { content: '📰' !important; }
+
+.news-page .news-type-other {
+  --news-home-strip: linear-gradient(135deg, #ead8b5, #d4b276);
+  --news-home-art: linear-gradient(145deg, #c9a262, #8e6e3a);
+}
+.news-page .news-type-other .news-card-body::before { content: '🎉' !important; }
+
+/* Linked people come immediately below the artwork, matching the home card. */
+.news-page .news-people {
+  order: 3 !important;
+  display: flex !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  align-items: center !important;
+  gap: 7px !important;
+  margin: 0 !important;
+  padding: 12px 16px 0 !important;
+  overflow: hidden !important;
+  flex-wrap: nowrap !important;
+}
+
+.news-page .news-people button {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #26334f !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: .72rem !important;
+  font-weight: 900 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+.news-page .news-people button::before { content: '@ '; }
+
+.news-page .news-card h2 {
+  order: 4 !important;
+  margin: 9px 16px 0 !important;
+  color: #222936 !important;
+  font-family: inherit !important;
+  font-size: 1.02rem !important;
+  font-weight: 900 !important;
+  line-height: 1.65 !important;
+}
+
+.news-page .news-description {
+  order: 5 !important;
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  margin: 9px 16px 0 !important;
+  color: #666a70 !important;
+  font-size: .78rem !important;
+  line-height: 1.9 !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 3 !important;
+  line-clamp: 3 !important;
+}
+
+.news-page .news-meta {
+  order: 6 !important;
+  display: flex !important;
+  box-sizing: border-box !important;
+  align-items: center !important;
+  gap: 8px 14px !important;
+  margin: 9px 16px 13px !important;
+  color: #8b8985 !important;
+  font-size: .66rem !important;
+}
+
+.news-page .news-meta span {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Same compact two-part bottom action bar as the home card. */
+.news-page .news-card-actions {
+  order: 7 !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  width: 100% !important;
+  min-height: 44px !important;
+  margin: auto 0 0 !important;
+  padding: 0 !important;
+  border-top: 1px solid #ece7e1 !important;
+  background: #fff !important;
+}
+
+.news-page .news-card-actions > .event-share-wrap,
+.news-page .news-card-actions > .news-admin-edit {
+  display: flex !important;
+  min-width: 0 !important;
+  min-height: 44px !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.news-page .news-card-actions > .news-admin-edit {
+  border-inline-start: 1px solid #ece7e1 !important;
+}
+
+.news-page .news-card-actions .event-share-button,
+.news-page .news-card-actions .record-action-group,
+.news-page .news-card-actions .record-edit-trigger {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #293554 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.news-page .news-card-actions .record-action-group {
+  display: flex !important;
+  padding: 0 !important;
+}
+
+.news-page .news-card-actions .event-share-button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+}
+
+.news-page .news-card-actions .event-share-button b,
+.news-page .news-card-actions .record-edit-trigger {
+  font-size: .68rem !important;
+  font-weight: 900 !important;
+}
+
+.news-page .news-card-actions .event-share-button small,
+.news-page .news-card-actions .event-share-message {
+  display: none !important;
+}
+
+.news-page .news-skeleton-grid {
+  grid-template-columns: 1fr !important;
+}
+
+@media (max-width: 720px) {
+  .news-page .news-grid {
+    gap: 14px !important;
+  }
+
+  .news-page .news-card {
+    border-radius: 19px !important;
+  }
+
+  .news-page .news-card-kicker {
+    min-height: 43px !important;
+    padding: 8px 10px !important;
+  }
+
+  .news-page .news-type-pill {
+    font-size: .68rem !important;
+  }
+
+  .news-page .news-card-body::before {
+    height: 190px !important;
+    min-height: 190px !important;
+    font-size: 76px !important;
+  }
+
+  .news-page .news-people {
+    padding: 10px 13px 0 !important;
+  }
+
+  .news-page .news-people button {
+    font-size: .65rem !important;
+  }
+
+  .news-page .news-card h2 {
+    margin: 7px 13px 0 !important;
+    font-size: .9rem !important;
+  }
+
+  .news-page .news-description {
+    margin: 7px 13px 0 !important;
+    font-size: .7rem !important;
+    line-height: 1.82 !important;
+  }
+
+  .news-page .news-meta {
+    margin: 8px 13px 11px !important;
+    font-size: .6rem !important;
+  }
+
+  .news-page .news-card-actions,
+  .news-page .news-card-actions > .event-share-wrap,
+  .news-page .news-card-actions > .news-admin-edit,
+  .news-page .news-card-actions .event-share-button,
+  .news-page .news-card-actions .record-action-group,
+  .news-page .news-card-actions .record-edit-trigger {
+    min-height: 40px !important;
+    height: 40px !important;
+  }
+
+  .news-page .news-card-actions .event-share-button b,
+  .news-page .news-card-actions .record-edit-trigger {
+    font-size: .62rem !important;
+  }
+}

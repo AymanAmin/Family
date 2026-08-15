@@ -114,19 +114,20 @@
     max-width: calc(100% - 4px) !important;
     min-width: 0 !important;
     justify-self: center !important;
-    min-height: 390px !important;
+    min-height: 330px !important;
     padding-bottom: 42px !important;
     border-radius: 20px !important;
   }
 
+  /* Compact artwork area on the all-news screen to save vertical space. */
   .news-page .news-home-card-list .event-card::before {
-    height: 190px !important;
-    min-height: 190px !important;
-    font-size: 76px !important;
+    height: 132px !important;
+    min-height: 132px !important;
+    font-size: 52px !important;
   }
 
   .news-page .news-home-card-list .event-card .event-top {
-    min-height: 44px !important;
+    min-height: 42px !important;
   }
 
   .news-page .news-home-card-list .event-card h3 {

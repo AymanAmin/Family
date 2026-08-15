@@ -92,11 +92,40 @@ function displayLineage(value: string | null) {
   return value.replace(/^عائلة\s+/, 'نسب ')
 }
 
+function DirectoryGenderIcon({ gender }: { gender: DirectoryPerson['gender'] }) {
+  if (gender === 'female') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="9" r="5" />
+        <path d="M12 14v7" />
+        <path d="M9 18h6" />
+      </svg>
+    )
+  }
+
+  if (gender === 'male') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="10" cy="14" r="5" />
+        <path d="M13.5 10.5 20 4" />
+        <path d="M15 4h5v5" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
+    </svg>
+  )
+}
+
 function PersonCard({ item, onOpen }: { item: DirectoryPerson; onOpen: (item: DirectoryPerson) => void }) {
   const meta = [item.birth_year ? String(item.birth_year) : '', item.is_deceased ? 'متوفى' : '', item.description || ''].filter(Boolean).slice(0, 2).join(' · ')
   return (
     <button className="directory-person-card" type="button" onClick={() => onOpen(item)}>
-      <span className={`directory-avatar ${item.gender === 'female' ? 'female' : ''}`}>{item.full_name.trim().charAt(0) || '؟'}</span>
+      <span className={`directory-avatar ${item.gender === 'female' ? 'female' : ''}`}><DirectoryGenderIcon gender={item.gender} /></span>
       <span className="directory-card-copy">
         <span className="verified-name-line"><strong>{item.full_name}</strong>{item.is_verified && <VerifiedBadge compact />}</span>
         <small>{meta || 'ملف شخص'}</small>

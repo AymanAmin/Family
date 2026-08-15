@@ -48,13 +48,12 @@
 }
 
 .add-action-choice {
-  --choice-shift: calc(var(--choice-index) * 5px);
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  margin-inline-end: var(--choice-shift);
+  margin-inline-end: 0;
   border: 0;
   background: transparent;
   padding: 0;
@@ -195,7 +194,7 @@ body.add-action-picker-open .mobile-bottom-nav .add-nav-action .mobile-nav-icon 
   }
 
   .add-action-choice {
-    margin-inline-end: calc(var(--choice-index) * 7px);
+    margin-inline-end: 0;
   }
 
   .add-action-choice-label {

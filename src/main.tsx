@@ -4,6 +4,8 @@ import App from './App'
 import './detail-avatar-icons'
 import './brand-identity'
 import './stats-swipe-fix'
+import './mobile-sections-nav'
+import './separate-directory-screens'
 import './add-action-menu'
 import './home-occasion-greetings'
 import './household-terminology'
@@ -209,8 +211,6 @@ function installPickerTouchScrollGuard() {
   document.addEventListener('pointerup', finishGesture, true)
   document.addEventListener('pointercancel', finishGesture, true)
 
-  // Android/iOS may synthesize a click after a completed finger drag. Capture it
-  // before React sees it so scrolling can never accidentally select a result.
   document.addEventListener('click', (event) => {
     if (!suppressList || Date.now() > suppressClickUntil) return
     const target = event.target

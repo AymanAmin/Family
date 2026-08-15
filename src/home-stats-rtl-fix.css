@@ -1,64 +1,312 @@
-/* Keep the home statistics/services strip in the natural Arabic RTL order. */
+/* Home navigation shortcuts: replace the old horizontal statistics scroller. */
 .unified-home-stats {
   direction: rtl !important;
 }
 
 .unified-home-stats > * {
   direction: rtl;
-  text-align: right;
 }
 
-/* The ancestors shortcut is always the first item in the RTL statistics strip. */
-.unified-home-stats > .top-ancestors-home-tile {
-  order: -100 !important;
+/* Keep the original service/stat buttons in the DOM as navigation targets,
+   but present only the compact icon shortcuts to the user. */
+.app-services.unified-home-stats.home-icon-menu {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  padding: 8px 4px 4px !important;
+  margin-top: 8px !important;
 }
 
-/* Give the welcome card and statistics strip enough visual breathing room. */
+.app-services.unified-home-stats.home-icon-menu > .service-tile:not(.home-hub-tile) {
+  display: none !important;
+}
+
+.home-hub-tile {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 104px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: #27435d;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-hub-tile:active {
+  transform: scale(.97);
+}
+
+.home-hub-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(44, 105, 128, .13), rgba(39, 146, 125, .08));
+  color: #2f6f81;
+  box-shadow: inset 0 0 0 1px rgba(72, 111, 128, .07);
+}
+
+.home-hub-icon svg {
+  width: 29px;
+  height: 29px;
+}
+
+.home-hub-count {
+  position: absolute;
+  top: -5px;
+  inset-inline-start: -7px;
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding-inline: 5px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #fff;
+  color: #31546d;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, .12);
+  font-size: .62rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.home-hub-copy {
+  display: grid;
+  min-width: 0;
+  text-align: center;
+}
+
+.home-hub-copy strong {
+  font-size: .82rem;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+/* Full icon navigation screen opened by "المزيد". */
+body.home-navigation-hub-active main > *:not(.home-navigation-hub-screen) {
+  display: none !important;
+}
+
+.home-navigation-hub-screen {
+  width: min(1050px, calc(100% - 32px));
+  margin: 24px auto 80px;
+  direction: rtl;
+}
+
+.home-navigation-hub-header {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: start;
+  padding: 24px 26px;
+  border: 1px solid rgba(112, 145, 158, .16);
+  border-radius: 28px;
+  background: linear-gradient(140deg, rgba(235, 248, 245, .95), rgba(255, 255, 255, .98));
+  box-shadow: 0 14px 38px rgba(46, 78, 92, .07);
+}
+
+.home-navigation-hub-header > div > span {
+  color: #318477;
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+.home-navigation-hub-header h1 {
+  margin: 5px 0 6px;
+  color: #264d6b;
+  font-size: clamp(1.55rem, 4vw, 2.35rem);
+}
+
+.home-navigation-hub-header p {
+  margin: 0;
+  color: #75858b;
+  line-height: 1.7;
+}
+
+.home-navigation-hub-back {
+  border: 1px solid rgba(66, 111, 126, .12);
+  border-radius: 999px;
+  background: #fff;
+  color: #315b70;
+  padding: 9px 13px;
+  font: inherit;
+  font-size: .76rem;
+  cursor: pointer;
+}
+
+.home-navigation-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-top: 18px;
+}
+
+.home-navigation-hub-item {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 12px;
+  min-height: 170px;
+  min-width: 0;
+  padding: 20px 12px;
+  border: 1px solid rgba(112, 145, 158, .14);
+  border-radius: 25px;
+  background: rgba(255, 255, 255, .96);
+  color: #294e69;
+  box-shadow: 0 10px 28px rgba(46, 78, 92, .055);
+  font: inherit;
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-navigation-hub-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(49, 132, 119, .26);
+  box-shadow: 0 14px 34px rgba(46, 78, 92, .09);
+}
+
+.home-navigation-hub-item .home-hub-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 21px;
+}
+
+.home-navigation-hub-item .home-hub-icon svg {
+  width: 34px;
+  height: 34px;
+}
+
+.home-navigation-hub-item .home-hub-copy {
+  gap: 5px;
+}
+
+.home-navigation-hub-item .home-hub-copy strong {
+  font-size: .94rem;
+}
+
+.home-navigation-hub-item .home-hub-copy small {
+  color: #849197;
+  font-size: .68rem;
+  line-height: 1.5;
+}
+
+/* Give the welcome card and shortcuts enough visual breathing room. */
 .nasab-dashboard {
   row-gap: 24px;
 }
 
 @media (max-width: 760px) {
-  /* Use one native momentum-scrolling row instead of manually changing scrollLeft.
-     This is substantially smoother on Android/iOS and behaves correctly in RTL. */
-  .app-services.unified-home-stats {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    align-items: stretch !important;
-    gap: 10px !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    padding: 2px 2px 10px !important;
-    margin-top: 8px !important;
-    direction: rtl !important;
-    scroll-padding-inline: 2px !important;
-    scroll-snap-type: inline proximity !important;
-    scroll-behavior: smooth;
-    overscroll-behavior-inline: contain;
-    touch-action: pan-x pan-y;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+  .app-services.unified-home-stats.home-icon-menu {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 2px !important;
+    padding: 3px 0 0 !important;
+    margin-top: 7px !important;
   }
 
-  .app-services.unified-home-stats::-webkit-scrollbar {
-    display: none;
+  .home-hub-tile {
+    min-height: 92px;
+    gap: 7px;
+    padding: 6px 1px;
+    border-radius: 18px;
   }
 
-  .app-services.unified-home-stats > .service-tile {
-    flex: 0 0 clamp(128px, 42vw, 162px) !important;
-    width: auto !important;
-    min-width: 0 !important;
-    scroll-snap-align: start;
-    scroll-snap-stop: normal;
+  .home-hub-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 16px;
+  }
+
+  .home-hub-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .home-hub-copy strong {
+    font-size: .72rem;
+  }
+
+  .home-hub-count {
+    top: -4px;
+    inset-inline-start: -5px;
+    min-width: 22px;
+    height: 22px;
+    font-size: .56rem;
+  }
+
+  .home-navigation-hub-screen {
+    width: calc(100% - 24px);
+    margin: 14px auto 105px;
+  }
+
+  .home-navigation-hub-header {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 20px 18px;
+    border-radius: 24px;
+  }
+
+  .home-navigation-hub-back {
+    justify-self: start;
+  }
+
+  .home-navigation-hub-header h1 {
+    font-size: 1.65rem;
+  }
+
+  .home-navigation-hub-header p {
+    font-size: .78rem;
+  }
+
+  .home-navigation-hub-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 13px;
+  }
+
+  .home-navigation-hub-item {
+    min-height: 132px;
+    gap: 9px;
+    padding: 14px 7px;
+    border-radius: 20px;
+  }
+
+  .home-navigation-hub-item .home-hub-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 17px;
+  }
+
+  .home-navigation-hub-item .home-hub-icon svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .home-navigation-hub-item .home-hub-copy strong {
+    font-size: .75rem;
+    white-space: normal;
+  }
+
+  .home-navigation-hub-item .home-hub-copy small {
+    font-size: .6rem;
   }
 
   .nasab-dashboard {
     row-gap: 26px !important;
   }
 
-  /* Keep the welcome card comfortably inside the phone viewport and reduce its height. */
   .compact-family-welcome {
     width: calc(100% - 14px) !important;
     min-height: 166px !important;
@@ -80,5 +328,11 @@
   .compact-family-welcome p {
     font-size: .75rem !important;
     line-height: 1.68 !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .home-navigation-hub-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

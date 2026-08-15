@@ -46,16 +46,6 @@ const eventLabels: Record<string, string> = {
   other: 'مناسبة',
 }
 
-const eventGlyphs: Record<string, string> = {
-  death: '✦',
-  wedding: '♡',
-  birth: '☆',
-  naming: '◌',
-  graduation: '◇',
-  general: '◈',
-  other: '•',
-}
-
 function familyName(value: RelatedFamily): string {
   if (!value) return ''
   if (Array.isArray(value)) return value[0]?.name ?? ''
@@ -276,63 +266,41 @@ export default function NewsScreen({ onBack, onAdd, onOpenPerson }: Props) {
         <div className="news-error"><strong>{error}</strong><button type="button" onClick={() => void loadPage(0, false)}>إعادة المحاولة</button></div>
       ) : items.length ? (
         <>
-          <div className="news-grid">
+          <div className="news-grid news-home-card-list">
             {items.map((item) => {
               const family = familyName(item.families)
               return (
-                <article className={`news-card news-type-${item.event_type}`} key={item.id}>
-                  <div className="news-card-body">
-                    <header className="news-card-kicker">
-                      <div className="news-card-type">
-                        <span className="news-card-glyph" aria-hidden="true">{eventGlyphs[item.event_type] ?? '•'}</span>
-                        <span className="news-type-pill">{eventLabels[item.event_type] ?? item.event_type}</span>
-                      </div>
-                      <time dateTime={item.event_date ?? item.created_at}>{formatDate(item.event_date)}</time>
-                    </header>
-
-                    <h2>{item.title}</h2>
-                    {item.description && <p className="news-description">{item.description}</p>}
-
-                    {(item.location_name || family) && (
-                      <div className="news-meta">
-                        {item.location_name && <span><b aria-hidden="true">⌖</b>{item.location_name}</span>}
-                        {family && <span><b aria-hidden="true">⌂</b>{family}</span>}
-                      </div>
-                    )}
-
-                    {item.mentions?.length ? (
-                      <div className="news-people" aria-label="الأشخاص المرتبطون بالخبر">
-                        {item.mentions.map((mention) => {
-                          const id = personId(mention.people)
-                          const name = personName(mention.people)
-                          if (!id || !name) return null
-                          return <button type="button" key={`${item.id}-${id}-${mention.participant_role}`} onClick={() => void onOpenPerson(id)}>{name}</button>
-                        })}
-                      </div>
-                    ) : null}
-
-                    <footer className="news-card-actions">
-                      <EventShareButton event={{ id: item.id, event_type: item.event_type, title: item.title, description: item.description, event_date: item.event_date, location_name: item.location_name, family_name: family || null, people: (item.mentions ?? []).map((mention) => personName(mention.people)).filter(Boolean) }} />
-                      <div className="news-admin-edit">
-                        <RecordEditButton
-                          entityType="events"
-                          recordId={item.id}
-                          createdBy={item.created_by}
-                          sessionUserId={sessionUserId}
-                          isAdmin={isAdmin}
-                          initialData={{
-                            event_type: item.event_type,
-                            title: item.title,
-                            family_id: item.family_id,
-                            event_date: item.event_date,
-                            location_name: item.location_name,
-                            description: item.description,
-                          }}
-                          onSaved={() => loadPage(0, false)}
-                        />
-                      </div>
-                    </footer>
-                  </div>
+                <article className={`event-card event-type-${item.event_type} news-list-event-card`} key={item.id}>
+                  <div className="event-top"><span>{eventLabels[item.event_type] || item.event_type}</span><time>{formatDate(item.event_date)}</time></div>
+                  <h3>{item.title}</h3>
+                  <p>{item.description || 'لا توجد تفاصيل إضافية.'}</p>
+                  {item.mentions?.length ? (
+                    <div className="event-mention-chips" aria-label="الأشخاص المرتبطون بالخبر">
+                      {item.mentions.map((mention) => {
+                        const id = personId(mention.people)
+                        const name = personName(mention.people)
+                        return name ? <button className="event-mention-chip" type="button" key={`${item.id}-${id}-${mention.participant_role}`} onClick={() => id && void onOpenPerson(id)}>@ {name}</button> : null
+                      })}
+                    </div>
+                  ) : null}
+                  <small>{item.location_name || family || 'المكان غير محدد'}</small>
+                  <EventShareButton compact event={{ id: item.id, event_type: item.event_type, title: item.title, description: item.description, event_date: item.event_date, location_name: item.location_name, family_name: family || null, people: (item.mentions ?? []).map((mention) => personName(mention.people)).filter(Boolean) }} />
+                  <RecordEditButton
+                    entityType="events"
+                    recordId={item.id}
+                    createdBy={item.created_by}
+                    sessionUserId={sessionUserId}
+                    isAdmin={isAdmin}
+                    initialData={{
+                      event_type: item.event_type,
+                      title: item.title,
+                      family_id: item.family_id,
+                      event_date: item.event_date,
+                      location_name: item.location_name,
+                      description: item.description,
+                    }}
+                    onSaved={() => loadPage(0, false)}
+                  />
                 </article>
               )
             })}

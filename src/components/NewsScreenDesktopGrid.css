@@ -1,39 +1,66 @@
-/* Desktop/tablet layout for the full news screen.
-   Mobile intentionally keeps the narrow single-column cards from NewsScreenHomeCards.css. */
+/* Full news screen responsive layout.
+   Phones keep the current single-column card presentation.
+   Larger screens switch to a real multi-column CSS Grid. */
+
 @media (min-width: 761px) {
   .news-page {
-    width: min(100%, 1180px) !important;
+    width: min(calc(100% - 32px), 1240px) !important;
+    max-width: 1240px !important;
   }
 
+  .news-page .news-grid.news-home-card-list,
   .news-page .news-home-card-list {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     grid-auto-flow: row !important;
-    justify-items: stretch !important;
-    align-items: stretch !important;
+    grid-auto-columns: unset !important;
+    place-items: stretch !important;
     gap: 18px !important;
     width: 100% !important;
-    max-width: none !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     overflow: visible !important;
   }
 
+  .news-page .news-grid.news-home-card-list > article.event-card,
   .news-page .news-home-card-list > .event-card {
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
     min-height: 390px !important;
+    height: auto !important;
     justify-self: stretch !important;
+    align-self: stretch !important;
+    margin: 0 !important;
   }
 
   .news-page .news-skeleton-grid {
+    display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 18px !important;
   }
 }
 
-@media (min-width: 1050px) {
+/* Desktop/laptop: three cards on each row. */
+@media (min-width: 1000px) {
+  .news-page .news-grid.news-home-card-list,
   .news-page .news-home-card-list,
   .news-page .news-skeleton-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Very wide displays can comfortably show four cards per row. */
+@media (min-width: 1500px) {
+  .news-page {
+    width: min(calc(100% - 48px), 1480px) !important;
+    max-width: 1480px !important;
+  }
+
+  .news-page .news-grid.news-home-card-list,
+  .news-page .news-home-card-list,
+  .news-page .news-skeleton-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   }
 }

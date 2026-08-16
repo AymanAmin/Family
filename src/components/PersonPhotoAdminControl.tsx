@@ -25,15 +25,37 @@ function personIdFromHash() {
   return target === 'person' && id ? id.trim() : ''
 }
 
+function ensureActionHost(hero: HTMLElement) {
+  const actionGroup = hero.querySelector<HTMLElement>('.record-action-group')
+  const parent = actionGroup ?? hero
+  let host = hero.querySelector<HTMLElement>('.person-photo-control-host')
+
+  if (!host) {
+    host = document.createElement('span')
+    host.className = 'person-photo-control-host'
+    host.style.display = 'contents'
+  }
+
+  // Do not portal directly into RecordEditButton's React-managed children.
+  // During client-side navigation that component can render again after this
+  // control, which used to remove the externally inserted photo button. A
+  // dedicated portal host is recreated/reparented whenever React replaces it.
+  if (host.parentElement !== parent) parent.appendChild(host)
+  return host
+}
+
 function readPersonContext(): ContextState | null {
-  const anchor = document.querySelector<HTMLElement>('.detail-hero .person-context-anchor[data-person-context-id]')
+  const hero = document.querySelector<HTMLElement>('.detail-page .detail-hero')
+  if (!hero) return null
+
+  const anchor = hero.querySelector<HTMLElement>('.person-context-anchor[data-person-context-id]')
   const personId = anchor?.dataset.personContextId?.trim() || personIdFromHash()
   if (!personId) return null
 
-  const hero = document.querySelector<HTMLElement>('.detail-page .detail-hero')
-  const personName = hero?.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim() || ''
-  const host = hero?.querySelector<HTMLElement>('.record-action-group') ?? hero
-  if (!personName || !host) return null
+  const personName = hero.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim() || ''
+  if (!personName) return null
+
+  const host = ensureActionHost(hero)
   return { personId, personName, host }
 }
 
@@ -141,6 +163,8 @@ export default function PersonPhotoAdminControl() {
 
   useEffect(() => {
     let frame = 0
+    let retryTimer = 0
+
     const refresh = () => {
       if (frame) window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
@@ -154,14 +178,34 @@ export default function PersonPhotoAdminControl() {
       })
     }
 
+    const refreshAfterNavigation = () => {
+      refresh()
+      window.clearTimeout(retryTimer)
+      // A second pass covers lazy/Suspense transitions where the destination
+      // hero is committed just after the navigation event.
+      retryTimer = window.setTimeout(refresh, 120)
+    }
+
     const observer = new MutationObserver(refresh)
-    observer.observe(document.body, { childList: true, subtree: true })
-    window.addEventListener('hashchange', refresh)
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-person-context-id'],
+    })
+    window.addEventListener('hashchange', refreshAfterNavigation)
+    window.addEventListener('popstate', refreshAfterNavigation)
+    window.addEventListener('sila:route-changed', refreshAfterNavigation)
+    window.addEventListener('sila:history-navigation', refreshAfterNavigation)
     refresh()
 
     return () => {
       observer.disconnect()
-      window.removeEventListener('hashchange', refresh)
+      window.removeEventListener('hashchange', refreshAfterNavigation)
+      window.removeEventListener('popstate', refreshAfterNavigation)
+      window.removeEventListener('sila:route-changed', refreshAfterNavigation)
+      window.removeEventListener('sila:history-navigation', refreshAfterNavigation)
+      window.clearTimeout(retryTimer)
       if (frame) window.cancelAnimationFrame(frame)
     }
   }, [])

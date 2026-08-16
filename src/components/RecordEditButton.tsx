@@ -115,6 +115,24 @@ export default function RecordEditButton({
     setArchiveOpen(true)
   }
 
+  function openPersonPhotoEditor() {
+    if (typeof document === 'undefined') return
+
+    let attempts = 0
+    const clickPhotoTrigger = () => {
+      const trigger = document.querySelector<HTMLButtonElement>('.detail-page .person-photo-admin-trigger:not(.person-google-photo-trigger)')
+      if (trigger && !trigger.disabled) {
+        trigger.click()
+        return
+      }
+
+      attempts += 1
+      if (attempts < 8) window.setTimeout(clickPhotoTrigger, 100)
+    }
+
+    clickPhotoTrigger()
+  }
+
   function setValue(key: string, value: string | number | boolean | null) {
     setForm((current) => ({ ...current, [key]: value }))
   }
@@ -199,10 +217,10 @@ export default function RecordEditButton({
   }
 
   const editModal = open && typeof document !== 'undefined' ? createPortal(
-    <div className="record-edit-overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && !busy && setOpen(false)}>
-      <section className="record-edit-sheet" role="dialog" aria-modal="true" aria-label={title}>
+    <div className={`record-edit-overlay${entityType === 'people' ? ' person-edit-overlay' : ''}`} role="presentation" onMouseDown={(e) => e.target === e.currentTarget && !busy && setOpen(false)}>
+      <section className={`record-edit-sheet${entityType === 'people' ? ' person-edit-sheet' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="record-edit-heading">
-          <div><span>تحرير السجل</span><h2>{title}</h2></div>
+          <div><span>{entityType === 'people' ? 'بيانات الشخص' : 'تحرير السجل'}</span><h2>{title}</h2></div>
           <button type="button" onClick={() => !busy && setOpen(false)} aria-label="إغلاق">×</button>
         </div>
 
@@ -219,6 +237,15 @@ export default function RecordEditButton({
 
           {entityType === 'people' && (
             <>
+              {isAdmin && <button className="person-edit-photo-launcher" type="button" onClick={openPersonPhotoEditor}>
+                <span className="person-edit-photo-launcher-icon" aria-hidden="true">▣</span>
+                <span className="person-edit-photo-launcher-copy">
+                  <strong>الصورة الشخصية</strong>
+                  <small>إضافة صورة جديدة أو استبدال الصورة الحالية</small>
+                </span>
+                <b>إدارة الصورة</b>
+              </button>}
+
               <label><span>الاسم الكامل</span><input required value={String(form.full_name ?? '')} onChange={(e) => setValue('full_name', e.target.value)} /></label>
               <div className="edit-form-grid">
                 <label><span>الجنس</span><select value={String(form.gender ?? '')} onChange={(e) => setValue('gender', e.target.value)}><option value="">غير محدد</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>

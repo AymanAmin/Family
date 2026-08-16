@@ -98,12 +98,14 @@ export default function HomeKinshipShortcut() {
     })
     window.addEventListener('hashchange', locate)
     window.addEventListener('popstate', locate)
+    window.addEventListener('sila:route-changed', locate)
 
     return () => {
       window.cancelAnimationFrame(frame)
       observer.disconnect()
       window.removeEventListener('hashchange', locate)
       window.removeEventListener('popstate', locate)
+      window.removeEventListener('sila:route-changed', locate)
       clearHost()
     }
   }, [])

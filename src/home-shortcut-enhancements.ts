@@ -1,4 +1,5 @@
 import { supabase } from './lib/supabase'
+import './directory-person-photo-fix'
 
 const ORDER_STYLE_ID = 'home-shortcut-order-style'
 const DESKTOP_STYLE_ID = 'desktop-sections-news-grid-style'

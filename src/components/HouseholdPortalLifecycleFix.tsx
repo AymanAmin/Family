@@ -89,7 +89,10 @@ export default function HouseholdPortalLifecycleFix(): null {
     const handleNavigationClick = (event: MouseEvent): void => {
       const target = event.target
       if (!(target instanceof Element) || !isNavigationAction(target)) return
-      closeForNavigation()
+
+      // Let the clicked control finish its own routing first, then close the
+      // previous surface before the browser paints the destination screen.
+      window.queueMicrotask(closeForNavigation)
     }
 
     scheduleCleanup()

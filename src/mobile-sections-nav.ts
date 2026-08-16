@@ -17,6 +17,7 @@ const sectionsIcon = `
 </svg>`
 
 let enhanceFrame = 0
+let refreshRetryTimer = 0
 
 function currentScreen() {
   return new URL(window.location.href).searchParams.get('screen')
@@ -24,6 +25,11 @@ function currentScreen() {
 
 function navButtons() {
   return Array.from(document.querySelectorAll<HTMLButtonElement>('.mobile-bottom-nav > button'))
+}
+
+function buttonLabel(button: HTMLButtonElement) {
+  const candidate = button.lastElementChild
+  return candidate instanceof HTMLElement ? candidate : null
 }
 
 function findSectionsButton() {
@@ -38,11 +44,11 @@ function candidateSectionsButton() {
   // The fifth mobile slot used to be الإدارة for moderators and حسابي/دخول for members.
   // Prefer matching that semantic slot explicitly, then fall back to the final nav button.
   const legacySlot = buttons.find((button) => {
-    const label = button.querySelector<HTMLElement>(':scope > span:last-child')?.textContent?.trim()
+    const label = buttonLabel(button)?.textContent?.trim()
     return label === 'الإدارة' || label === 'حسابي' || label === 'دخول' || label === 'الأقسام'
   })
 
-  return legacySlot || buttons.at(-1) || null
+  return legacySlot || buttons[buttons.length - 1] || null
 }
 
 function syncExclusiveSectionsState(button: HTMLButtonElement) {
@@ -56,7 +62,7 @@ function syncExclusiveSectionsState(button: HTMLButtonElement) {
 
 function enhanceMobileSectionsButton() {
   const button = candidateSectionsButton()
-  if (!button) return
+  if (!button) return false
 
   button.classList.add('mobile-sections-nav')
   button.setAttribute('aria-label', 'الأقسام')
@@ -68,15 +74,72 @@ function enhanceMobileSectionsButton() {
     icon.innerHTML = sectionsIcon
   }
 
-  const label = button.querySelector<HTMLElement>(':scope > span:last-child')
+  const label = buttonLabel(button)
   if (label && label.textContent?.trim() !== 'الأقسام') label.textContent = 'الأقسام'
 
   syncExclusiveSectionsState(button)
+  return true
 }
 
 function scheduleEnhance() {
-  window.cancelAnimationFrame(enhanceFrame)
-  enhanceFrame = window.requestAnimationFrame(enhanceMobileSectionsButton)
+  // Coalesce DOM mutations instead of cancelling/restarting the frame. During a hard refresh
+  // React can render several auth/profile states quickly; repeatedly cancelling the frame could
+  // leave the legacy الإدارة label visible until the mutation burst finishes.
+  if (enhanceFrame) return
+  enhanceFrame = window.requestAnimationFrame(() => {
+    enhanceFrame = 0
+    enhanceMobileSectionsButton()
+  })
+}
+
+function installInitialSectionsGuard() {
+  if (document.getElementById('mobile-sections-initial-guard')) return
+
+  const style = document.createElement('style')
+  style.id = 'mobile-sections-initial-guard'
+  style.textContent = `
+    @media (max-width: 900px) {
+      .mobile-bottom-nav > button:last-child:not(.mobile-sections-nav) {
+        position: relative;
+      }
+
+      .mobile-bottom-nav > button:last-child:not(.mobile-sections-nav) > span {
+        visibility: hidden !important;
+      }
+
+      .mobile-bottom-nav > button:last-child:not(.mobile-sections-nav)::before {
+        content: '▦';
+        display: block;
+        font-size: 24px;
+        line-height: 1;
+        color: currentColor;
+      }
+
+      .mobile-bottom-nav > button:last-child:not(.mobile-sections-nav)::after {
+        content: 'الأقسام';
+        display: block;
+        margin-top: 4px;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.2;
+        color: currentColor;
+      }
+    }
+  `
+  document.head.appendChild(style)
+}
+
+function startRefreshRetryWindow() {
+  window.clearInterval(refreshRetryTimer)
+
+  const startedAt = Date.now()
+  refreshRetryTimer = window.setInterval(() => {
+    enhanceMobileSectionsButton()
+    if (Date.now() - startedAt >= 3500) {
+      window.clearInterval(refreshRetryTimer)
+      refreshRetryTimer = 0
+    }
+  }, 100)
 }
 
 function notifySectionsHost() {
@@ -108,6 +171,8 @@ function openSections() {
 }
 
 if (typeof document !== 'undefined') {
+  installInitialSectionsGuard()
+
   document.addEventListener('click', (event) => {
     const target = event.target
     if (!(target instanceof Element)) return
@@ -131,15 +196,24 @@ if (typeof document !== 'undefined') {
     window.setTimeout(scheduleEnhance, 0)
   }, true)
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scheduleEnhance, { once: true })
-  else scheduleEnhance()
+  const boot = () => {
+    enhanceMobileSectionsButton()
+    scheduleEnhance()
+    startRefreshRetryWindow()
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true })
+  else boot()
 
   const observer = new MutationObserver(scheduleEnhance)
   observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] })
 
   window.addEventListener('popstate', scheduleEnhance)
   window.addEventListener('hashchange', scheduleEnhance)
-  window.addEventListener('pageshow', scheduleEnhance)
+  window.addEventListener('pageshow', () => {
+    enhanceMobileSectionsButton()
+    startRefreshRetryWindow()
+  })
 }
 
 export {}

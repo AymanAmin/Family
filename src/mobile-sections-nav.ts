@@ -1,5 +1,6 @@
 import './android-apk-install'
 import './feedback-auto-dismiss'
+import './home-shortcut-enhancements'
 
 const SECTIONS_SCREEN = 'menu'
 

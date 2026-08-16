@@ -1,0 +1,52 @@
+name: Publish signed Family APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'downloads/release-payload/**'
+      - '.github/workflows/publish-signed-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: family-signed-apk
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reassemble signed APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat downloads/release-payload/part*.b64 > /tmp/Family.apk.b64
+          base64 -d /tmp/Family.apk.b64 > downloads/Family.apk
+          test -s downloads/Family.apk
+
+      - name: Verify release checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'f50e895be3b9f63b36a3e471fa46bb2ba3c5f695866fdb39a982f6323ef64593  downloads/Family.apk' | sha256sum -c -
+
+      - name: Publish signed APK to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f downloads/Family.apk
+          if git diff --cached --quiet; then
+            echo 'Signed APK is already current.'
+          else
+            git commit -m 'Publish Family Android 1.0.1 signed release [skip ci]'
+            git pull --rebase origin main
+            git push origin main
+          fi

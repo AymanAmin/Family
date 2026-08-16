@@ -137,8 +137,250 @@
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 }
 
-/* Keep the family-relation total readable on the dark navy/gold profile badge. */
+/* Keep the family-relation total readable regardless of inherited text-fill rules. */
+.family-overview-count,
+.detail-page .family-overview-count,
 .page-section.detail-page .family-overview-count {
   color: #fffdf8 !important;
-  text-shadow: 0 1px 2px rgb(20 28 45 / 45%) !important;
+  -webkit-text-fill-color: #fffdf8 !important;
+  opacity: 1 !important;
+  text-shadow: 0 1px 3px rgb(20 28 45 / 58%) !important;
+}
+
+.family-overview-count::before,
+.family-overview-count::after,
+.family-overview-count > * {
+  color: #fffdf8 !important;
+  -webkit-text-fill-color: #fffdf8 !important;
+}
+
+/* The manual photo action now lives inside the person edit experience. Keep the
+   old technical trigger mounted for the existing upload logic, but hide it from
+   the profile action row. Google-photo access remains unchanged. */
+.detail-page .person-photo-control-host .person-photo-admin-trigger:not(.person-google-photo-trigger) {
+  display: none !important;
+}
+
+/* Warm person editor: cream paper, soft sand borders and amber accents. */
+.record-edit-overlay.person-edit-overlay {
+  background: rgb(63 49 36 / 46%) !important;
+  backdrop-filter: blur(7px) saturate(.92) !important;
+}
+
+.record-edit-sheet.person-edit-sheet {
+  border: 1px solid #ead8be !important;
+  background: linear-gradient(180deg, #fffdf8 0%, #fffaf1 58%, #fbf1e3 100%) !important;
+  box-shadow: 0 30px 90px rgb(74 52 30 / 30%) !important;
+}
+
+.person-edit-sheet .record-edit-heading {
+  border-bottom: 1px solid #ead8be !important;
+  background:
+    radial-gradient(circle at 12% 10%, rgb(255 255 255 / 82%), transparent 8rem),
+    linear-gradient(135deg, #fff8ec 0%, #f7e7cf 100%) !important;
+}
+
+.person-edit-sheet .record-edit-heading span {
+  color: #a46e35 !important;
+  -webkit-text-fill-color: #a46e35 !important;
+  font-weight: 900 !important;
+}
+
+.person-edit-sheet .record-edit-heading h2 {
+  color: #5d4734 !important;
+  -webkit-text-fill-color: #5d4734 !important;
+}
+
+.person-edit-sheet .record-edit-heading > button {
+  border-color: #e7cfad !important;
+  color: #9a6534 !important;
+  background: #fffaf2 !important;
+}
+
+.person-edit-sheet .record-edit-form {
+  background: linear-gradient(180deg, rgb(255 253 248 / 86%), rgb(255 249 239 / 94%)) !important;
+}
+
+.person-edit-sheet .record-edit-form label > span {
+  color: #66513e !important;
+  -webkit-text-fill-color: #66513e !important;
+  font-weight: 850 !important;
+}
+
+.person-edit-sheet .record-edit-form input,
+.person-edit-sheet .record-edit-form select,
+.person-edit-sheet .record-edit-form textarea {
+  border-color: #e8dac7 !important;
+  color: #4f4338 !important;
+  -webkit-text-fill-color: #4f4338 !important;
+  background: #fffefa !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 72%) !important;
+}
+
+.person-edit-sheet .record-edit-form input:focus,
+.person-edit-sheet .record-edit-form select:focus,
+.person-edit-sheet .record-edit-form textarea:focus {
+  border-color: #c8955b !important;
+  outline: none !important;
+  box-shadow: 0 0 0 4px rgb(200 149 91 / 14%) !important;
+}
+
+.person-edit-sheet .life-status-card {
+  border-color: #e7d7c1 !important;
+  background: linear-gradient(135deg, #fffaf2, #fbf1e4) !important;
+}
+
+.person-edit-sheet .life-status-card.alive .life-status-icon {
+  color: #4f8170 !important;
+  background: #e7f1ea !important;
+}
+
+.person-edit-sheet .life-status-card.deceased .life-status-icon {
+  color: #9a6b3f !important;
+  background: #f4e5d2 !important;
+}
+
+.person-edit-sheet .life-status-copy strong {
+  color: #5c4937 !important;
+  -webkit-text-fill-color: #5c4937 !important;
+}
+
+.person-edit-sheet .life-status-copy small {
+  color: #8c7a69 !important;
+  -webkit-text-fill-color: #8c7a69 !important;
+}
+
+.person-edit-photo-launcher {
+  display: grid !important;
+  grid-template-columns: 46px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 11px !important;
+  width: 100% !important;
+  min-height: 68px !important;
+  padding: 10px 12px !important;
+  border: 1px solid #e5cfac !important;
+  border-radius: 17px !important;
+  color: #5d4936 !important;
+  background:
+    radial-gradient(circle at 92% 18%, rgb(255 255 255 / 84%), transparent 8rem),
+    linear-gradient(135deg, #fff7e8, #f7ead7) !important;
+  box-shadow: 0 8px 22px rgb(121 83 45 / 8%) !important;
+  text-align: right !important;
+  cursor: pointer !important;
+}
+
+.person-edit-photo-launcher:hover {
+  border-color: #cf9c62 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 11px 26px rgb(121 83 45 / 12%) !important;
+}
+
+.person-edit-photo-launcher-icon {
+  display: grid !important;
+  width: 46px !important;
+  height: 46px !important;
+  place-items: center !important;
+  border-radius: 14px !important;
+  color: #fffaf2 !important;
+  -webkit-text-fill-color: #fffaf2 !important;
+  background: linear-gradient(145deg, #9b6939, #c89255) !important;
+  box-shadow: 0 8px 18px rgb(143 94 49 / 22%) !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+}
+
+.person-edit-photo-launcher-copy {
+  display: grid !important;
+  gap: 3px !important;
+  min-width: 0 !important;
+}
+
+.person-edit-photo-launcher-copy strong {
+  color: #5b4633 !important;
+  -webkit-text-fill-color: #5b4633 !important;
+  font-size: .76rem !important;
+  font-weight: 900 !important;
+}
+
+.person-edit-photo-launcher-copy small {
+  color: #8b7662 !important;
+  -webkit-text-fill-color: #8b7662 !important;
+  font-size: .61rem !important;
+  line-height: 1.5 !important;
+}
+
+.person-edit-photo-launcher > b {
+  padding: 7px 9px !important;
+  border: 1px solid #dfc49e !important;
+  border-radius: 11px !important;
+  color: #8c5e30 !important;
+  -webkit-text-fill-color: #8c5e30 !important;
+  background: #fffaf1 !important;
+  font-size: .61rem !important;
+  white-space: nowrap !important;
+}
+
+.person-edit-sheet .record-edit-form > .primary {
+  border-color: #9e6a38 !important;
+  color: #fffaf4 !important;
+  -webkit-text-fill-color: #fffaf4 !important;
+  background: linear-gradient(135deg, #8c5d32, #b98349) !important;
+  box-shadow: 0 10px 24px rgb(130 84 43 / 20%) !important;
+}
+
+.person-edit-sheet .record-edit-message {
+  border-color: #e3caa7 !important;
+  color: #76512f !important;
+  -webkit-text-fill-color: #76512f !important;
+  background: #fff6e9 !important;
+}
+
+@media (max-width: 760px) {
+  .record-edit-sheet.person-edit-sheet {
+    width: min(100%, 440px) !important;
+    max-height: min(80dvh, 650px) !important;
+    border-radius: 23px !important;
+  }
+
+  .person-edit-sheet .record-edit-heading {
+    padding: 13px 14px 11px !important;
+  }
+
+  .person-edit-sheet .record-edit-form {
+    gap: 10px !important;
+    padding: 11px 12px 13px !important;
+  }
+
+  .person-edit-photo-launcher {
+    grid-template-columns: 42px minmax(0, 1fr) auto !important;
+    min-height: 62px !important;
+    padding: 9px 10px !important;
+    border-radius: 15px !important;
+  }
+
+  .person-edit-photo-launcher-icon {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 13px !important;
+  }
+
+  .person-edit-photo-launcher-copy strong {
+    font-size: .7rem !important;
+  }
+
+  .person-edit-photo-launcher-copy small,
+  .person-edit-photo-launcher > b {
+    font-size: .56rem !important;
+  }
+}
+
+@media (max-width: 370px) {
+  .person-edit-photo-launcher {
+    grid-template-columns: 40px minmax(0, 1fr) !important;
+  }
+
+  .person-edit-photo-launcher > b {
+    grid-column: 2 !important;
+    justify-self: start !important;
+  }
 }

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import PersonPhotoEverywhere from './PersonPhotoEverywhere'
 import PersonPhotoAdminControl from './PersonPhotoAdminControl'
 import '../home-kinship-shortcut.css'
 
@@ -39,23 +38,9 @@ export default function HomeKinshipShortcut() {
 
   useEffect(() => {
     let currentHost: HTMLElement | null = null
-    let movedWelcome: HTMLElement | null = null
     let frame = 0
 
-    const restoreWelcome = () => {
-      if (!movedWelcome) return
-
-      if (currentHost?.isConnected && currentHost.parentElement) {
-        currentHost.insertAdjacentElement('afterend', movedWelcome)
-      } else if (movedWelcome.isConnected) {
-        movedWelcome.remove()
-      }
-
-      movedWelcome = null
-    }
-
     const clearHost = () => {
-      restoreWelcome()
       if (currentHost?.isConnected) currentHost.remove()
       currentHost = null
       setHost(null)
@@ -64,36 +49,24 @@ export default function HomeKinshipShortcut() {
     const locate = () => {
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
-        const hero = document.querySelector<HTMLElement>('.home-search-hero')
-        const welcome = document.querySelector<HTMLElement>('.compact-family-welcome')
+        const dashboard = document.querySelector<HTMLElement>('.nasab-dashboard')
+        const welcome = dashboard?.querySelector<HTMLElement>(':scope > .compact-family-welcome') ?? null
+        const stats = dashboard?.querySelector<HTMLElement>(':scope > .app-services.unified-home-stats') ?? null
 
-        if (!hero || !welcome) {
-          if (currentHost || movedWelcome) clearHost()
+        if (!dashboard || !welcome || !stats) {
+          if (currentHost) clearHost()
           return
         }
 
-        if (movedWelcome && movedWelcome !== welcome) {
-          clearHost()
-        }
-
-        if (!currentHost || !currentHost.isConnected) {
-          const originalParent = welcome.parentElement
-          if (!originalParent) return
-
+        // Never move the React-managed welcome card. Moving it outside its parent
+        // made React recreate it on later renders, which produced duplicated hero
+        // cards and unstable ordering on the home screen.
+        if (!currentHost || !currentHost.isConnected || currentHost.parentElement !== dashboard) {
+          if (currentHost?.isConnected) currentHost.remove()
           currentHost = document.createElement('div')
-          currentHost.className = 'home-kinship-shortcut-host home-kinship-shortcut-swapped'
-          originalParent.insertBefore(currentHost, welcome)
-          movedWelcome = welcome
+          currentHost.className = 'home-kinship-shortcut-host'
+          dashboard.appendChild(currentHost)
           setHost(currentHost)
-        } else if (!movedWelcome) {
-          movedWelcome = welcome
-        }
-
-        // Swap the two home cards: the digital-family welcome card takes the
-        // shortcut's former position directly below search, while the kinship
-        // shortcut occupies the welcome card's original position after services.
-        if (hero.nextElementSibling !== welcome) {
-          hero.insertAdjacentElement('afterend', welcome)
         }
       })
     }
@@ -109,16 +82,9 @@ export default function HomeKinshipShortcut() {
     }
   }, [])
 
-  const globalPersonPhotoExperience = <>
-    <PersonPhotoEverywhere />
-    <PersonPhotoAdminControl />
-  </>
-
-  if (!host) return globalPersonPhotoExperience
-
   return <>
-    {globalPersonPhotoExperience}
-    {createPortal(
+    <PersonPhotoAdminControl />
+    {host && createPortal(
       <section className="home-kinship-shortcut" aria-label="اختصار معرفة صلة القرابة">
         <button type="button" className="home-kinship-shortcut-button" onClick={openKinshipPath}>
           <span className="home-kinship-shortcut-icon" aria-hidden="true">

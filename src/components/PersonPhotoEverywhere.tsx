@@ -43,6 +43,15 @@ function personIdFromRoute() {
   return match ? decodeURIComponent(match[1]) : ''
 }
 
+function displayedPersonId() {
+  if (typeof document === 'undefined') return personIdFromRoute()
+  const hero = document.querySelector<HTMLElement>('.detail-page .detail-hero')
+  const anchoredId = hero
+    ?.querySelector<HTMLElement>('.person-context-anchor[data-person-context-id]')
+    ?.dataset.personContextId?.trim() || ''
+  return anchoredId || personIdFromRoute()
+}
+
 function safePhotoUrl(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const text = value.trim()
@@ -78,12 +87,13 @@ function collectBindings(): AvatarBinding[] {
     })
   }
 
-  // Main person profile: bind by the actual record id, not only by the displayed
-  // name. This is important when two people have the same name; the old name-only
-  // safety rule intentionally suppressed the image in that case.
+  // The rendered person anchor is the source of truth for the profile currently
+  // on screen. During SPA navigation React can render the new person before the
+  // URL/hash is synchronized, so using the hash here can briefly bind the old
+  // person's photo and leave the avatar stale until a hard refresh.
   add('.detail-hero .detail-avatar',
     (avatar) => textFrom(avatar.closest('.detail-hero'), 'h1'),
-    () => personIdFromRoute())
+    () => displayedPersonId())
   add('.account-area .account-profile-button', (avatar) => textFrom(avatar.closest('.account-area'), '.account-copy strong'))
 
   // Directory, pickers and family/person lists.
@@ -302,8 +312,22 @@ export function notifyPersonPhotoUpdated(fullName: string, photoUrl: string | nu
 
 export default function PersonPhotoEverywhere(): null {
   useEffect(() => {
-    const observer = new MutationObserver(() => scheduleScan())
-    observer.observe(document.body, { childList: true, subtree: true })
+    let lastDisplayedPersonId = displayedPersonId()
+
+    const onDomChanged = () => {
+      const nextDisplayedPersonId = displayedPersonId()
+      const personChanged = nextDisplayedPersonId !== lastDisplayedPersonId
+      lastDisplayedPersonId = nextDisplayedPersonId
+      scheduleScan(personChanged)
+    }
+
+    const observer = new MutationObserver(onDomChanged)
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-person-context-id'],
+    })
 
     const onPhotoUpdated = (event: Event) => {
       const detail = (event as CustomEvent<PhotoUpdateDetail>).detail
@@ -314,17 +338,24 @@ export default function PersonPhotoEverywhere(): null {
       scheduleScan(Boolean(!detail?.personId))
     }
 
-    const onRouteChange = () => scheduleScan(true)
+    const onRouteChange = () => {
+      lastDisplayedPersonId = displayedPersonId()
+      scheduleScan(true)
+    }
     window.addEventListener('sila:person-photo-updated', onPhotoUpdated)
     window.addEventListener('hashchange', onRouteChange)
+    window.addEventListener('popstate', onRouteChange)
     window.addEventListener('sila:route-changed', onRouteChange)
+    window.addEventListener('sila:history-navigation', onRouteChange)
     scheduleScan()
 
     return () => {
       observer.disconnect()
       window.removeEventListener('sila:person-photo-updated', onPhotoUpdated)
       window.removeEventListener('hashchange', onRouteChange)
+      window.removeEventListener('popstate', onRouteChange)
       window.removeEventListener('sila:route-changed', onRouteChange)
+      window.removeEventListener('sila:history-navigation', onRouteChange)
       if (scanFrame) window.cancelAnimationFrame(scanFrame)
     }
   }, [])

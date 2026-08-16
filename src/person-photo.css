@@ -265,3 +265,158 @@
     font-size: .68rem !important;
   }
 }
+
+/* Warm photo editor: match the person edit dialog instead of the cool teal palette. */
+.record-edit-overlay.person-photo-admin-overlay {
+  background: rgb(63 49 36 / 48%) !important;
+  backdrop-filter: blur(7px) saturate(.92) !important;
+}
+
+.record-edit-sheet.person-photo-admin-sheet {
+  border: 1px solid #ead8be !important;
+  background: linear-gradient(180deg, #fffdf8 0%, #fff9ef 58%, #fbf0e1 100%) !important;
+  box-shadow: 0 30px 90px rgb(74 52 30 / 30%) !important;
+}
+
+.person-photo-admin-sheet .record-edit-heading {
+  border-bottom: 1px solid #ead8be !important;
+  background:
+    radial-gradient(circle at 12% 10%, rgb(255 255 255 / 84%), transparent 8rem),
+    linear-gradient(135deg, #fff8ec 0%, #f7e7cf 100%) !important;
+}
+
+.person-photo-admin-sheet .record-edit-heading span {
+  color: #a46e35 !important;
+  -webkit-text-fill-color: #a46e35 !important;
+  font-weight: 900 !important;
+}
+
+.person-photo-admin-sheet .record-edit-heading h2 {
+  color: #5d4734 !important;
+  -webkit-text-fill-color: #5d4734 !important;
+}
+
+.person-photo-admin-sheet .record-edit-heading > button {
+  border-color: #e7cfad !important;
+  color: #8c5e30 !important;
+  -webkit-text-fill-color: #8c5e30 !important;
+  background: #fffaf2 !important;
+}
+
+.person-photo-admin-sheet .person-photo-admin-form {
+  background: linear-gradient(180deg, rgb(255 253 248 / 88%), rgb(255 248 237 / 94%)) !important;
+}
+
+.person-photo-admin-sheet .person-photo-admin-note {
+  border-color: #e3cda9 !important;
+  color: #80694f !important;
+  -webkit-text-fill-color: #80694f !important;
+  background: #fff6e7 !important;
+}
+
+.person-photo-admin-sheet .person-photo-upload-picker {
+  border-color: #d8b98d !important;
+  color: #5c4937 !important;
+  -webkit-text-fill-color: #5c4937 !important;
+  background: linear-gradient(135deg, #fffaf1, #f8eddd) !important;
+}
+
+.person-photo-admin-sheet .person-photo-upload-picker:hover,
+.person-photo-admin-sheet .person-photo-upload-picker:focus-within {
+  border-color: #c58b4e !important;
+  background: #fff3df !important;
+  box-shadow: 0 0 0 4px rgb(197 139 78 / 13%) !important;
+}
+
+.person-photo-admin-sheet .person-photo-upload-icon {
+  color: #fffaf2 !important;
+  -webkit-text-fill-color: #fffaf2 !important;
+  background: linear-gradient(145deg, #966437, #c58d50) !important;
+  box-shadow: 0 8px 18px rgb(143 94 49 / 20%) !important;
+}
+
+.person-photo-admin-sheet .person-photo-upload-picker strong {
+  color: #5b4633 !important;
+  -webkit-text-fill-color: #5b4633 !important;
+}
+
+.person-photo-admin-sheet .person-photo-upload-picker small {
+  color: #8b7662 !important;
+  -webkit-text-fill-color: #8b7662 !important;
+}
+
+.person-photo-admin-sheet .person-photo-admin-preview {
+  border-color: #e5d2b8 !important;
+  background: linear-gradient(135deg, #fffaf2, #f7ecdc) !important;
+}
+
+.person-photo-admin-sheet .person-photo-admin-preview img {
+  border: 1px solid #dec4a2 !important;
+  background: #f3e4cf !important;
+  box-shadow: 0 7px 17px rgb(109 75 43 / 12%) !important;
+}
+
+.person-photo-admin-sheet .person-photo-admin-preview strong {
+  color: #5b4633 !important;
+  -webkit-text-fill-color: #5b4633 !important;
+}
+
+.person-photo-admin-sheet .person-photo-admin-preview small {
+  color: #8b7662 !important;
+  -webkit-text-fill-color: #8b7662 !important;
+}
+
+.person-photo-admin-sheet .record-edit-message {
+  border-color: #e3caa7 !important;
+  color: #76512f !important;
+  -webkit-text-fill-color: #76512f !important;
+  background: #fff6e9 !important;
+}
+
+.person-photo-admin-sheet .person-photo-admin-actions .secondary {
+  border-color: #e2d3bf !important;
+  color: #66513e !important;
+  -webkit-text-fill-color: #66513e !important;
+  background: #fffaf2 !important;
+}
+
+.person-photo-admin-sheet .person-photo-remove {
+  border-color: #dfb7ad !important;
+  color: #96594e !important;
+  -webkit-text-fill-color: #96594e !important;
+  background: #fff2ee !important;
+}
+
+.person-photo-admin-sheet .person-photo-admin-actions .primary {
+  border-color: #9e6a38 !important;
+  color: #fffaf4 !important;
+  -webkit-text-fill-color: #fffaf4 !important;
+  background: linear-gradient(135deg, #8c5d32, #b98349) !important;
+  box-shadow: 0 10px 24px rgb(130 84 43 / 20%) !important;
+}
+
+.person-photo-admin-sheet .person-photo-admin-actions .primary:disabled {
+  border-color: #d3b895 !important;
+  color: #fffaf4 !important;
+  -webkit-text-fill-color: #fffaf4 !important;
+  background: linear-gradient(135deg, #bd9b78, #cdb08d) !important;
+  opacity: .72 !important;
+}
+
+@media (max-width: 760px) {
+  .record-edit-sheet.person-photo-admin-sheet {
+    width: min(100%, 440px) !important;
+    max-height: min(82dvh, 680px) !important;
+    border-radius: 23px !important;
+  }
+
+  .person-photo-admin-sheet .record-edit-heading {
+    padding: 13px 14px 11px !important;
+  }
+
+  .person-photo-admin-sheet .person-photo-admin-form {
+    gap: 11px !important;
+    padding: 12px !important;
+    padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
+  }
+}

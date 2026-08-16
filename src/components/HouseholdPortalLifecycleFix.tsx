@@ -77,8 +77,8 @@ function isNavigationAction(target: Element): boolean {
 export default function HouseholdPortalLifecycleFix(): null {
   useEffect(() => {
     let frame = 0
-    let routeSyncTimer = 0
-    let lastKnownHash = window.location.hash
+    const previousPushState = window.history.pushState.bind(window.history)
+    const previousReplaceState = window.history.replaceState.bind(window.history)
 
     const scheduleCleanup = (): void => {
       window.cancelAnimationFrame(frame)
@@ -90,30 +90,31 @@ export default function HouseholdPortalLifecycleFix(): null {
       scheduleCleanup()
     }
 
-    // React changes the visible screen first and then updates the SPA hash via
-    // history.pushState/replaceState. Those APIs do not emit hashchange, while
-    // several route-aware enhancements (including person photos/admin controls)
-    // rely on that signal. Re-emit it only when a DOM transition reveals that
-    // the hash really changed, after the route has had time to settle.
-    const syncSpaRoute = (): void => {
-      window.clearTimeout(routeSyncTimer)
-      routeSyncTimer = window.setTimeout(() => {
-        const nextHash = window.location.hash
-        if (nextHash === lastKnownHash) return
-        lastKnownHash = nextHash
-        window.dispatchEvent(new Event('hashchange'))
-      }, 120)
+    // pushState/replaceState do not emit hashchange. The app uses them for its
+    // SPA routes, so route-aware enhancements need one dependable signal after
+    // the URL has actually changed. This catches every navigation source,
+    // including directory/person cards that do not carry data-route attributes.
+    const emitSpaRouteChanged = (previousHash: string): void => {
+      const nextHash = window.location.hash
+      if (nextHash === previousHash) return
+      window.queueMicrotask(() => {
+        window.dispatchEvent(new CustomEvent('sila:route-changed', {
+          detail: { hash: window.location.hash, href: window.location.href },
+        }))
+      })
     }
 
-    const handleObservedMutation = (): void => {
-      scheduleCleanup()
-      syncSpaRoute()
-    }
+    window.history.pushState = ((state: unknown, unused: string, url?: string | URL | null) => {
+      const previousHash = window.location.hash
+      previousPushState(state, unused, url)
+      emitSpaRouteChanged(previousHash)
+    }) as History['pushState']
 
-    const handleRouteEvent = (): void => {
-      lastKnownHash = window.location.hash
-      closeForNavigation()
-    }
+    window.history.replaceState = ((state: unknown, unused: string, url?: string | URL | null) => {
+      const previousHash = window.location.hash
+      previousReplaceState(state, unused, url)
+      emitSpaRouteChanged(previousHash)
+    }) as History['replaceState']
 
     const handleNavigationClick = (event: MouseEvent): void => {
       const target = event.target
@@ -122,27 +123,29 @@ export default function HouseholdPortalLifecycleFix(): null {
       // Let the clicked control finish its own routing first, then close the
       // previous surface before the browser paints the destination screen.
       window.queueMicrotask(closeForNavigation)
-      syncSpaRoute()
     }
 
     scheduleCleanup()
 
     const root = document.getElementById('root') ?? document.body
-    const observer = new MutationObserver(handleObservedMutation)
+    const observer = new MutationObserver(scheduleCleanup)
     observer.observe(root, { childList: true, subtree: true })
 
     document.addEventListener('click', handleNavigationClick, true)
-    window.addEventListener('hashchange', handleRouteEvent)
-    window.addEventListener('popstate', handleRouteEvent)
+    window.addEventListener('hashchange', closeForNavigation)
+    window.addEventListener('popstate', closeForNavigation)
+    window.addEventListener('sila:route-changed', closeForNavigation)
     window.addEventListener('sila:navigation-start', closeForNavigation)
 
     return () => {
       observer.disconnect()
       window.cancelAnimationFrame(frame)
-      window.clearTimeout(routeSyncTimer)
+      window.history.pushState = previousPushState as History['pushState']
+      window.history.replaceState = previousReplaceState as History['replaceState']
       document.removeEventListener('click', handleNavigationClick, true)
-      window.removeEventListener('hashchange', handleRouteEvent)
-      window.removeEventListener('popstate', handleRouteEvent)
+      window.removeEventListener('hashchange', closeForNavigation)
+      window.removeEventListener('popstate', closeForNavigation)
+      window.removeEventListener('sila:route-changed', closeForNavigation)
       window.removeEventListener('sila:navigation-start', closeForNavigation)
       removeStaleHouseholdPreview()
     }

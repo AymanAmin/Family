@@ -32,6 +32,10 @@ function buttonLabel(button: HTMLButtonElement) {
   return candidate instanceof HTMLElement ? candidate : null
 }
 
+function normalizedButtonLabel(button: HTMLButtonElement) {
+  return buttonLabel(button)?.textContent?.replace(/\s+/g, ' ').trim() || ''
+}
+
 function findSectionsButton() {
   return document.querySelector<HTMLButtonElement>('.mobile-bottom-nav .mobile-sections-nav')
 }
@@ -44,11 +48,29 @@ function candidateSectionsButton() {
   // The fifth mobile slot used to be الإدارة for moderators and حسابي/دخول for members.
   // Prefer matching that semantic slot explicitly, then fall back to the final nav button.
   const legacySlot = buttons.find((button) => {
-    const label = buttonLabel(button)?.textContent?.trim()
+    const label = normalizedButtonLabel(button)
     return label === 'الإدارة' || label === 'حسابي' || label === 'دخول' || label === 'الأقسام'
   })
 
   return legacySlot || buttons[buttons.length - 1] || null
+}
+
+function visibleTreePage() {
+  const page = document.querySelector<HTMLElement>('.family-tree-page')
+  return Boolean(page && page.getClientRects().length > 0)
+}
+
+function syncVisiblePrimaryState(sectionsButton: HTMLButtonElement) {
+  if (currentScreen() === SECTIONS_SCREEN) return
+  if (!visibleTreePage()) return
+
+  const treeButton = navButtons().find((button) => normalizedButtonLabel(button) === 'الشجرة')
+  if (!treeButton) return
+
+  // FamilyTreeScreen can stay mounted for navigation caching. Base the active tab
+  // on the page that is actually visible so the bottom bar always matches the screen.
+  navButtons().forEach((item) => item.classList.toggle('active', item === treeButton))
+  sectionsButton.classList.remove('active')
 }
 
 function syncExclusiveSectionsState(button: HTMLButtonElement) {
@@ -57,6 +79,7 @@ function syncExclusiveSectionsState(button: HTMLButtonElement) {
     navButtons().forEach((item) => item.classList.toggle('active', item === button))
   } else {
     button.classList.remove('active')
+    syncVisiblePrimaryState(button)
   }
 }
 
@@ -206,7 +229,7 @@ if (typeof document !== 'undefined') {
   else boot()
 
   const observer = new MutationObserver(scheduleEnhance)
-  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] })
+  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'style'] })
 
   window.addEventListener('popstate', scheduleEnhance)
   window.addEventListener('hashchange', scheduleEnhance)

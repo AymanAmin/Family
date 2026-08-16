@@ -77,6 +77,7 @@ function isNavigationAction(target: Element): boolean {
 export default function HouseholdPortalLifecycleFix(): null {
   useEffect(() => {
     let frame = 0
+    let routeFrame = 0
     const previousPushState = window.history.pushState.bind(window.history)
     const previousReplaceState = window.history.replaceState.bind(window.history)
 
@@ -92,12 +93,15 @@ export default function HouseholdPortalLifecycleFix(): null {
 
     // pushState/replaceState do not emit hashchange. The app uses them for its
     // SPA routes, so route-aware enhancements need one dependable signal after
-    // the URL has actually changed. This catches every navigation source,
-    // including directory/person cards that do not carry data-route attributes.
+    // the URL has actually changed. Dispatch on the next animation frame so
+    // React has a chance to commit the destination profile before photo widgets
+    // resolve the new person id and portal host.
     const emitSpaRouteChanged = (previousHash: string): void => {
       const nextHash = window.location.hash
       if (nextHash === previousHash) return
-      window.queueMicrotask(() => {
+      window.cancelAnimationFrame(routeFrame)
+      routeFrame = window.requestAnimationFrame(() => {
+        routeFrame = 0
         window.dispatchEvent(new CustomEvent('sila:route-changed', {
           detail: { hash: window.location.hash, href: window.location.href },
         }))
@@ -140,6 +144,7 @@ export default function HouseholdPortalLifecycleFix(): null {
     return () => {
       observer.disconnect()
       window.cancelAnimationFrame(frame)
+      window.cancelAnimationFrame(routeFrame)
       window.history.pushState = previousPushState as History['pushState']
       window.history.replaceState = previousReplaceState as History['replaceState']
       document.removeEventListener('click', handleNavigationClick, true)

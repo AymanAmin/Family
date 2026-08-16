@@ -57,3 +57,21 @@ jobs:
           path: Family-release-unsigned.apk
           if-no-files-found: error
           retention-days: 7
+
+      - name: Prepare Android signing utilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p android-signing-tools/lib
+          cp "$ANDROID_HOME/build-tools/35.0.0/apksigner" android-signing-tools/
+          cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" android-signing-tools/
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" android-signing-tools/lib/
+          chmod +x android-signing-tools/apksigner android-signing-tools/zipalign
+
+      - name: Upload Android signing utilities
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-Signing-Tools-35
+          path: android-signing-tools
+          if-no-files-found: error
+          retention-days: 1

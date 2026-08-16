@@ -314,15 +314,17 @@ export default function PersonPhotoEverywhere(): null {
       scheduleScan(Boolean(!detail?.personId))
     }
 
-    const onRouteChange = () => scheduleScan()
+    const onRouteChange = () => scheduleScan(true)
     window.addEventListener('sila:person-photo-updated', onPhotoUpdated)
     window.addEventListener('hashchange', onRouteChange)
+    window.addEventListener('sila:route-changed', onRouteChange)
     scheduleScan()
 
     return () => {
       observer.disconnect()
       window.removeEventListener('sila:person-photo-updated', onPhotoUpdated)
       window.removeEventListener('hashchange', onRouteChange)
+      window.removeEventListener('sila:route-changed', onRouteChange)
       if (scanFrame) window.cancelAnimationFrame(scanFrame)
     }
   }, [])

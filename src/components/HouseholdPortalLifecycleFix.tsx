@@ -77,6 +77,8 @@ function isNavigationAction(target: Element): boolean {
 export default function HouseholdPortalLifecycleFix(): null {
   useEffect(() => {
     let frame = 0
+    let routeSyncTimer = 0
+    let lastKnownHash = window.location.hash
 
     const scheduleCleanup = (): void => {
       window.cancelAnimationFrame(frame)
@@ -88,6 +90,31 @@ export default function HouseholdPortalLifecycleFix(): null {
       scheduleCleanup()
     }
 
+    // React changes the visible screen first and then updates the SPA hash via
+    // history.pushState/replaceState. Those APIs do not emit hashchange, while
+    // several route-aware enhancements (including person photos/admin controls)
+    // rely on that signal. Re-emit it only when a DOM transition reveals that
+    // the hash really changed, after the route has had time to settle.
+    const syncSpaRoute = (): void => {
+      window.clearTimeout(routeSyncTimer)
+      routeSyncTimer = window.setTimeout(() => {
+        const nextHash = window.location.hash
+        if (nextHash === lastKnownHash) return
+        lastKnownHash = nextHash
+        window.dispatchEvent(new Event('hashchange'))
+      }, 120)
+    }
+
+    const handleObservedMutation = (): void => {
+      scheduleCleanup()
+      syncSpaRoute()
+    }
+
+    const handleRouteEvent = (): void => {
+      lastKnownHash = window.location.hash
+      closeForNavigation()
+    }
+
     const handleNavigationClick = (event: MouseEvent): void => {
       const target = event.target
       if (!(target instanceof Element) || !isNavigationAction(target)) return
@@ -95,25 +122,27 @@ export default function HouseholdPortalLifecycleFix(): null {
       // Let the clicked control finish its own routing first, then close the
       // previous surface before the browser paints the destination screen.
       window.queueMicrotask(closeForNavigation)
+      syncSpaRoute()
     }
 
     scheduleCleanup()
 
     const root = document.getElementById('root') ?? document.body
-    const observer = new MutationObserver(scheduleCleanup)
+    const observer = new MutationObserver(handleObservedMutation)
     observer.observe(root, { childList: true, subtree: true })
 
     document.addEventListener('click', handleNavigationClick, true)
-    window.addEventListener('hashchange', closeForNavigation)
-    window.addEventListener('popstate', closeForNavigation)
+    window.addEventListener('hashchange', handleRouteEvent)
+    window.addEventListener('popstate', handleRouteEvent)
     window.addEventListener('sila:navigation-start', closeForNavigation)
 
     return () => {
       observer.disconnect()
       window.cancelAnimationFrame(frame)
+      window.clearTimeout(routeSyncTimer)
       document.removeEventListener('click', handleNavigationClick, true)
-      window.removeEventListener('hashchange', closeForNavigation)
-      window.removeEventListener('popstate', closeForNavigation)
+      window.removeEventListener('hashchange', handleRouteEvent)
+      window.removeEventListener('popstate', handleRouteEvent)
       window.removeEventListener('sila:navigation-start', closeForNavigation)
       removeStaleHouseholdPreview()
     }

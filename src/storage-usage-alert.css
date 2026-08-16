@@ -1,0 +1,126 @@
+.admin-storage-alert {
+  position: fixed;
+  z-index: 1500;
+  inset-inline: 12px;
+  inset-block-end: calc(84px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  width: min(460px, calc(100vw - 24px));
+  margin-inline-start: auto;
+  padding: 12px;
+  border: 1px solid #e4c56d;
+  border-radius: 16px;
+  background: #fffdf5;
+  box-shadow: 0 16px 40px rgb(28 43 56 / 18%);
+  color: #3d3521;
+}
+
+.admin-storage-alert--danger {
+  border-color: #df9e72;
+  background: #fff8f3;
+}
+
+.admin-storage-alert--critical {
+  border-color: #d88787;
+  background: #fff5f5;
+}
+
+.admin-storage-alert-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #f2d886;
+  color: #5c4814;
+  font-size: .82rem;
+  font-weight: 950;
+}
+
+.admin-storage-alert--danger .admin-storage-alert-icon {
+  background: #f4c6a7;
+  color: #6e3513;
+}
+
+.admin-storage-alert--critical .admin-storage-alert-icon {
+  background: #efb1b1;
+  color: #742a2a;
+}
+
+.admin-storage-alert-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-storage-alert-copy strong {
+  color: var(--brand-navy-950, #173653);
+  font-size: .76rem;
+  line-height: 1.5;
+}
+
+.admin-storage-alert-copy > span,
+.admin-storage-alert-copy small {
+  color: #665f4f;
+  font-size: .64rem;
+  line-height: 1.65;
+}
+
+.admin-storage-alert-meter {
+  position: relative;
+  overflow: hidden;
+  height: 6px;
+  margin-block: 2px;
+  border-radius: 999px;
+  background: rgb(89 82 62 / 12%);
+}
+
+.admin-storage-alert-meter > i {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: .7;
+}
+
+.admin-storage-alert > button {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  color: #625d51;
+  background: rgb(255 255 255 / 72%);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.admin-storage-alert > button:focus-visible {
+  outline: 3px solid rgb(61 147 135 / 28%);
+  outline-offset: 2px;
+}
+
+@media (min-width: 761px) {
+  .admin-storage-alert {
+    inset-inline-start: auto;
+    inset-inline-end: 22px;
+    inset-block-end: 24px;
+  }
+}
+
+@media (max-width: 360px) {
+  .admin-storage-alert {
+    inset-inline: 8px;
+    width: calc(100vw - 16px);
+    padding: 10px;
+  }
+
+  .admin-storage-alert-icon {
+    width: 30px;
+    height: 30px;
+  }
+}

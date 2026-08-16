@@ -10,6 +10,7 @@ const SCREEN_VALUES: Record<DirectoryMode, string> = {
 
 let pendingMode: DirectoryMode | null = null
 let enhanceFrame = 0
+let retryTimer = 0
 
 function normalizedText(element: Element | null) {
   return element?.textContent?.replace(/\s+/g, ' ').trim() || ''
@@ -41,11 +42,19 @@ function findDirectoryTab(page: HTMLElement, mode: DirectoryMode) {
     .find((button) => normalizedText(button).startsWith(expected)) || null
 }
 
-function updateDirectoryCopy(page: HTMLElement, mode: DirectoryMode) {
-  if (page.dataset.separateDirectoryMode === mode) return
+function forceSeparateLayout(page: HTMLElement, mode: DirectoryMode) {
   page.dataset.separateDirectoryMode = mode
   page.classList.toggle('directory-people-screen', mode === 'people')
   page.classList.toggle('directory-families-screen', mode === 'families')
+
+  // Keep the shared React directory implementation internally, but never expose
+  // its combined tabs when the user entered the dedicated People/Family screen.
+  const tabs = page.querySelector<HTMLElement>('.directory-tabs')
+  if (tabs) tabs.style.setProperty('display', 'none', 'important')
+}
+
+function updateDirectoryCopy(page: HTMLElement, mode: DirectoryMode) {
+  forceSeparateLayout(page, mode)
 
   const kicker = page.querySelector<HTMLElement>('.directory-kicker')
   const title = page.querySelector<HTMLElement>('.directory-v2-heading h1')
@@ -76,6 +85,9 @@ function resetDirectoryCopy(page: HTMLElement) {
   delete page.dataset.separateDirectoryMode
   page.classList.remove('directory-people-screen', 'directory-families-screen')
 
+  const tabs = page.querySelector<HTMLElement>('.directory-tabs')
+  if (tabs) tabs.style.removeProperty('display')
+
   const kicker = page.querySelector<HTMLElement>('.directory-kicker')
   const title = page.querySelector<HTMLElement>('.directory-v2-heading h1')
   const description = page.querySelector<HTMLElement>('.directory-v2-heading p')
@@ -90,8 +102,7 @@ function resetDirectoryCopy(page: HTMLElement) {
   }
 }
 
-function syncMobileActiveState(mode: DirectoryMode | null, page: HTMLElement | null) {
-  if (!page) return
+function syncMobileActiveState(mode: DirectoryMode | null) {
   const peopleButton = Array.from(document.querySelectorAll<HTMLButtonElement>('.mobile-bottom-nav > button'))
     .find((button) => normalizedText(button).includes('الأفراد'))
   if (!peopleButton) return
@@ -101,39 +112,57 @@ function syncMobileActiveState(mode: DirectoryMode | null, page: HTMLElement | n
 }
 
 function enhanceNow() {
+  enhanceFrame = 0
+
+  if (pendingMode && modeFromUrl() !== pendingMode) writeMode(pendingMode)
+
   const page = document.querySelector<HTMLElement>('.directory-v2-page')
-  if (!page) return
-
-  if (pendingMode) {
-    writeMode(pendingMode)
-    pendingMode = null
-  }
-
-  const mode = modeFromUrl()
-  if (!mode) {
-    resetDirectoryCopy(page)
-    syncMobileActiveState(null, page)
+  if (!page) {
+    if (pendingMode) scheduleRetry()
     return
   }
 
+  const mode = pendingMode || modeFromUrl()
+  if (!mode) {
+    resetDirectoryCopy(page)
+    syncMobileActiveState(null)
+    return
+  }
+
+  // Re-assert the URL after React navigation so refresh/back preserves the
+  // dedicated destination instead of falling back to the combined directory.
+  writeMode(mode)
   updateDirectoryCopy(page, mode)
+
   const tab = findDirectoryTab(page, mode)
   if (tab && !tab.classList.contains('active')) {
     tab.click()
+    forceSeparateLayout(page, mode)
+    scheduleRetry()
     return
   }
-  syncMobileActiveState(mode, page)
+
+  pendingMode = null
+  syncMobileActiveState(mode)
 }
 
 function scheduleEnhance() {
-  window.cancelAnimationFrame(enhanceFrame)
+  // Coalesce mutation bursts. Cancelling every animation frame can starve the
+  // enhancer while React is mounting the directory after a hard navigation.
+  if (enhanceFrame) return
   enhanceFrame = window.requestAnimationFrame(enhanceNow)
+}
+
+function scheduleRetry() {
+  window.clearTimeout(retryTimer)
+  retryTimer = window.setTimeout(scheduleEnhance, 35)
 }
 
 function requestMode(mode: DirectoryMode) {
   pendingMode = mode
+  writeMode(mode)
   scheduleEnhance()
-  window.setTimeout(scheduleEnhance, 0)
+  scheduleRetry()
 }
 
 function clearSeparatedMode() {
@@ -206,6 +235,9 @@ if (typeof document !== 'undefined') {
     pendingMode = null
     scheduleEnhance()
   })
+  window.addEventListener('hashchange', scheduleEnhance)
+  window.addEventListener('pageshow', scheduleEnhance)
+  window.addEventListener('sila:history-navigation', scheduleEnhance)
 }
 
 export {}

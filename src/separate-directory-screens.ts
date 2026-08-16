@@ -11,12 +11,24 @@ const SCREEN_VALUES: Record<DirectoryMode, string> = {
 let pendingMode: DirectoryMode | null = null
 let enhanceFrame = 0
 let retryTimer = 0
+let navigationTimer = 0
 
 function normalizedText(element: Element | null) {
   return element?.textContent?.replace(/\s+/g, ' ').trim() || ''
 }
 
+function routeTarget() {
+  const route = decodeURIComponent(window.location.hash.replace(/^#\/?/, ''))
+  return route.split('/')[0] || ''
+}
+
 function modeFromUrl(): DirectoryMode | null {
+  // The dedicated directory mode belongs only to #/search. Keeping it active
+  // after React has opened #/person/:id left the directory enhancer alive on a
+  // hidden kept-alive search screen and, more importantly, meant the photo
+  // controls did not get a reliable route lifecycle signal on SPA navigation.
+  if (routeTarget() !== 'search') return null
+
   const value = new URL(window.location.href).searchParams.get(SCREEN_PARAM)
   if (value === SCREEN_VALUES.people) return 'people'
   if (value === SCREEN_VALUES.families) return 'families'
@@ -120,14 +132,14 @@ function syncMobileActiveState(mode: DirectoryMode | null) {
 function enhanceNow() {
   enhanceFrame = 0
 
-  if (pendingMode && modeFromUrl() !== pendingMode) writeMode(pendingMode)
+  if (pendingMode && routeTarget() === 'search' && modeFromUrl() !== pendingMode) writeMode(pendingMode)
 
-  const mode = pendingMode || modeFromUrl()
+  const mode = routeTarget() === 'search' ? (pendingMode || modeFromUrl()) : null
   syncBodyMode(mode)
 
   const page = document.querySelector<HTMLElement>('.directory-v2-page')
   if (!page) {
-    if (pendingMode) scheduleRetry()
+    if (pendingMode && routeTarget() === 'search') scheduleRetry()
     return
   }
 
@@ -181,6 +193,33 @@ function clearSeparatedMode() {
   scheduleEnhance()
 }
 
+function notifyWhenDirectoryNavigationSettles() {
+  const startingHash = window.location.hash
+  let attempts = 0
+  window.clearTimeout(navigationTimer)
+
+  const check = () => {
+    attempts += 1
+    const changed = window.location.hash !== startingHash
+
+    if (changed || attempts >= 12) {
+      // pushState/replaceState do not emit hashchange. The photo/avatar and
+      // photo-admin components listen to this app lifecycle event, so emit it
+      // only after React has committed the destination route.
+      pendingMode = null
+      scheduleEnhance()
+      window.dispatchEvent(new CustomEvent('sila:route-changed', {
+        detail: { source: 'dedicated-directory', hash: window.location.hash },
+      }))
+      return
+    }
+
+    navigationTimer = window.setTimeout(check, 25)
+  }
+
+  navigationTimer = window.setTimeout(check, 0)
+}
+
 function directoryModeFromTarget(target: Element): DirectoryMode | null {
   const hubAction = target.closest<HTMLElement>('[data-hub-action]')?.dataset.hubAction
   if (hubAction === 'people') return 'people'
@@ -227,6 +266,14 @@ if (typeof document !== 'undefined') {
       return
     }
 
+    // This is the problematic path: ?screen=directory-people#/search -> person.
+    // React opens the person with state first and synchronizes the hash through
+    // history.replaceState afterwards, which emits no native hashchange event.
+    if (target.closest('.directory-person-card')) {
+      notifyWhenDirectoryNavigationSettles()
+      return
+    }
+
     if (isExplicitGeneralSearch(target) || isUnrelatedPrimaryNavigation(target)) clearSeparatedMode()
   }, true)
 
@@ -248,6 +295,7 @@ if (typeof document !== 'undefined') {
   window.addEventListener('hashchange', scheduleEnhance)
   window.addEventListener('pageshow', scheduleEnhance)
   window.addEventListener('sila:history-navigation', scheduleEnhance)
+  window.addEventListener('sila:route-changed', scheduleEnhance)
 }
 
 export {}

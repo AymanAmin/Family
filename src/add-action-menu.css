@@ -113,6 +113,39 @@ body.add-action-picker-open .mobile-bottom-nav .add-nav-action .mobile-nav-icon 
   transition: transform .18s ease;
 }
 
+/* Desktop add button lives in the sticky top navigation. The old floating-action
+   geometry opened the choices above the trigger, which placed the whole menu
+   outside the viewport. On desktop the choices must drop below the top bar. */
+@media (min-width: 761px) {
+  .add-action-picker-layer {
+    z-index: 30050;
+  }
+
+  .add-action-picker-menu {
+    top: calc(var(--add-trigger-y) + 50px);
+    align-items: flex-start;
+    max-height: calc(100dvh - var(--add-trigger-y) - 72px);
+    overflow-y: auto;
+    padding: 4px 5px 12px;
+    transform: translateX(-50%) translateY(-8px) scale(.96);
+    transform-origin: 50% 0;
+  }
+
+  .add-action-picker-layer.visible .add-action-picker-menu {
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+
+  .add-action-choice {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .add-action-choice-label {
+    min-width: 128px;
+    justify-content: center;
+  }
+}
+
 /* Each add mode is presented as its own destination screen. */
 .add-standalone-screen {
   width: min(760px, calc(100% - 28px)) !important;

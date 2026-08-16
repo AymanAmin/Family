@@ -1,0 +1,39 @@
+/* Desktop/tablet layout for the full news screen.
+   Mobile intentionally keeps the narrow single-column cards from NewsScreenHomeCards.css. */
+@media (min-width: 761px) {
+  .news-page {
+    width: min(100%, 1180px) !important;
+  }
+
+  .news-page .news-home-card-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    justify-items: stretch !important;
+    align-items: stretch !important;
+    gap: 18px !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+  }
+
+  .news-page .news-home-card-list > .event-card {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    min-height: 390px !important;
+    justify-self: stretch !important;
+  }
+
+  .news-page .news-skeleton-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 18px !important;
+  }
+}
+
+@media (min-width: 1050px) {
+  .news-page .news-home-card-list,
+  .news-page .news-skeleton-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}

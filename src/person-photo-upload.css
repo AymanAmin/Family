@@ -1,0 +1,83 @@
+.person-photo-upload-picker {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 11px;
+  align-items: center;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px dashed #9fc8c1;
+  border-radius: 16px;
+  color: var(--brand-navy-950, #173653);
+  background: #f8fcfb;
+  cursor: pointer;
+}
+
+.person-photo-upload-picker:hover {
+  border-color: var(--brand-teal-600, #3d9387);
+  background: #f1faf7;
+}
+
+.person-photo-upload-picker:focus-within {
+  border-color: var(--brand-teal-600, #3d9387);
+  box-shadow: 0 0 0 4px rgb(61 147 135 / 13%);
+}
+
+.person-photo-upload-picker.is-busy {
+  cursor: progress;
+  opacity: .72;
+}
+
+.person-photo-upload-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.person-photo-upload-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  color: var(--brand-teal-700, #2f766d);
+  background: #e4f3ef;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.person-photo-upload-picker > span:last-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.person-photo-upload-picker strong {
+  font-size: .74rem;
+  font-weight: 900;
+}
+
+.person-photo-upload-picker small {
+  color: var(--muted);
+  font-size: .62rem;
+  line-height: 1.55;
+}
+
+.person-photo-upload-preview small {
+  white-space: normal;
+  line-height: 1.55;
+}
+
+@media (max-width: 360px) {
+  .person-photo-upload-picker {
+    grid-template-columns: 40px minmax(0, 1fr);
+    padding: 10px;
+  }
+
+  .person-photo-upload-icon {
+    width: 40px;
+    height: 40px;
+  }
+}

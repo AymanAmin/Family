@@ -126,3 +126,13 @@
 .family-tree-page .tree-focus-summary {
   display: none !important;
 }
+
+/* Home shortcuts: families remain available from the dedicated screen/sections,
+   but the compact home statistics row now shows only top ancestors, people and news. */
+.app-services.unified-home-stats.home-icon-menu > .home-hub-tile[data-hub-action="families"] {
+  display: none !important;
+}
+
+.app-services.unified-home-stats.home-icon-menu {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}

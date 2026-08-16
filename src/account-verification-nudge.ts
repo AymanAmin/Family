@@ -74,11 +74,15 @@ function renderNudge(anchor: HTMLElement, pending: boolean): void {
 
     const steps = document.createElement('div')
     steps.className = 'account-verification-steps'
-    steps.append(
-      textElement('span', '', '1 ابحث عن اسمك'),
-      textElement('span', '', '2 افتح ملفك'),
-      textElement('span', '', '3 اضغط «هذا أنا»'),
-    )
+
+    const firstStep = textElement('span', '', 'ابحث عن اسمك')
+    firstStep.dataset.step = '1'
+    const secondStep = textElement('span', '', 'افتح ملفك')
+    secondStep.dataset.step = '2'
+    const thirdStep = textElement('span', '', 'اضغط «هذا أنا»')
+    thirdStep.dataset.step = '3'
+
+    steps.append(firstStep, secondStep, thirdStep)
     copy.append(steps)
   }
 

@@ -1,9 +1,24 @@
-.home-kinship-shortcut-host {
-  margin: 12px 0 2px;
+/* Stable home order: search (outside dashboard) → welcome → kinship → stats.
+   Do not move React-managed nodes in JavaScript; grid ordering is enough. */
+.nasab-dashboard > .compact-family-welcome {
+  order: 1;
 }
 
-.home-kinship-shortcut-host.home-kinship-shortcut-swapped {
-  margin-top: 18px;
+.nasab-dashboard > .home-kinship-shortcut-host {
+  order: 2;
+}
+
+.nasab-dashboard > .app-services.unified-home-stats {
+  order: 3;
+}
+
+.nasab-dashboard > .home-occasion-greetings-host {
+  order: 4;
+}
+
+.home-kinship-shortcut-host {
+  width: 100%;
+  margin: 0 0 2px;
 }
 
 .home-kinship-shortcut {
@@ -104,11 +119,7 @@
 
 @media (max-width: 760px) {
   .home-kinship-shortcut-host {
-    margin-top: 9px;
-  }
-
-  .home-kinship-shortcut-host.home-kinship-shortcut-swapped {
-    margin-top: 16px;
+    margin: 0 0 2px;
   }
 
   .home-kinship-shortcut-button {

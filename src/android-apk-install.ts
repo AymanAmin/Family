@@ -1,6 +1,6 @@
 import './android-apk-install.css'
 
-const APK_URL = `${import.meta.env.BASE_URL}downloads/Family.apk?v=20260816-2`
+const APK_URL = `${import.meta.env.BASE_URL}downloads/Family-1.0.1-release.apk?v=20260816-3`
 const APK_FILE_NAME = 'Family.apk'
 
 let floatingButton: HTMLAnchorElement | null = null

@@ -86,6 +86,81 @@ body.separate-directory-screen-active .family-welcome-card {
   background: #f5eee4 !important;
 }
 
+.directory-photo-filter-row {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 12px;
+}
+
+.directory-photo-filter {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border: 1px solid #d8e5df;
+  border-radius: 999px;
+  color: #657970;
+  background: rgb(255 255 255 / 88%);
+  font-size: .72rem;
+  font-weight: 900;
+  box-shadow: 0 5px 14px rgb(7 56 45 / 5%);
+  transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
+}
+
+.directory-photo-filter:hover:not(:disabled) {
+  border-color: #b8d3c8;
+  transform: translateY(-1px);
+}
+
+.directory-photo-filter.active {
+  border-color: #9fc8b8;
+  color: var(--green-800);
+  background: #eaf5f0;
+}
+
+.directory-photo-filter:disabled {
+  cursor: wait;
+  opacity: .62;
+}
+
+.directory-photo-filter-check {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--green-700, #0f604b);
+  font-size: .62rem;
+  line-height: 1;
+}
+
+.directory-v2-page.directory-people-screen .directory-photo-filter {
+  border-color: var(--directory-warm-line) !important;
+  color: #866f54 !important;
+  background: rgb(255 253 249 / 94%) !important;
+  box-shadow: 0 6px 16px rgb(120 82 29 / 6%) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-photo-filter:hover:not(:disabled) {
+  border-color: #d8bc8f !important;
+  background: #fffaf2 !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-photo-filter.active {
+  border-color: #cfa867 !important;
+  color: var(--directory-warm-deep) !important;
+  background: var(--directory-warm-soft) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-photo-filter-check {
+  color: #fff !important;
+  background: var(--directory-warm-deep) !important;
+}
+
 .directory-v2-page.directory-people-screen .directory-result-section > header > strong,
 .directory-v2-page.directory-families-screen .directory-result-section > header > strong {
   color: var(--directory-warm-deep) !important;
@@ -141,5 +216,15 @@ body.separate-directory-screen-active .family-welcome-card {
   .directory-v2-page.directory-people-screen .directory-v2-heading p,
   .directory-v2-page.directory-families-screen .directory-v2-heading p {
     margin-top: 8px !important;
+  }
+
+  .directory-photo-filter-row {
+    margin-top: 10px;
+  }
+
+  .directory-photo-filter {
+    min-height: 36px;
+    padding: 6px 11px;
+    font-size: .68rem;
   }
 }

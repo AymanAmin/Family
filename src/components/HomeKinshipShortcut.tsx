@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import PersonPhotoAdminControl from './PersonPhotoAdminControl'
+import AdminStorageUsageAlert from './AdminStorageUsageAlert'
 import '../home-kinship-shortcut.css'
+import '../person-photo-upload.css'
 
 function buttonText(button: Element) {
   return button.textContent?.replace(/\s+/g, ' ').trim() || ''
@@ -84,6 +86,7 @@ export default function HomeKinshipShortcut() {
 
   return <>
     <PersonPhotoAdminControl />
+    <AdminStorageUsageAlert />
     {host && createPortal(
       <section className="home-kinship-shortcut" aria-label="اختصار معرفة صلة القرابة">
         <button type="button" className="home-kinship-shortcut-button" onClick={openKinshipPath}>

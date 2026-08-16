@@ -6,11 +6,11 @@
   gap: 8px;
   margin: -2px 0 12px auto;
   padding: 7px 10px;
-  border: 1px solid rgb(45 101 135 / 14%);
+  border: 1px solid #ead8b9;
   border-radius: 13px;
-  color: #36566c;
-  background: linear-gradient(145deg, rgb(248 252 251 / 96%), rgb(237 246 244 / 92%));
-  box-shadow: 0 5px 16px rgb(31 72 94 / 5%);
+  color: #6f5737;
+  background: linear-gradient(145deg, #fffdf8, #faf2e3);
+  box-shadow: 0 5px 16px rgb(126 87 40 / 6%);
 }
 
 .admin-person-attribution-icon {
@@ -21,9 +21,10 @@
   place-items: center;
   border-radius: 9px;
   color: white;
-  background: linear-gradient(145deg, #3e7e9c, #285b7a);
+  background: linear-gradient(145deg, #c69a54, #9a6b2e);
   font-size: .67rem;
   font-weight: 900;
+  box-shadow: 0 4px 12px rgb(154 107 46 / 18%);
 }
 
 .admin-person-attribution-copy {
@@ -33,7 +34,7 @@
 }
 
 .admin-person-attribution-copy > span {
-  color: #7a8c94;
+  color: #9a876d;
   font-size: .48rem;
   font-weight: 800;
   line-height: 1.3;
@@ -41,7 +42,7 @@
 
 .admin-person-attribution-copy strong {
   overflow: hidden;
-  color: #496473;
+  color: #705a3d;
   font-size: .59rem;
   font-weight: 600;
   line-height: 1.45;
@@ -50,17 +51,47 @@
 }
 
 .admin-person-attribution-copy b {
-  color: #244c68;
+  color: #8a602a;
   font-weight: 900;
 }
 
 .admin-person-attribution time {
   flex: 0 0 auto;
   padding-inline-start: 8px;
-  border-inline-start: 1px solid rgb(62 105 127 / 12%);
-  color: #819099;
+  border-inline-start: 1px solid rgb(183 137 69 / 20%);
+  color: #9c8c76;
   font-size: .51rem;
   white-space: nowrap;
+}
+
+/* Person profile final visual corrections. These are deliberately more specific
+   than the shared profile theme so the real photo and warm identity always win. */
+.page-section.detail-page .detail-avatar.person-photo-enhanced {
+  color: transparent !important;
+  background-image: var(--person-photo-background) !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: cover !important;
+  box-shadow: 0 12px 26px rgb(126 87 40 / 16%) !important;
+}
+
+/* Verification is part of the warm Sila identity: white check on a gold badge. */
+.page-section.detail-page .verified-person-badge,
+.page-section.detail-page .person-title-line .verified-person-badge {
+  background: linear-gradient(145deg, #c89c55, #a8742f) !important;
+  box-shadow: 0 3px 9px rgb(168 116 47 / 24%) !important;
+}
+
+.page-section.detail-page .verified-person-badge svg {
+  fill: #fff !important;
+}
+
+/* The family count is shown over a dark/warm square; keep the number readable. */
+.page-section.detail-page .family-overview-count {
+  color: #fff !important;
+  background: linear-gradient(145deg, #293957, #b78945) !important;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 16%);
+  box-shadow: 0 9px 22px rgb(126 87 40 / 16%) !important;
 }
 
 @media (max-width: 520px) {

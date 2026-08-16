@@ -422,7 +422,7 @@ body.top-ancestors-active main > *:not(.top-ancestors-screen) {
 
 @media (max-width: 700px) {
   .top-ancestors-screen {
-    width: calc(100% - 18px);
+    width: calc(100% - 32px);
     margin: 10px auto 92px;
   }
 

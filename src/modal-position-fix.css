@@ -136,3 +136,9 @@
 .app-services.unified-home-stats.home-icon-menu {
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 }
+
+/* Keep the family-relation total readable on the dark navy/gold profile badge. */
+.page-section.detail-page .family-overview-count {
+  color: #fffdf8 !important;
+  text-shadow: 0 1px 2px rgb(20 28 45 / 45%) !important;
+}

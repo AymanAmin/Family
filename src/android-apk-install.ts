@@ -3,26 +3,10 @@ import './android-apk-install.css'
 const APK_URL = `${import.meta.env.BASE_URL}downloads/Family-1.0.1-release.apk?v=20260816-3`
 const APK_FILE_NAME = 'Family.apk'
 
-let floatingButton: HTMLAnchorElement | null = null
 let syncFrame = 0
 
-function isStandaloneMode() {
-  return window.matchMedia('(display-mode: standalone)').matches
-}
-
-function isAndroidWebView() {
-  const ua = navigator.userAgent
-  return /;\s*wv\)/i.test(ua) || /\bwv\b/i.test(ua) || /Version\/4\.0.*Chrome/i.test(ua)
-}
-
-function isAndroidBrowser() {
-  return /Android/i.test(navigator.userAgent) && !isStandaloneMode() && !isAndroidWebView()
-}
-
-function visibleHomeStats() {
-  const stats = document.querySelector<HTMLElement>('.app-services.unified-home-stats')
-  if (!stats || document.body.classList.contains('home-navigation-hub-active')) return false
-  return stats.getClientRects().length > 0
+function isAndroidDevice() {
+  return /Android/i.test(navigator.userAgent)
 }
 
 function downloadIcon() {
@@ -35,16 +19,32 @@ function downloadIcon() {
     </svg>`
 }
 
+function removeApkItems() {
+  document.querySelectorAll<HTMLElement>('[data-apk-download="true"]').forEach((item) => item.remove())
+}
+
 function ensureHubDownloadItem() {
+  // The APK is an optional Android-only download and must live only inside
+  // the أقسام screen. The normal browser/PWA install prompt remains separate.
+  if (!isAndroidDevice()) {
+    removeApkItems()
+    return
+  }
+
   const grid = document.querySelector<HTMLElement>('.home-navigation-hub-grid')
-  if (!grid || grid.querySelector('[data-apk-download="true"]')) return
+  if (!grid) {
+    removeApkItems()
+    return
+  }
+
+  if (grid.querySelector('[data-apk-download="true"]')) return
 
   const button = document.createElement('a')
   button.className = 'home-navigation-hub-item android-apk-hub-item'
   button.href = APK_URL
   button.download = APK_FILE_NAME
   button.dataset.apkDownload = 'true'
-  button.setAttribute('aria-label', 'تنزيل تطبيق أندرويد')
+  button.setAttribute('aria-label', 'تنزيل تطبيق أندرويد APK')
 
   const icon = document.createElement('span')
   icon.className = 'home-hub-icon'
@@ -54,48 +54,28 @@ function ensureHubDownloadItem() {
   copy.className = 'home-hub-copy'
 
   const label = document.createElement('strong')
-  label.textContent = 'تطبيق أندرويد'
+  label.textContent = 'تطبيق أندرويد APK'
 
   const description = document.createElement('small')
-  description.textContent = 'تنزيل التطبيق وتثبيته على الهاتف'
+  description.textContent = 'تنزيل نسخة أندرويد وتثبيتها يدويًا'
 
   copy.append(label, description)
   button.append(icon, copy)
   grid.appendChild(button)
 }
 
-function ensureFloatingDownload() {
-  if (!isAndroidBrowser()) {
-    floatingButton?.remove()
-    floatingButton = null
-    document.body.classList.remove('android-apk-browser')
-    return
-  }
-
-  document.body.classList.add('android-apk-browser')
-
-  if (!floatingButton?.isConnected) {
-    const link = document.createElement('a')
-    link.className = 'android-apk-floating'
-    link.href = APK_URL
-    link.download = APK_FILE_NAME
-    link.setAttribute('aria-label', 'تنزيل وتثبيت تطبيق Family على أندرويد')
-    link.innerHTML = `${downloadIcon()}<span>تثبيت التطبيق</span>`
-    document.body.appendChild(link)
-    floatingButton = link
-  }
-
-  floatingButton.hidden = !visibleHomeStats()
-}
-
 function syncAndroidInstallUi() {
+  // Intentionally no floating APK button on the home screen. Home uses the
+  // browser's original PWA install experience through InstallPrompt.
   ensureHubDownloadItem()
-  ensureFloatingDownload()
 }
 
 function scheduleSync() {
-  window.cancelAnimationFrame(syncFrame)
-  syncFrame = window.requestAnimationFrame(syncAndroidInstallUi)
+  if (syncFrame) return
+  syncFrame = window.requestAnimationFrame(() => {
+    syncFrame = 0
+    syncAndroidInstallUi()
+  })
 }
 
 if (typeof document !== 'undefined') {

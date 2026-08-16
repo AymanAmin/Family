@@ -55,6 +55,8 @@ function closeOpenDialogs(): void {
 function isNavigationAction(target: Element): boolean {
   if (target.closest('a[href*="#/"]')) return true
 
+  // Keep the same close-before-leave behavior across public screens,
+  // person/family drill-downs and administration/settings navigation.
   return Boolean(target.closest([
     '.desktop-nav button',
     '.mobile-bottom-nav button',

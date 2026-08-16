@@ -36,6 +36,12 @@ function registerVisit() {
   return next
 }
 
+function homeScreenIsVisible() {
+  const stats = document.querySelector<HTMLElement>('.app-services.unified-home-stats')
+  if (!stats || document.body.classList.contains('home-navigation-hub-active')) return false
+  return stats.getClientRects().length > 0
+}
+
 function openCurrentPageInChrome() {
   const current = new URL(window.location.href)
   const scheme = current.protocol.replace(':', '')
@@ -51,6 +57,8 @@ export default function InstallPrompt() {
   const [iosHelp, setIosHelp] = useState(false)
   const [installed, setInstalled] = useState(false)
   const [installing, setInstalling] = useState(false)
+  const [eligible, setEligible] = useState(false)
+  const [homeActive, setHomeActive] = useState(false)
 
   const isIos = useMemo(() => {
     const ua = navigator.userAgent
@@ -66,33 +74,26 @@ export default function InstallPrompt() {
     }
 
     const visitCount = registerVisit()
-    const canSuggestInstall = visitCount >= MIN_VISITS_BEFORE_PROMPT && !recentlyDismissed()
-    let promptTimer: number | undefined
-
-    const showWhenReady = () => {
-      if (!canSuggestInstall || promptTimer) return
-      promptTimer = window.setTimeout(() => setVisible(true), PROMPT_DELAY_MS)
-    }
+    setEligible(visitCount >= MIN_VISITS_BEFORE_PROMPT && !recentlyDismissed())
 
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault()
 
       // Samsung Internet may package the PWA using a WebAPK path that newer
-      // Play Protect versions can flag as targeting an old Android release.
-      // Do not invoke that installer; route the user to Chrome instead.
+      // Play Protect versions can flag. Keep the old browser-install experience,
+      // but route Samsung Internet users to Chrome instead of the APK installer.
       if (isSamsungInternet) {
         setInstallEvent(null)
-        showWhenReady()
         return
       }
 
       setInstallEvent(event as BeforeInstallPromptEvent)
-      showWhenReady()
     }
 
     const onInstalled = () => {
       setInstalled(true)
       setVisible(false)
+      setEligible(false)
       setIosHelp(false)
       setInstallEvent(null)
       window.localStorage.removeItem(DISMISS_KEY)
@@ -101,17 +102,51 @@ export default function InstallPrompt() {
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
     window.addEventListener('appinstalled', onInstalled)
 
-    if (isIos || isSamsungInternet) showWhenReady()
-
     return () => {
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
       window.removeEventListener('appinstalled', onInstalled)
-      if (promptTimer) window.clearTimeout(promptTimer)
     }
-  }, [isIos, isSamsungInternet])
+  }, [isSamsungInternet])
+
+  useEffect(() => {
+    const syncHome = () => setHomeActive(homeScreenIsVisible())
+    syncHome()
+
+    const observer = new MutationObserver(syncHome)
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'hidden'],
+    })
+
+    window.addEventListener('popstate', syncHome)
+    window.addEventListener('hashchange', syncHome)
+    window.addEventListener('pageshow', syncHome)
+    window.addEventListener('sila:history-navigation', syncHome)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('popstate', syncHome)
+      window.removeEventListener('hashchange', syncHome)
+      window.removeEventListener('pageshow', syncHome)
+      window.removeEventListener('sila:history-navigation', syncHome)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (installed || !eligible || !homeActive || (!installEvent && !isIos && !isSamsungInternet)) {
+      setVisible(false)
+      return undefined
+    }
+
+    const timer = window.setTimeout(() => setVisible(true), PROMPT_DELAY_MS)
+    return () => window.clearTimeout(timer)
+  }, [eligible, homeActive, installEvent, installed, isIos, isSamsungInternet])
 
   function dismiss() {
     window.localStorage.setItem(DISMISS_KEY, String(Date.now()))
+    setEligible(false)
     setVisible(false)
     setIosHelp(false)
   }
@@ -130,6 +165,7 @@ export default function InstallPrompt() {
       setInstallEvent(null)
       if (choice.outcome === 'accepted') {
         setVisible(false)
+        setEligible(false)
         return
       }
       dismiss()
@@ -139,7 +175,7 @@ export default function InstallPrompt() {
     if (isIos) setIosHelp(true)
   }
 
-  if (installed || !visible || (!installEvent && !isIos && !isSamsungInternet)) return null
+  if (installed || !homeActive || !visible || (!installEvent && !isIos && !isSamsungInternet)) return null
 
   const showingSamsungHelp = isSamsungInternet && !iosHelp
   const title = iosHelp
@@ -150,7 +186,7 @@ export default function InstallPrompt() {
   const subtitle = iosHelp
     ? 'خطوتان فقط من قائمة المشاركة.'
     : showingSamsungHelp
-      ? 'افتح صلة في Google Chrome لتجنب تحذير Play Protect في Samsung Internet.'
+      ? 'افتح صلة في Google Chrome ثم استخدم تثبيت التطبيق من المتصفح.'
       : 'أضفه إلى الشاشة الرئيسية للوصول السريع والتنبيهات.'
 
   return (

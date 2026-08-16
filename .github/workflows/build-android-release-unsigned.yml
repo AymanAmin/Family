@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: family-android-release-unsigned
+  cancel-in-progress: true
+
 jobs:
   build-release:
     runs-on: ubuntu-latest
@@ -43,7 +47,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print
           APK="$(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -1)"
           test -n "$APK"
           test -s "$APK"
@@ -62,10 +65,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p android-signing-tools/lib
-          cp "$ANDROID_HOME/build-tools/35.0.0/apksigner" android-signing-tools/
-          cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" android-signing-tools/
-          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" android-signing-tools/lib/
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/35.0.0"
+          mkdir -p android-signing-tools/lib android-signing-tools/lib64
+          cp "$BUILD_TOOLS/apksigner" android-signing-tools/
+          cp "$BUILD_TOOLS/zipalign" android-signing-tools/
+          cp "$BUILD_TOOLS/lib/apksigner.jar" android-signing-tools/lib/
+          LIBCPP="$(find "$BUILD_TOOLS" -type f -name 'libc++.so' | head -1)"
+          test -n "$LIBCPP"
+          cp "$LIBCPP" android-signing-tools/lib64/
           chmod +x android-signing-tools/apksigner android-signing-tools/zipalign
 
       - name: Upload Android signing utilities

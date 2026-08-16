@@ -9,6 +9,17 @@ function buttonText(button: Element) {
   return button.textContent?.replace(/\s+/g, ' ').trim() || ''
 }
 
+function currentPersonContextKey() {
+  if (typeof window === 'undefined') return ''
+
+  const anchor = document.querySelector<HTMLElement>('.detail-hero .person-context-anchor[data-person-context-id]')
+  const anchoredId = anchor?.dataset.personContextId?.trim() || ''
+  if (anchoredId) return anchoredId
+
+  const match = window.location.hash.match(/^#\/person\/([^/?#]+)/)
+  return match ? decodeURIComponent(match[1]) : ''
+}
+
 function openKinshipPath() {
   const navigationButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.desktop-nav button, .mobile-bottom-nav button'))
   const treeButton = navigationButtons.find((button) => {
@@ -37,6 +48,7 @@ function openKinshipPath() {
 
 export default function HomeKinshipShortcut() {
   const [host, setHost] = useState<HTMLElement | null>(null)
+  const [photoContextKey, setPhotoContextKey] = useState(() => currentPersonContextKey())
 
   useEffect(() => {
     let currentHost: HTMLElement | null = null
@@ -51,6 +63,9 @@ export default function HomeKinshipShortcut() {
     const locate = () => {
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
+        const nextPhotoContextKey = currentPersonContextKey()
+        setPhotoContextKey((current) => current === nextPhotoContextKey ? current : nextPhotoContextKey)
+
         const dashboard = document.querySelector<HTMLElement>('.nasab-dashboard')
         const welcome = dashboard?.querySelector<HTMLElement>(':scope > .compact-family-welcome') ?? null
         const stats = dashboard?.querySelector<HTMLElement>(':scope > .app-services.unified-home-stats') ?? null
@@ -75,17 +90,26 @@ export default function HomeKinshipShortcut() {
 
     locate()
     const observer = new MutationObserver(locate)
-    observer.observe(document.body, { childList: true, subtree: true })
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-person-context-id'],
+    })
+    window.addEventListener('hashchange', locate)
+    window.addEventListener('popstate', locate)
 
     return () => {
       window.cancelAnimationFrame(frame)
       observer.disconnect()
+      window.removeEventListener('hashchange', locate)
+      window.removeEventListener('popstate', locate)
       clearHost()
     }
   }, [])
 
   return <>
-    <PersonPhotoAdminControl />
+    <PersonPhotoAdminControl key={photoContextKey || 'no-person'} />
     <AdminStorageUsageAlert />
     {host && createPortal(
       <section className="home-kinship-shortcut" aria-label="اختصار معرفة صلة القرابة">

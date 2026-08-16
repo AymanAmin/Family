@@ -23,6 +23,12 @@ function modeFromUrl(): DirectoryMode | null {
   return null
 }
 
+function syncBodyMode(mode: DirectoryMode | null) {
+  document.body.classList.toggle('separate-directory-screen-active', Boolean(mode))
+  document.body.classList.toggle('separate-directory-people-active', mode === 'people')
+  document.body.classList.toggle('separate-directory-families-active', mode === 'families')
+}
+
 function writeMode(mode: DirectoryMode | null) {
   const url = new URL(window.location.href)
   const current = url.searchParams.get(SCREEN_PARAM)
@@ -116,13 +122,15 @@ function enhanceNow() {
 
   if (pendingMode && modeFromUrl() !== pendingMode) writeMode(pendingMode)
 
+  const mode = pendingMode || modeFromUrl()
+  syncBodyMode(mode)
+
   const page = document.querySelector<HTMLElement>('.directory-v2-page')
   if (!page) {
     if (pendingMode) scheduleRetry()
     return
   }
 
-  const mode = pendingMode || modeFromUrl()
   if (!mode) {
     resetDirectoryCopy(page)
     syncMobileActiveState(null)
@@ -160,6 +168,7 @@ function scheduleRetry() {
 
 function requestMode(mode: DirectoryMode) {
   pendingMode = mode
+  syncBodyMode(mode)
   writeMode(mode)
   scheduleEnhance()
   scheduleRetry()
@@ -167,6 +176,7 @@ function requestMode(mode: DirectoryMode) {
 
 function clearSeparatedMode() {
   pendingMode = null
+  syncBodyMode(null)
   writeMode(null)
   scheduleEnhance()
 }

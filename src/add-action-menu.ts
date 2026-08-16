@@ -4,6 +4,13 @@ import './mobile-sections-nav'
 type AddMode = 'family' | 'person' | 'event' | 'relationship'
 
 const MODE_STORAGE_KEY = 'sila_add_screen_mode'
+const SCREEN_PARAM = 'screen'
+const SCREEN_VALUES: Record<AddMode, string> = {
+  person: 'add-person',
+  family: 'add-family',
+  event: 'add-event',
+  relationship: 'add-relationship',
+}
 
 const modeMeta: Record<AddMode, { label: string; title: string; description: string; icon: string }> = {
   person: {
@@ -43,8 +50,9 @@ let pickerLayer: HTMLElement | null = null
 let sourceButton: HTMLButtonElement | null = null
 let bypassAddClick = false
 let pendingMode: AddMode | null = null
-let restoreMode: AddMode | null = window.location.hash.startsWith('#/add') ? readStoredMode() : null
+let restoreMode: AddMode | null = null
 let enhanceFrame = 0
+let retryTimer = 0
 
 function normalizedText(element: Element | null) {
   return element?.textContent?.replace(/\s+/g, ' ').trim() || ''
@@ -61,6 +69,32 @@ function readStoredMode(): AddMode | null {
 
 function storeMode(mode: AddMode) {
   try { window.sessionStorage.setItem(MODE_STORAGE_KEY, mode) } catch { /* storage can be disabled */ }
+}
+
+function modeFromUrl(): AddMode | null {
+  const value = new URL(window.location.href).searchParams.get(SCREEN_PARAM)
+  return (Object.keys(SCREEN_VALUES) as AddMode[]).find((mode) => SCREEN_VALUES[mode] === value) || null
+}
+
+function writeScreenMode(mode: AddMode | null) {
+  const url = new URL(window.location.href)
+  const current = url.searchParams.get(SCREEN_PARAM)
+  const isCurrentAddScreen = (Object.values(SCREEN_VALUES) as string[]).includes(current || '')
+
+  if (mode) {
+    const next = SCREEN_VALUES[mode]
+    if (current === next) return
+    url.searchParams.set(SCREEN_PARAM, next)
+  } else {
+    if (!isCurrentAddScreen) return
+    url.searchParams.delete(SCREEN_PARAM)
+  }
+
+  window.history.replaceState(window.history.state, '', url.toString())
+}
+
+function isAddRoute() {
+  return window.location.hash.startsWith('#/add')
 }
 
 function isAddNavigationButton(button: HTMLButtonElement) {
@@ -137,19 +171,35 @@ function activeMode(control: HTMLElement): AddMode {
   return found || 'family'
 }
 
+function forceStandaloneShell(section: HTMLElement, control: HTMLElement, mode: AddMode) {
+  section.classList.add('add-standalone-screen')
+  section.dataset.addStandaloneMode = mode
+  control.style.setProperty('display', 'none', 'important')
+
+  const pageHeading = section.querySelector<HTMLElement>(':scope > .page-heading')
+  if (pageHeading) pageHeading.style.setProperty('display', 'none', 'important')
+}
+
 function selectModeInReact(mode: AddMode, attempts = 0) {
   const control = findSegmentedControl()
   if (!control) {
-    if (attempts < 45) window.setTimeout(() => selectModeInReact(mode, attempts + 1), 45)
+    if (attempts < 60) window.setTimeout(() => selectModeInReact(mode, attempts + 1), 40)
     return
   }
 
   const button = Array.from(control.querySelectorAll<HTMLButtonElement>('button'))
     .find((item) => normalizedText(item) === segmentLabels[mode])
 
-  if (button && !button.classList.contains('active')) button.click()
-  else pendingMode = null
+  if (button && !button.classList.contains('active')) {
+    button.click()
+    window.setTimeout(() => selectModeInReact(mode, attempts + 1), 0)
+    return
+  }
+
+  pendingMode = null
+  restoreMode = null
   storeMode(mode)
+  writeScreenMode(mode)
   scheduleEnhance()
 }
 
@@ -165,8 +215,13 @@ function chooseMode(mode: AddMode) {
   restoreMode = null
   storeMode(mode)
   closePicker()
-  triggerNativeAddNavigation()
-  window.setTimeout(() => selectModeInReact(mode), 30)
+
+  if (!isAddRoute()) triggerNativeAddNavigation()
+
+  window.setTimeout(() => {
+    writeScreenMode(mode)
+    selectModeInReact(mode)
+  }, 25)
 }
 
 function makeStandaloneHeader(mode: AddMode) {
@@ -200,48 +255,85 @@ function updateStandaloneHeader(header: HTMLElement, mode: AddMode) {
 }
 
 function enhanceAddScreen() {
+  enhanceFrame = 0
+
+  if (!isAddRoute()) {
+    writeScreenMode(null)
+    return
+  }
+
   const control = findSegmentedControl()
-  if (!control) return
+  if (!control) {
+    scheduleRetry()
+    return
+  }
+
   const section = control.closest<HTMLElement>('section.page-section')
-  if (!section) return
+  if (!section) {
+    scheduleRetry()
+    return
+  }
 
-  section.classList.add('add-standalone-screen')
-  const mode = activeMode(control)
-  const requestedMode = pendingMode || restoreMode
+  const requestedMode = pendingMode || modeFromUrl() || restoreMode || activeMode(control)
+  const currentMode = activeMode(control)
 
-  if (requestedMode && requestedMode !== mode) {
+  // Hide the shared selector immediately. It is only an internal React control now;
+  // the user sees one dedicated destination per add type.
+  forceStandaloneShell(section, control, requestedMode)
+
+  if (requestedMode !== currentMode) {
     const target = Array.from(control.querySelectorAll<HTMLButtonElement>('button'))
       .find((button) => normalizedText(button) === segmentLabels[requestedMode])
     if (target) {
       target.click()
+      forceStandaloneShell(section, control, requestedMode)
+      scheduleRetry()
       return
     }
   }
 
-  if (requestedMode === mode) {
-    pendingMode = null
-    restoreMode = null
-  }
+  pendingMode = null
+  restoreMode = null
+  storeMode(requestedMode)
+  writeScreenMode(requestedMode)
 
-  storeMode(mode)
   let header = section.querySelector<HTMLElement>(':scope > .add-standalone-heading')
   if (!header) {
-    header = makeStandaloneHeader(mode)
+    header = makeStandaloneHeader(requestedMode)
     section.prepend(header)
   } else {
-    updateStandaloneHeader(header, mode)
+    updateStandaloneHeader(header, requestedMode)
   }
 }
 
 function scheduleEnhance() {
-  window.cancelAnimationFrame(enhanceFrame)
+  // Coalesce mutation bursts so React cannot starve the enhancer while mounting.
+  if (enhanceFrame) return
   enhanceFrame = window.requestAnimationFrame(enhanceAddScreen)
 }
 
+function scheduleRetry() {
+  window.clearTimeout(retryTimer)
+  retryTimer = window.setTimeout(scheduleEnhance, 35)
+}
+
+function clearAddScreenWhenLeaving(target: Element) {
+  const primary = target.closest<HTMLButtonElement>('.desktop-nav button, .mobile-bottom-nav button, .brand')
+  if (!primary || isAddNavigationButton(primary)) return
+  writeScreenMode(null)
+  pendingMode = null
+  restoreMode = null
+}
+
 if (typeof document !== 'undefined') {
+  restoreMode = isAddRoute() ? (modeFromUrl() || readStoredMode()) : null
+
   document.addEventListener('click', (event) => {
     const target = event.target
     if (!(target instanceof Element)) return
+
+    clearAddScreenWhenLeaving(target)
+
     const button = target.closest<HTMLButtonElement>('button')
     if (!button || !isAddNavigationButton(button)) return
 
@@ -267,6 +359,30 @@ if (typeof document !== 'undefined') {
 
   const observer = new MutationObserver(scheduleEnhance)
   observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
+
+  window.addEventListener('popstate', () => {
+    pendingMode = null
+    restoreMode = isAddRoute() ? (modeFromUrl() || readStoredMode()) : null
+    scheduleEnhance()
+  })
+
+  window.addEventListener('hashchange', () => {
+    if (!isAddRoute()) {
+      writeScreenMode(null)
+      pendingMode = null
+      restoreMode = null
+    } else {
+      restoreMode = modeFromUrl() || readStoredMode()
+    }
+    scheduleEnhance()
+  })
+
+  window.addEventListener('pageshow', () => {
+    restoreMode = isAddRoute() ? (modeFromUrl() || readStoredMode()) : null
+    scheduleEnhance()
+  })
+
+  window.addEventListener('sila:history-navigation', scheduleEnhance)
 }
 
 export {}

@@ -49,8 +49,8 @@ const CACHE_TTL = 45_000
 const peopleCache = new Map<string, PeoplePage & { savedAt: number }>()
 const householdCache = new Map<string, HouseholdPage & { savedAt: number }>()
 
-function cacheKey(term: string, page: number) {
-  return `${term.trim().toLocaleLowerCase('ar')}::${page}`
+function cacheKey(term: string, page: number, scope = 'all') {
+  return `${term.trim().toLocaleLowerCase('ar')}::${page}::${scope}`
 }
 
 function normalizePerson(item: Record<string, unknown>): DirectoryPerson {
@@ -121,6 +121,15 @@ function DirectoryGenderIcon({ gender }: { gender: DirectoryPerson['gender'] }) 
   )
 }
 
+function PhotoFilterIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h2l1.2-1.7h4.6L15.5 6h2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" />
+      <circle cx="12" cy="12.5" r="3.2" />
+    </svg>
+  )
+}
+
 function PersonCard({ item, onOpen }: { item: DirectoryPerson; onOpen: (item: DirectoryPerson) => void }) {
   const meta = [item.birth_year ? String(item.birth_year) : '', item.is_deceased ? 'متوفى' : '', item.description || ''].filter(Boolean).slice(0, 2).join(' · ')
   return (
@@ -154,16 +163,19 @@ function hasNextPage(receivedLength: number, count: number | null, from: number)
   return receivedLength > PAGE_SIZE || (count != null && from + PAGE_SIZE < count)
 }
 
-async function fetchPeoplePage(page: number, queryTerm: string, forceFresh = false): Promise<PeoplePage> {
+async function fetchPeoplePage(page: number, queryTerm: string, photoOnly = false, forceFresh = false): Promise<PeoplePage> {
   if (!supabase) return { rows: [], count: null, hasMore: false }
-  const key = cacheKey(queryTerm, page)
+  const key = cacheKey(queryTerm, page, photoOnly ? 'photo' : 'all')
   const cached = peopleCache.get(key)
   if (!forceFresh && cached && Date.now() - cached.savedAt < CACHE_TTL) return cached
 
   const from = page * PAGE_SIZE
   const normalizedTerm = queryTerm.trim()
 
-  if (normalizedTerm) {
+  // Preserve the smart Arabic-name RPC for the normal directory. When the
+  // photo filter is active we query people directly so pagination/counts are
+  // calculated by the database against photo_url rather than filtered in UI.
+  if (normalizedTerm && !photoOnly) {
     const smart = await supabase.rpc('search_directory_people', { p_query: normalizedTerm, p_limit: PAGE_SIZE + 1, p_offset: from })
     if (!smart.error) {
       const received = (smart.data ?? []).map((item: unknown) => normalizePerson(item as Record<string, unknown>))
@@ -178,12 +190,17 @@ async function fetchPeoplePage(page: number, queryTerm: string, forceFresh = fal
     .from('people')
     .select('id,full_name,gender,birth_year,is_deceased,death_date,is_verified,description,status,family_id,created_by,created_at,families(name)', { count: 'planned' })
     .eq('status', 'approved')
+  if (photoOnly) query = query.not('photo_url', 'is', null)
   if (normalizedTerm) query = query.ilike('full_name', `%${normalizedTerm}%`)
   const result = await query.order(normalizedTerm ? 'full_name' : 'created_at', { ascending: Boolean(normalizedTerm) }).range(from, to)
 
   if (result.error) {
-    const fallbackBase = supabase.from('people').select('id,full_name,gender,birth_year,is_deceased,death_date,description,status,family_id,created_by,created_at', { count: 'planned' }).eq('status', 'approved')
-    const fallback = normalizedTerm ? fallbackBase.ilike('full_name', `%${normalizedTerm}%`) : fallbackBase
+    let fallback = supabase
+      .from('people')
+      .select('id,full_name,gender,birth_year,is_deceased,death_date,description,status,family_id,created_by,created_at', { count: 'planned' })
+      .eq('status', 'approved')
+    if (photoOnly) fallback = fallback.not('photo_url', 'is', null)
+    if (normalizedTerm) fallback = fallback.ilike('full_name', `%${normalizedTerm}%`)
     const fallbackResult = await fallback.order(normalizedTerm ? 'full_name' : 'created_at', { ascending: Boolean(normalizedTerm) }).range(from, to)
     if (fallbackResult.error) throw fallbackResult.error
     const received = (fallbackResult.data ?? []).map((item) => normalizePerson(item as unknown as Record<string, unknown>))
@@ -226,6 +243,7 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
   const [term, setTerm] = useState(initialTerm)
   const [submittedTerm, setSubmittedTerm] = useState(initialTerm.trim())
   const [tab, setTab] = useState<Tab>(initialTab)
+  const [photoOnly, setPhotoOnly] = useState(false)
   const [people, setPeople] = useState<DirectoryPerson[]>([])
   const [households, setHouseholds] = useState<DirectoryHousehold[]>([])
   const [peoplePage, setPeoplePage] = useState(0)
@@ -240,7 +258,7 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
   const requestRef = useRef(0)
   const debounceRef = useRef<number | null>(null)
 
-  const reload = useCallback(async (queryTerm: string, forceFresh = false) => {
+  const reload = useCallback(async (queryTerm: string, photoOnlyFilter = false, forceFresh = false) => {
     if (!supabase) return
     if (forceFresh) {
       peopleCache.clear()
@@ -250,7 +268,10 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
     setLoading(true)
     setError('')
     try {
-      const [peopleResult, householdResult] = await Promise.all([fetchPeoplePage(0, queryTerm, forceFresh), fetchHouseholdPage(0, queryTerm, forceFresh)])
+      const [peopleResult, householdResult] = await Promise.all([
+        fetchPeoplePage(0, queryTerm, photoOnlyFilter, forceFresh),
+        fetchHouseholdPage(0, queryTerm, forceFresh),
+      ])
       if (requestId !== requestRef.current) return
       setPeople(peopleResult.rows)
       setPeopleCount(peopleResult.count)
@@ -272,7 +293,8 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
     const value = initialTerm.trim()
     setTerm(initialTerm)
     setSubmittedTerm(value)
-    void reload(value, true)
+    setPhotoOnly(false)
+    void reload(value, false, true)
   }, [initialTerm, reload])
 
   useEffect(() => setTab(initialTab), [initialTab])
@@ -283,7 +305,10 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
     if (debounceRef.current) window.clearTimeout(debounceRef.current)
     const normalized = value.trim()
     if (normalized.length === 1) return
-    debounceRef.current = window.setTimeout(() => { setSubmittedTerm(normalized); void reload(normalized) }, 360)
+    debounceRef.current = window.setTimeout(() => {
+      setSubmittedTerm(normalized)
+      void reload(normalized, photoOnly)
+    }, 360)
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -292,14 +317,20 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
     const value = term.trim()
     if (value.length === 1) return
     setSubmittedTerm(value)
-    void reload(value)
+    void reload(value, photoOnly)
   }
 
   function clearSearch() {
     if (debounceRef.current) window.clearTimeout(debounceRef.current)
     setTerm('')
     setSubmittedTerm('')
-    void reload('')
+    void reload('', photoOnly)
+  }
+
+  function togglePhotoFilter() {
+    const next = !photoOnly
+    setPhotoOnly(next)
+    void reload(submittedTerm, next)
   }
 
   function openHousehold(item: DirectoryHousehold) {
@@ -313,7 +344,7 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
     try {
       if (kind === 'people') {
         const nextPage = peoplePage + 1
-        const result = await fetchPeoplePage(nextPage, submittedTerm)
+        const result = await fetchPeoplePage(nextPage, submittedTerm, photoOnly)
         setPeople((current) => [...current, ...result.rows.filter((row) => !current.some((old) => old.id === row.id))])
         setPeopleCount(result.count)
         setPeopleHasMore(result.hasMore)
@@ -336,6 +367,9 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
   const showPeople = tab === 'all' || tab === 'people'
   const showHouseholds = tab === 'all' || tab === 'families'
   const waitingForSecondCharacter = term.trim().length === 1
+  const peopleHeading = submittedTerm
+    ? `نتائج «${submittedTerm}»${photoOnly ? ' بصور بروفايل' : ''}`
+    : photoOnly ? 'الأفراد الذين لديهم صور بروفايل' : 'أحدث الأفراد المعتمدين'
 
   return (
     <section className="directory-v2-page">
@@ -352,6 +386,15 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
           <button className="directory-search-submit" type="submit" disabled={waitingForSecondCharacter}>بحث</button>
         </form>
         {waitingForSecondCharacter && <div className="directory-search-tip">اكتب حرفًا ثانيًا لبدء البحث السريع.</div>}
+        {tab !== 'families' && (
+          <div className="directory-photo-filter-row" aria-label="فلتر الأفراد">
+            <button className={`directory-photo-filter${photoOnly ? ' active' : ''}`} type="button" aria-pressed={photoOnly} disabled={loading} onClick={togglePhotoFilter}>
+              <PhotoFilterIcon />
+              <span>صور بروفايل فقط</span>
+              {photoOnly && <span className="directory-photo-filter-check" aria-hidden="true">✓</span>}
+            </button>
+          </div>
+        )}
         <div className="directory-tabs" role="tablist" aria-label="نوع النتائج">
           <button className={tab === 'all' ? 'active' : ''} type="button" onClick={() => setTab('all')}>الكل</button>
           <button className={tab === 'people' ? 'active' : ''} type="button" onClick={() => setTab('people')}>الأشخاص {peopleCount != null && <b title="عدد تقديري سريع">≈{peopleCount}</b>}</button>
@@ -366,8 +409,8 @@ export default function DirectoryScreen({ initialTerm = '', initialTab = 'all', 
         <div className="directory-result-stack" aria-live="polite">
           {showPeople && (
             <section className="directory-result-section">
-              <header><div><span>الأفراد</span><h2>{submittedTerm ? `نتائج «${submittedTerm}»` : 'أحدث الأفراد المعتمدين'}</h2></div>{peopleCount != null && <strong>≈{peopleCount}</strong>}</header>
-              {people.length ? <div className="directory-person-list">{people.map((item) => <PersonCard key={item.id} item={item} onOpen={onOpenPerson} />)}</div> : <div className="directory-empty">لا توجد نتائج أشخاص مطابقة.</div>}
+              <header><div><span>الأفراد</span><h2>{peopleHeading}</h2></div>{peopleCount != null && <strong>≈{peopleCount}</strong>}</header>
+              {people.length ? <div className="directory-person-list">{people.map((item) => <PersonCard key={item.id} item={item} onOpen={onOpenPerson} />)}</div> : <div className="directory-empty">{photoOnly ? 'لا توجد نتائج لأشخاص لديهم صور بروفايل.' : 'لا توجد نتائج أشخاص مطابقة.'}</div>}
               {peopleHasMore && <button className="directory-more" type="button" disabled={loadingMore === 'people'} onClick={() => void loadMore('people')}>{loadingMore === 'people' ? 'جارٍ التحميل…' : 'عرض 8 أشخاص إضافيين'}</button>}
             </section>
           )}

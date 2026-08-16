@@ -25,6 +25,107 @@ body.separate-directory-screen-active .family-welcome-card {
   margin-top: 0;
 }
 
+/* Dedicated people/family screens use the warm Sila palette instead of teal. */
+.directory-v2-page.directory-people-screen,
+.directory-v2-page.directory-families-screen {
+  --directory-warm: #aa7b35;
+  --directory-warm-deep: #8e6428;
+  --directory-warm-soft: #f7efe0;
+  --directory-warm-softer: #fffaf2;
+  --directory-warm-line: #eadcc4;
+}
+
+.directory-v2-page.directory-people-screen .directory-v2-hero,
+.directory-v2-page.directory-families-screen .directory-v2-hero {
+  border-color: var(--directory-warm-line) !important;
+  background:
+    radial-gradient(circle at 12% 80%, rgb(170 123 53 / 9%) 0 82px, transparent 83px),
+    linear-gradient(135deg, #fffdfa 0%, #fff8ed 100%) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-kicker,
+.directory-v2-page.directory-families-screen .directory-kicker,
+.directory-v2-page.directory-people-screen .directory-search-icon,
+.directory-v2-page.directory-families-screen .directory-search-icon,
+.directory-v2-page.directory-people-screen .directory-result-section > header span,
+.directory-v2-page.directory-families-screen .directory-result-section > header span,
+.directory-v2-page.directory-people-screen .directory-arrow,
+.directory-v2-page.directory-families-screen .directory-arrow {
+  color: var(--directory-warm-deep) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-search-box,
+.directory-v2-page.directory-families-screen .directory-search-box {
+  border-color: var(--directory-warm-line) !important;
+  background: rgb(255 253 249 / 96%) !important;
+  box-shadow: 0 10px 28px rgb(120 82 29 / 7%) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-search-box:focus-within,
+.directory-v2-page.directory-families-screen .directory-search-box:focus-within {
+  border-color: rgb(170 123 53 / 52%) !important;
+  box-shadow: 0 0 0 4px rgb(170 123 53 / 9%) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-search-submit,
+.directory-v2-page.directory-families-screen .directory-search-submit {
+  border: 0 !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #293957 0%, #aa7b35 100%) !important;
+  box-shadow: 0 9px 20px rgb(94 67 31 / 16%) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-search-submit:active,
+.directory-v2-page.directory-families-screen .directory-search-submit:active {
+  transform: translateY(1px) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-clear,
+.directory-v2-page.directory-families-screen .directory-clear {
+  color: #866f54 !important;
+  background: #f5eee4 !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-result-section > header > strong,
+.directory-v2-page.directory-families-screen .directory-result-section > header > strong {
+  color: var(--directory-warm-deep) !important;
+  background: var(--directory-warm-soft) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-avatar,
+.directory-v2-page.directory-families-screen .directory-avatar,
+.directory-v2-page.directory-people-screen .directory-family-mark,
+.directory-v2-page.directory-families-screen .directory-family-mark {
+  color: var(--directory-warm-deep) !important;
+  background: linear-gradient(145deg, #f4e4c9, #fff5e6) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-avatar.female,
+.directory-v2-page.directory-families-screen .directory-avatar.female {
+  color: #94662c !important;
+  background: linear-gradient(145deg, #faecd8, #fff6e9) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-person-card:hover,
+.directory-v2-page.directory-families-screen .directory-person-card:hover,
+.directory-v2-page.directory-people-screen .directory-family-card:hover,
+.directory-v2-page.directory-families-screen .directory-family-card:hover {
+  border-color: #dfc79f !important;
+  box-shadow: 0 8px 22px rgb(120 82 29 / 8%) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-more,
+.directory-v2-page.directory-families-screen .directory-more {
+  border-color: #dec79f !important;
+  color: var(--directory-warm-deep) !important;
+  background: var(--directory-warm-softer) !important;
+}
+
+.directory-v2-page.directory-people-screen .directory-more:hover,
+.directory-v2-page.directory-families-screen .directory-more:hover {
+  background: var(--directory-warm-soft) !important;
+}
+
 @media (max-width: 760px) {
   .directory-v2-page.directory-people-screen .directory-v2-hero,
   .directory-v2-page.directory-families-screen .directory-v2-hero {

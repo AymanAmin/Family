@@ -16,6 +16,7 @@ type PhotoUpdateDetail = {
 type AvatarBinding = {
   avatar: HTMLElement
   name: string
+  personId?: string
 }
 
 type NamePhotoGroup = {
@@ -26,6 +27,7 @@ type NamePhotoGroup = {
 
 const PHOTO_CACHE_TTL = 5 * 60_000
 const photoByName = new Map<string, PhotoCacheEntry>()
+const photoById = new Map<string, PhotoCacheEntry>()
 const loadedPhotoUrls = new Set<string>()
 const photoLoadPromises = new Map<string, Promise<boolean>>()
 let scanFrame = 0
@@ -33,6 +35,12 @@ let requestSerial = 0
 
 function normalizedName(value: string | null | undefined) {
   return (value ?? '').replace(/\s+/g, ' ').trim()
+}
+
+function personIdFromRoute() {
+  if (typeof window === 'undefined') return ''
+  const match = window.location.hash.match(/^#\/person\/([^/?#]+)/)
+  return match ? decodeURIComponent(match[1]) : ''
 }
 
 function safePhotoUrl(value: unknown): string | null {
@@ -59,18 +67,23 @@ function collectBindings(): AvatarBinding[] {
   const bindings: AvatarBinding[] = []
   const seen = new Set<HTMLElement>()
 
-  function add(selector: string, resolveName: (avatar: HTMLElement) => string) {
+  function add(selector: string, resolveName: (avatar: HTMLElement) => string, resolvePersonId?: (avatar: HTMLElement) => string) {
     document.querySelectorAll<HTMLElement>(selector).forEach((avatar) => {
       if (seen.has(avatar)) return
       const name = normalizedName(resolveName(avatar))
       if (!name) return
       seen.add(avatar)
-      bindings.push({ avatar, name })
+      const personId = resolvePersonId?.(avatar)?.trim() || undefined
+      bindings.push({ avatar, name, personId })
     })
   }
 
-  // Main person profile and signed-in account avatar.
-  add('.detail-hero .detail-avatar', (avatar) => textFrom(avatar.closest('.detail-hero'), 'h1'))
+  // Main person profile: bind by the actual record id, not only by the displayed
+  // name. This is important when two people have the same name; the old name-only
+  // safety rule intentionally suppressed the image in that case.
+  add('.detail-hero .detail-avatar',
+    (avatar) => textFrom(avatar.closest('.detail-hero'), 'h1'),
+    () => personIdFromRoute())
   add('.account-area .account-profile-button', (avatar) => textFrom(avatar.closest('.account-area'), '.account-copy strong'))
 
   // Directory, pickers and family/person lists.
@@ -159,9 +172,6 @@ function applyPhoto(binding: AvatarBinding, url: string | null) {
 
   if (avatar.dataset.personPhotoUrl === url && avatar.classList.contains('person-photo-enhanced')) return
 
-  // If the browser already decoded this image once, applying it as a background is
-  // immediate and does not replace React-managed children. This prevents the avatar
-  // from flashing empty during route/state re-renders.
   if (loadedPhotoUrls.has(url)) {
     commitPhoto(avatar, url)
     return
@@ -174,12 +184,35 @@ function applyPhoto(binding: AvatarBinding, url: string | null) {
     if (!avatar.isConnected || avatar.dataset.personPhotoPendingUrl !== url) return
 
     if (!loaded) {
-      photoByName.set(name, { url: null, savedAt: Date.now() })
+      if (binding.personId) photoById.set(binding.personId, { url: null, savedAt: Date.now() })
+      else photoByName.set(name, { url: null, savedAt: Date.now() })
       restoreAvatar(avatar)
       return
     }
 
     commitPhoto(avatar, url)
+  })
+}
+
+async function fetchPhotosByIds(ids: string[]) {
+  if (!supabase || !ids.length) return
+  const { data, error } = await supabase
+    .from('people')
+    .select('id,photo_url')
+    .eq('status', 'approved')
+    .in('id', ids)
+
+  if (error) return
+  const now = Date.now()
+  const returned = new Set<string>()
+  for (const row of data ?? []) {
+    const id = typeof row.id === 'string' ? row.id : ''
+    if (!id) continue
+    returned.add(id)
+    photoById.set(id, { url: safePhotoUrl(row.photo_url), savedAt: now })
+  }
+  ids.forEach((id) => {
+    if (!returned.has(id)) photoById.set(id, { url: null, savedAt: now })
   })
 }
 
@@ -215,9 +248,6 @@ async function fetchPhotos(names: string[]) {
   names.forEach((name) => {
     const group = groups.get(name)
     const safeUniqueUrl = group && !group.missingPhoto && group.urls.size === 1 ? Array.from(group.urls)[0] ?? null : null
-    // Exact duplicate names are intentionally conservative: if one duplicate has
-    // no image or the duplicates have different images, keep the fallback avatar
-    // rather than risking showing the wrong person's photo.
     photoByName.set(name, { url: safeUniqueUrl, savedAt: now })
   })
 }
@@ -228,7 +258,15 @@ async function scanAndApply(force = false) {
   if (!bindings.length) return
 
   const now = Date.now()
-  const namesToFetch = [...new Set(bindings.map((item) => item.name).filter((name) => {
+  const idsToFetch = [...new Set(bindings.map((item) => item.personId).filter((id): id is string => Boolean(id)).filter((id) => {
+    if (force) return true
+    const cached = photoById.get(id)
+    return !cached || now - cached.savedAt > PHOTO_CACHE_TTL
+  }))]
+
+  if (idsToFetch.length) await fetchPhotosByIds(idsToFetch)
+
+  const namesToFetch = [...new Set(bindings.filter((item) => !item.personId).map((item) => item.name).filter((name) => {
     if (force) return true
     const cached = photoByName.get(name)
     return !cached || now - cached.savedAt > PHOTO_CACHE_TTL
@@ -236,7 +274,12 @@ async function scanAndApply(force = false) {
 
   if (namesToFetch.length) await fetchPhotos(namesToFetch)
 
-  bindings.forEach((binding) => applyPhoto(binding, photoByName.get(binding.name)?.url ?? null))
+  bindings.forEach((binding) => {
+    const url = binding.personId
+      ? photoById.get(binding.personId)?.url ?? null
+      : photoByName.get(binding.name)?.url ?? null
+    applyPhoto(binding, url)
+  })
 }
 
 function scheduleScan(force = false) {
@@ -266,7 +309,9 @@ export default function PersonPhotoEverywhere(): null {
       const detail = (event as CustomEvent<PhotoUpdateDetail>).detail
       const name = normalizedName(detail?.fullName)
       if (name) photoByName.set(name, { url: safePhotoUrl(detail?.photoUrl), savedAt: Date.now() })
-      scheduleScan(Boolean(!name))
+      if (detail?.personId) photoById.set(detail.personId, { url: safePhotoUrl(detail.photoUrl), savedAt: Date.now() })
+      // Refetch id-bound avatars too when the existing caller only supplied a name.
+      scheduleScan(Boolean(!detail?.personId))
     }
 
     const onRouteChange = () => scheduleScan()

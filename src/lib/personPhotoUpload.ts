@@ -6,7 +6,7 @@ const QUALITY_STEPS = [0.86, 0.78, 0.7, 0.62, 0.54, 0.46, 0.38, 0.3]
 export type CompressedPersonPhoto = {
   blob: Blob
   mimeType: 'image/webp' | 'image/jpeg'
-  extension: 'webp' | 'jpg'
+  extension: 'webp'
   width: number
   height: number
   originalBytes: number
@@ -66,7 +66,8 @@ async function encodeAtSize(image: HTMLImageElement, width: number, height: numb
     let blob = await canvasBlob(canvas, preferredType, quality)
 
     // A browser may silently fall back to PNG when WebP encoding is unavailable.
-    // JPEG is used as the compatibility fallback so the 50 KiB cap stays realistic.
+    // JPEG remains the content compatibility fallback, but the storage object key
+    // always ends in .webp so every person permanently owns one replaceable file.
     if (preferredType === 'image/webp' && blob.type !== 'image/webp') {
       preferredType = 'image/jpeg'
       context.save()
@@ -82,7 +83,7 @@ async function encodeAtSize(image: HTMLImageElement, width: number, height: numb
       return {
         blob,
         mimeType: preferredType,
-        extension: preferredType === 'image/webp' ? 'webp' : 'jpg',
+        extension: 'webp',
       } as const
     }
   }
@@ -91,7 +92,7 @@ async function encodeAtSize(image: HTMLImageElement, width: number, height: numb
     ? {
         blob: lastBlob,
         mimeType: preferredType,
-        extension: preferredType === 'image/webp' ? 'webp' : 'jpg',
+        extension: 'webp',
       } as const
     : null
 }

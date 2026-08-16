@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ChangeEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
+import { compressPersonPhoto, PERSON_PHOTO_MAX_BYTES, type CompressedPersonPhoto } from '../lib/personPhotoUpload'
 import { notifyPersonPhotoUpdated } from './PersonPhotoEverywhere'
 
 type ContextState = {
@@ -14,6 +15,8 @@ type ProfileRole = {
   account_status?: string | null
   linked_person_id?: string | null
 }
+
+const PHOTO_BUCKET = 'person-photos'
 
 function personIdFromHash() {
   if (typeof window === 'undefined') return ''
@@ -58,6 +61,26 @@ function googlePhotoFromSessionUser(user: { app_metadata?: Record<string, unknow
   return httpsMetadataPhoto(user.user_metadata?.picture) || httpsMetadataPhoto(user.user_metadata?.avatar_url)
 }
 
+function formatFileSize(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB'
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes >= 100 * 1024 ? 0 : 1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function storageObjectNameFromUrl(value: string) {
+  if (!value) return ''
+  try {
+    const url = new URL(value)
+    const marker = `/storage/v1/object/public/${PHOTO_BUCKET}/`
+    const index = url.pathname.indexOf(marker)
+    if (index < 0) return ''
+    const name = decodeURIComponent(url.pathname.slice(index + marker.length))
+    return name && !name.includes('/') ? name : ''
+  } catch {
+    return ''
+  }
+}
+
 export default function PersonPhotoAdminControl() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [linkedPersonId, setLinkedPersonId] = useState('')
@@ -67,8 +90,11 @@ export default function PersonPhotoAdminControl() {
   const [open, setOpen] = useState(false)
   const [googleOpen, setGoogleOpen] = useState(false)
   const [photoUrl, setPhotoUrl] = useState('')
-  const [draftUrl, setDraftUrl] = useState('')
+  const [selectedPhoto, setSelectedPhoto] = useState<CompressedPersonPhoto | null>(null)
+  const [selectedFileName, setSelectedFileName] = useState('')
+  const [previewUrl, setPreviewUrl] = useState('')
   const [loadingPhoto, setLoadingPhoto] = useState(false)
+  const [compressing, setCompressing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [googleBusy, setGoogleBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -164,8 +190,18 @@ export default function PersonPhotoAdminControl() {
     return () => { cancelled = true }
   }, [context?.personId])
 
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+  }, [previewUrl])
+
+  function resetSelection() {
+    setSelectedPhoto(null)
+    setSelectedFileName('')
+    setPreviewUrl('')
+  }
+
   function openEditor() {
-    setDraftUrl(photoUrl)
+    resetSelection()
     setMessage('')
     setOpen(true)
   }
@@ -175,34 +211,112 @@ export default function PersonPhotoAdminControl() {
     setGoogleOpen(true)
   }
 
-  async function savePhotoUrl() {
-    if (!supabase || !context?.personId || busy) return
-    const value = draftUrl.trim()
-    if (!isValidHttpsUrl(value)) {
-      setMessage('استخدم رابط صورة يبدأ بـ https:// فقط.')
+  async function choosePhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || compressing || busy) return
+
+    setCompressing(true)
+    setMessage('جارٍ ضغط الصورة تلقائيًا إلى 50KB أو أقل…')
+    resetSelection()
+
+    try {
+      const compressed = await compressPersonPhoto(file)
+      const objectUrl = URL.createObjectURL(compressed.blob)
+      setSelectedPhoto(compressed)
+      setSelectedFileName(file.name)
+      setPreviewUrl(objectUrl)
+      setMessage(`تم ضغط الصورة من ${formatFileSize(file.size)} إلى ${formatFileSize(compressed.blob.size)}. النسخة المضغوطة فقط هي التي سترفع.`)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'تعذر ضغط الصورة المختارة.')
+    } finally {
+      setCompressing(false)
+    }
+  }
+
+  async function saveUploadedPhoto() {
+    if (!supabase || !context?.personId || busy || compressing) return
+    if (!selectedPhoto) {
+      setMessage('اختر صورة من جهازك أولًا.')
+      return
+    }
+
+    if (selectedPhoto.blob.size > PERSON_PHOTO_MAX_BYTES) {
+      setMessage('الصورة المضغوطة ما زالت أكبر من 50KB. اختر صورة أخرى.')
       return
     }
 
     setBusy(true)
-    setMessage('')
-    const { data, error } = await supabase.rpc('set_person_photo_url', {
-      p_person_id: context.personId,
-      p_photo_url: value || null,
-    })
-    setBusy(false)
+    setMessage('جارٍ رفع الصورة المضغوطة…')
 
-    if (error) {
-      const lowered = error.message.toLowerCase()
-      if (lowered.includes('only administrators')) setMessage('هذه الخاصية متاحة للمدراء فقط.')
-      else if (lowered.includes('https')) setMessage('الرابط يجب أن يكون رابط HTTPS صالحًا.')
-      else setMessage(error.message || 'تعذر حفظ رابط الصورة.')
+    const objectName = `${context.personId}.${selectedPhoto.extension}`
+    const previousObject = storageObjectNameFromUrl(photoUrl)
+    const { error: uploadError } = await supabase.storage.from(PHOTO_BUCKET).upload(objectName, selectedPhoto.blob, {
+      cacheControl: '3600',
+      contentType: selectedPhoto.mimeType,
+      upsert: true,
+    })
+
+    if (uploadError) {
+      setBusy(false)
+      setMessage(uploadError.message || 'تعذر رفع الصورة.')
       return
     }
 
-    const saved = typeof data === 'string' ? data : ''
+    const { data: publicData } = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(objectName)
+    const versionedUrl = `${publicData.publicUrl}?v=${Date.now()}`
+    const { data, error } = await supabase.rpc('set_person_photo_url', {
+      p_person_id: context.personId,
+      p_photo_url: versionedUrl,
+    })
+
+    if (error) {
+      setBusy(false)
+      setMessage(error.message || 'تم رفع الملف لكن تعذر ربطه بسجل الشخص.')
+      return
+    }
+
+    const saved = typeof data === 'string' ? data : versionedUrl
+    const alternateName = `${context.personId}.${selectedPhoto.extension === 'webp' ? 'jpg' : 'webp'}`
+    const cleanup = [previousObject, alternateName].filter((name, index, values) => name && name !== objectName && values.indexOf(name) === index)
+    if (cleanup.length) void supabase.storage.from(PHOTO_BUCKET).remove(cleanup)
+
     setPhotoUrl(saved)
-    notifyPersonPhotoUpdated(context.personName, saved || null)
-    setMessage(saved ? 'تم حفظ رابط الصورة، وسيظهر في بطاقات الشخص مباشرة.' : 'تم حذف رابط الصورة والعودة للأيقونة الافتراضية.')
+    notifyPersonPhotoUpdated(context.personName, saved)
+    window.dispatchEvent(new Event('family:person-photo-storage-changed'))
+    setBusy(false)
+    setMessage(`تم حفظ الصورة بنجاح بحجم ${formatFileSize(selectedPhoto.blob.size)}.`)
+    resetSelection()
+    window.setTimeout(() => setOpen(false), 900)
+  }
+
+  async function removePhoto() {
+    if (!supabase || !context?.personId || busy) return
+    setBusy(true)
+    setMessage('جارٍ إزالة الصورة…')
+
+    const oldObject = storageObjectNameFromUrl(photoUrl)
+    const { error } = await supabase.rpc('set_person_photo_url', {
+      p_person_id: context.personId,
+      p_photo_url: null,
+    })
+
+    if (error) {
+      setBusy(false)
+      setMessage(error.message || 'تعذر إزالة الصورة.')
+      return
+    }
+
+    if (oldObject) {
+      await supabase.storage.from(PHOTO_BUCKET).remove([oldObject])
+      window.dispatchEvent(new Event('family:person-photo-storage-changed'))
+    }
+
+    setPhotoUrl('')
+    notifyPersonPhotoUpdated(context.personName, null)
+    resetSelection()
+    setBusy(false)
+    setMessage('تم حذف الصورة والعودة للأيقونة الافتراضية.')
     window.setTimeout(() => setOpen(false), 850)
   }
 
@@ -226,7 +340,7 @@ export default function PersonPhotoAdminControl() {
     const saved = typeof data === 'string' ? data : googlePhotoUrl
     setPhotoUrl(saved)
     notifyPersonPhotoUpdated(context.personName, saved || null)
-    setGoogleMessage('تم استيراد صورة Google كرابط فقط، وستظهر في المنصة مباشرة.')
+    setGoogleMessage('تم استخدام صورة Google لحساب الشخص.')
     window.setTimeout(() => setGoogleOpen(false), 950)
   }
 
@@ -255,30 +369,43 @@ export default function PersonPhotoAdminControl() {
   )
 
   const modal = open ? createPortal(
-    <div className="record-edit-overlay person-photo-admin-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !busy && setOpen(false)}>
+    <div className="record-edit-overlay person-photo-admin-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !busy && !compressing && setOpen(false)}>
       <section className="record-edit-sheet person-photo-admin-sheet" role="dialog" aria-modal="true" aria-label={`صورة ${context.personName}`}>
         <div className="record-edit-heading">
-          <div><span>للمدراء فقط</span><h2>رابط صورة {context.personName}</h2></div>
-          <button type="button" onClick={() => !busy && setOpen(false)} aria-label="إغلاق">×</button>
+          <div><span>للمدراء فقط</span><h2>صورة {context.personName}</h2></div>
+          <button type="button" onClick={() => !busy && !compressing && setOpen(false)} aria-label="إغلاق">×</button>
         </div>
 
         <div className="person-photo-admin-form">
-          <p className="person-photo-admin-note">لا يتم رفع أي ملف إلى السيرفر. النظام يحفظ رابط الصورة فقط ويستخدمه عند عرض هذا الشخص في المنصة.</p>
-          <label className="person-photo-url-field">
-            <span>رابط الصورة <small>استخدم رابط HTTPS مباشر للصورة.</small></span>
-            <input type="url" inputMode="url" dir="ltr" value={draftUrl} onChange={(event) => setDraftUrl(event.target.value)} placeholder="https://example.com/photo.jpg" autoComplete="off" />
+          <p className="person-photo-admin-note">اختر أي صورة من الجوال أو الكمبيوتر. المنصة ستضغطها تلقائيًا إلى حد أقصى 50KB قبل الرفع؛ لا تحتاج إلى تصغير الصورة بنفسك.</p>
+
+          <label className={`person-photo-upload-picker${compressing ? ' is-busy' : ''}`}>
+            <input type="file" accept="image/*" onChange={(event) => void choosePhoto(event)} disabled={busy || compressing} />
+            <span className="person-photo-upload-icon" aria-hidden="true">＋</span>
+            <span>
+              <strong>{compressing ? 'جارٍ ضغط الصورة…' : 'اختيار صورة من الجهاز'}</strong>
+              <small>يمكن اختيار صورة كبيرة؛ سيتم حفظ النسخة المضغوطة فقط.</small>
+            </span>
           </label>
 
-          {draftUrl.trim() && isValidHttpsUrl(draftUrl) && <div className="person-photo-admin-preview">
-            <img src={draftUrl.trim()} alt={`معاينة صورة ${context.personName}`} />
-            <span><strong>معاينة الرابط</strong><small>{draftUrl.trim()}</small></span>
+          {previewUrl && selectedPhoto && <div className="person-photo-admin-preview person-photo-upload-preview">
+            <img src={previewUrl} alt={`معاينة الصورة المضغوطة لـ ${context.personName}`} />
+            <span>
+              <strong>{selectedFileName || 'الصورة المختارة'}</strong>
+              <small>قبل الضغط: {formatFileSize(selectedPhoto.originalBytes)} · بعد الضغط: {formatFileSize(selectedPhoto.blob.size)} · {selectedPhoto.width}×{selectedPhoto.height}</small>
+            </span>
+          </div>}
+
+          {!previewUrl && photoUrl && <div className="person-photo-admin-preview person-photo-upload-preview">
+            <img src={photoUrl} alt={`الصورة الحالية لـ ${context.personName}`} />
+            <span><strong>الصورة الحالية</strong><small>اختر صورة جديدة لاستبدالها.</small></span>
           </div>}
 
           {message && <div className="record-edit-message">{message}</div>}
           <div className="person-photo-admin-actions">
-            <button type="button" className="secondary" disabled={busy} onClick={() => setOpen(false)}>إلغاء</button>
-            {photoUrl && <button type="button" className="person-photo-remove" disabled={busy} onClick={() => setDraftUrl('')}>إزالة الصورة</button>}
-            <button type="button" className="primary" disabled={busy} onClick={() => void savePhotoUrl()}>{busy ? 'جارٍ الحفظ…' : 'حفظ الرابط'}</button>
+            <button type="button" className="secondary" disabled={busy || compressing} onClick={() => setOpen(false)}>إلغاء</button>
+            {photoUrl && <button type="button" className="person-photo-remove" disabled={busy || compressing} onClick={() => void removePhoto()}>إزالة الصورة</button>}
+            <button type="button" className="primary" disabled={busy || compressing || !selectedPhoto} onClick={() => void saveUploadedPhoto()}>{busy ? 'جارٍ الحفظ…' : 'حفظ الصورة'}</button>
           </div>
         </div>
       </section>
@@ -295,7 +422,7 @@ export default function PersonPhotoAdminControl() {
         </div>
 
         <div className="person-photo-admin-form">
-          <p className="person-photo-admin-note">سيتم حفظ رابط صورة حساب Google فقط داخل سجل الشخص. لا يتم تنزيل الصورة أو رفعها إلى خوادم المنصة.</p>
+          <p className="person-photo-admin-note">هذا الخيار يستخدم صورة حساب Google المرتبطة بالحساب الموثّق. رفع الصور اليدوي من زر «إضافة صورة» يتم ضغطه تلقائيًا إلى 50KB.</p>
           <div className="person-photo-admin-preview person-google-photo-preview">
             <img src={googlePhotoUrl} alt={`صورة Google لـ ${context.personName}`} />
             <span><strong>صورة حساب Google</strong><small>{googlePhotoUrl}</small></span>

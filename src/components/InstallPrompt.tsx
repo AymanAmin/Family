@@ -5,7 +5,6 @@ type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>
   userChoice: Promise<InstallChoice>
 }
-
 type NavigatorWithStandalone = Navigator & { standalone?: boolean }
 
 const DISMISS_KEY = 'sila_pwa_install_dismissed_at'
@@ -194,7 +193,7 @@ export default function InstallPrompt() {
       <button className="pwa-install-close" type="button" onClick={dismiss} aria-label="إغلاق اقتراح التثبيت">×</button>
 
       <div className="pwa-install-brand">
-        <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" aria-hidden="true" />
+        <img src={`${import.meta.env.BASE_URL}icons/icon-approved-v4-192.jpg?v=7`} alt="" aria-hidden="true" />
         <div>
           <span>صلة</span>
           <strong>{title}</strong>

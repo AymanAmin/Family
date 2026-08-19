@@ -4,8 +4,8 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/ic_family"
-        android:roundIcon="@drawable/ic_family"
+        android:icon="@drawable/sila_approved_logo"
+        android:roundIcon="@drawable/sila_approved_logo"
         android:label="Family"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"

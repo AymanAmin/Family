@@ -154,7 +154,7 @@ public class MainActivity extends Activity {
         overlay.setFocusable(true);
 
         ImageView logo = new ImageView(this);
-        logo.setImageResource(R.drawable.ic_family);
+        logo.setImageResource(R.drawable.sila_approved_logo);
         logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
         logo.setContentDescription("شعار صلة القرابة");
 

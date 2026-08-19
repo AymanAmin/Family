@@ -4,9 +4,12 @@ import android.app.Activity;
 import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.view.Gravity;
+import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
@@ -15,21 +18,35 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private static final String HOME_URL = "https://aymanamin.github.io/Family/";
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
+    private static final int SPLASH_BACKGROUND = Color.rgb(255, 249, 238);
 
     private WebView webView;
+    private FrameLayout splashOverlay;
     private ValueCallback<Uri[]> filePathCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        FrameLayout root = new FrameLayout(this);
         webView = new WebView(this);
-        setContentView(webView);
+        webView.setBackgroundColor(SPLASH_BACKGROUND);
+        root.addView(webView, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
+
+        splashOverlay = createSplashOverlay();
+        root.addView(splashOverlay, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
+        setContentView(root);
 
         WebView.setWebContentsDebuggingEnabled(false);
 
@@ -57,6 +74,12 @@ public class MainActivity extends Activity {
             @SuppressWarnings("deprecation")
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 return handleExternalUrl(Uri.parse(url));
+            }
+
+            @Override
+            public void onPageCommitVisible(WebView view, String url) {
+                super.onPageCommitVisible(view, url);
+                view.postDelayed(MainActivity.this::hideNativeSplash, 140);
             }
         });
 
@@ -120,6 +143,53 @@ public class MainActivity extends Activity {
         } else {
             webView.restoreState(savedInstanceState);
         }
+
+        webView.postDelayed(this::hideNativeSplash, 5000);
+    }
+
+    private FrameLayout createSplashOverlay() {
+        FrameLayout overlay = new FrameLayout(this);
+        overlay.setBackgroundColor(SPLASH_BACKGROUND);
+        overlay.setClickable(true);
+        overlay.setFocusable(true);
+
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.ic_family);
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        logo.setContentDescription("شعار صلة القرابة");
+
+        int logoSize = dpToPx(188);
+        FrameLayout.LayoutParams logoParams = new FrameLayout.LayoutParams(
+                logoSize,
+                logoSize,
+                Gravity.CENTER);
+        overlay.addView(logo, logoParams);
+        return overlay;
+    }
+
+    private void hideNativeSplash() {
+        FrameLayout overlay = splashOverlay;
+        if (overlay == null || overlay.getVisibility() != View.VISIBLE) {
+            return;
+        }
+
+        splashOverlay = null;
+        overlay.animate()
+                .alpha(0f)
+                .setDuration(220)
+                .withEndAction(() -> {
+                    View parent = (View) overlay.getParent();
+                    if (parent instanceof FrameLayout) {
+                        ((FrameLayout) parent).removeView(overlay);
+                    } else {
+                        overlay.setVisibility(View.GONE);
+                    }
+                })
+                .start();
+    }
+
+    private int dpToPx(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private boolean handleExternalUrl(Uri uri) {

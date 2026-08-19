@@ -9,7 +9,8 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const cacheNames = await caches.keys()
-    await Promise.all(cacheNames.map((name) => caches.delete(name)))
+    const silaCaches = cacheNames.filter((name) => name.startsWith('sila-'))
+    await Promise.all(silaCaches.map((name) => caches.delete(name)))
     await self.clients.claim()
   })())
 })

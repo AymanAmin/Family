@@ -5,14 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#b77914" />
     <meta name="description" content="صلة — منصة العائلة وصلة القرابة." />
+    <meta name="application-name" content="صلة" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="صلة" />
-    <link rel="manifest" href="/Family/manifest.webmanifest?v=16" />
-    <link rel="preload" as="image" href="/Family/brand/sila-approved-v4.jpg?v=16" fetchpriority="high" />
-    <link rel="icon" type="image/jpeg" href="/Family/brand/sila-approved-v4.jpg?v=16" />
-    <link rel="apple-touch-icon" href="/Family/icons/apple-touch-icon.png?v=16" />
+    <link rel="manifest" href="/Family/manifest.webmanifest" />
+    <link rel="preload" as="image" href="/Family/brand/sila-approved-v4.jpg" fetchpriority="high" />
+    <link rel="icon" type="image/jpeg" href="/Family/brand/sila-approved-v4.jpg" />
+    <link rel="apple-touch-icon" href="/Family/icons/apple-touch-icon.png" />
     <title>صلة القرابة</title>
     <style>
       #sila-splash {
@@ -87,36 +88,14 @@
         #sila-splash { transition-duration: .01ms; }
       }
     </style>
-    <script>
-      (() => {
-        window.__silaInstallPrompt = null
-        window.addEventListener('beforeinstallprompt', (event) => {
-          event.preventDefault()
-          window.__silaInstallPrompt = event
-          window.dispatchEvent(new Event('sila:install-prompt-ready'))
-        })
-        window.addEventListener('appinstalled', () => {
-          window.__silaInstallPrompt = null
-        })
-      })()
-    </script>
-    <script>
-      (() => {
-        if (!('serviceWorker' in navigator)) return
-        navigator.serviceWorker.register('/Family/sw.js', {
-          scope: '/Family/',
-          updateViaCache: 'none',
-        }).catch((error) => console.warn('Early service worker registration failed.', error))
-      })()
-    </script>
-    <script type="module" crossorigin src="/Family/assets/index-BLsg7Rui.js"></script>
+    <script type="module" crossorigin src="/Family/assets/index-DD77hfHJ.js"></script>
     <link rel="modulepreload" crossorigin href="/Family/assets/jsx-runtime-Cut7sifM.js">
-    <link rel="stylesheet" crossorigin href="/Family/assets/index-D7EyV_gS.css">
+    <link rel="stylesheet" crossorigin href="/Family/assets/index-M2rLWSDF.css">
   </head>
   <body>
     <div id="sila-splash" role="status" aria-label="جارٍ فتح صلة القرابة">
       <div class="sila-splash-inner">
-        <img src="/Family/brand/sila-approved-v4.jpg?v=16" alt="شعار صلة القرابة" fetchpriority="high" decoding="sync" />
+        <img src="/Family/brand/sila-approved-v4.jpg" alt="شعار صلة القرابة" fetchpriority="high" decoding="sync" />
         <span class="sila-splash-loader" aria-hidden="true"></span>
       </div>
     </div>

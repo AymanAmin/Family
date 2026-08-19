@@ -1,46 +1,28 @@
-const CACHE_VERSION = 'sila-v28-install-v16'
-const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
-
 function appUrl(path = '') {
   return new URL(path, self.registration.scope).toString()
 }
 
-const PRECACHE_PATHS = [
-  './',
-  'manifest.webmanifest?v=16',
-  'icons/icon-192.png?v=16',
-  'icons/icon-512.png?v=16',
-  'icons/maskable-512.png?v=16',
-  'icons/apple-touch-icon.png?v=16',
-  'brand/sila-approved-v4.jpg?v=16',
-  'brand/sila-mark.svg?v=16',
-  'icons/notification-badge.png',
-]
-
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_VERSION)
-      .then((cache) => Promise.all(PRECACHE_PATHS.map(async (path) => {
-        try {
-          await cache.add(appUrl(path))
-        } catch (error) {
-          console.warn('[Sila SW] Optional precache skipped:', path, error)
-        }
-      })))
-      .then(() => self.skipWaiting()),
-  )
+  event.waitUntil(self.skipWaiting())
 })
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_VERSION && key !== RUNTIME_CACHE).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim()),
-  )
+  event.waitUntil((async () => {
+    const cacheNames = await caches.keys()
+    const silaCaches = cacheNames.filter((name) => name.startsWith('sila-'))
+    await Promise.all(silaCaches.map((name) => caches.delete(name)))
+    await self.clients.claim()
+  })())
 })
 
-self.addEventListener('message', (event) => {
-  if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting()
+self.addEventListener('fetch', (event) => {
+  const request = event.request
+  if (request.method !== 'GET') return
+
+  const url = new URL(request.url)
+  if (url.origin !== self.location.origin) return
+
+  event.respondWith(fetch(request))
 })
 
 self.addEventListener('push', (event) => {
@@ -54,7 +36,7 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'صلة'
   const options = {
     body: data.body || 'لديك تحديث جديد في صلة.',
-    icon: appUrl('icons/icon-192.png?v=16'),
+    icon: appUrl('icons/icon-192.png'),
     badge: appUrl('icons/notification-badge.png'),
     tag: data.tag || 'sila-update',
     renotify: true,
@@ -82,60 +64,4 @@ self.addEventListener('notificationclick', (event) => {
     }
     return self.clients.openWindow(targetUrl)
   })())
-})
-
-self.addEventListener('fetch', (event) => {
-  const request = event.request
-  if (request.method !== 'GET') return
-
-  const requestUrl = new URL(request.url)
-  if (requestUrl.origin !== self.location.origin) return
-
-  if (requestUrl.pathname.toLowerCase().endsWith('.apk')) {
-    event.respondWith(fetch(request, { cache: 'no-store' }))
-    return
-  }
-
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request, { cache: 'no-store' })
-        .then((response) => {
-          const copy = response.clone()
-          void caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy))
-          return response
-        })
-        .catch(async () => {
-          return (await caches.match(request)) || (await caches.match(appUrl('./'))) || Response.error()
-        }),
-    )
-    return
-  }
-
-  const isBrandAsset = requestUrl.pathname.includes('/brand/') || requestUrl.pathname.includes('/icons/') || requestUrl.pathname.endsWith('/manifest.webmanifest')
-  if (isBrandAsset) {
-    event.respondWith(
-      fetch(request, { cache: 'no-store' })
-        .then((response) => {
-          if (response && response.status === 200 && response.type !== 'opaque') {
-            const copy = response.clone()
-            void caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy))
-          }
-          return response
-        })
-        .catch(async () => (await caches.match(request)) || Response.error()),
-    )
-    return
-  }
-
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached
-      return fetch(request).then((response) => {
-        if (!response || response.status !== 200 || response.type === 'opaque') return response
-        const copy = response.clone()
-        void caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy))
-        return response
-      })
-    }),
-  )
 })

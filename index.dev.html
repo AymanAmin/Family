@@ -100,6 +100,15 @@
         })
       })()
     </script>
+    <script>
+      (() => {
+        if (!('serviceWorker' in navigator)) return
+        navigator.serviceWorker.register('%BASE_URL%sw.js', {
+          scope: '%BASE_URL%',
+          updateViaCache: 'none',
+        }).catch((error) => console.warn('Early service worker registration failed.', error))
+      })()
+    </script>
   </head>
   <body>
     <div id="sila-splash" role="status" aria-label="جارٍ فتح صلة القرابة">

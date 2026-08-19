@@ -9,10 +9,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="صلة" />
-    <link rel="manifest" href="/Family/manifest.webmanifest?v=12" />
-    <link rel="preload" as="image" href="/Family/brand/sila-approved-v4.jpg?v=12" fetchpriority="high" />
-    <link rel="icon" type="image/jpeg" href="/Family/brand/sila-approved-v4.jpg?v=12" />
-    <link rel="apple-touch-icon" href="/Family/icons/apple-touch-icon-approved-v4.jpg?v=12" />
+    <link rel="manifest" href="/Family/manifest.webmanifest?v=13" />
+    <link rel="preload" as="image" href="/Family/brand/sila-approved-v4.jpg?v=13" fetchpriority="high" />
+    <link rel="icon" type="image/jpeg" href="/Family/brand/sila-approved-v4.jpg?v=13" />
+    <link rel="apple-touch-icon" href="/Family/icons/apple-touch-icon-approved-v4.jpg?v=13" />
     <title>صلة القرابة</title>
     <style>
       #sila-splash {
@@ -102,41 +102,21 @@
     </script>
     <script>
       (() => {
-        const resetKey = 'sila-brand-cache-reset-v12'
-        if (localStorage.getItem(resetKey) === 'done') return
-        localStorage.setItem(resetKey, 'running')
-
-        window.addEventListener('load', async () => {
-          try {
-            if ('serviceWorker' in navigator) {
-              const registrations = await navigator.serviceWorker.getRegistrations()
-              await Promise.all(registrations.map((registration) => registration.unregister()))
-            }
-            if ('caches' in window) {
-              const keys = await caches.keys()
-              await Promise.all(keys.filter((key) => key.startsWith('sila-')).map((key) => caches.delete(key)))
-            }
-          } catch (error) {
-            console.warn('Brand cache reset could not fully complete.', error)
-          } finally {
-            localStorage.setItem(resetKey, 'done')
-            const url = new URL(window.location.href)
-            if (url.searchParams.get('brand') !== 'v12') {
-              url.searchParams.set('brand', 'v12')
-              window.location.replace(url.toString())
-            }
-          }
-        }, { once: true })
+        if (!('serviceWorker' in navigator)) return
+        navigator.serviceWorker.register('/Family/sw.js', {
+          scope: '/Family/',
+          updateViaCache: 'none',
+        }).catch((error) => console.warn('Early service worker registration failed.', error))
       })()
     </script>
-    <script type="module" crossorigin src="/Family/assets/index-B1rgVDx9.js"></script>
+    <script type="module" crossorigin src="/Family/assets/index-C94dqz8m.js"></script>
     <link rel="modulepreload" crossorigin href="/Family/assets/jsx-runtime-Cut7sifM.js">
     <link rel="stylesheet" crossorigin href="/Family/assets/index-D7EyV_gS.css">
   </head>
   <body>
     <div id="sila-splash" role="status" aria-label="جارٍ فتح صلة القرابة">
       <div class="sila-splash-inner">
-        <img src="/Family/brand/sila-approved-v4.jpg?v=12" alt="شعار صلة القرابة" fetchpriority="high" decoding="sync" />
+        <img src="/Family/brand/sila-approved-v4.jpg?v=13" alt="شعار صلة القرابة" fetchpriority="high" decoding="sync" />
         <span class="sila-splash-loader" aria-hidden="true"></span>
       </div>
     </div>

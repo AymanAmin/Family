@@ -47,6 +47,7 @@ export default function InstallPrompt() {
   const [installed, setInstalled] = useState(false)
   const [installing, setInstalling] = useState(false)
   const [homeActive, setHomeActive] = useState(false)
+  const [feedback, setFeedback] = useState('')
 
   const userAgent = useMemo(() => navigator.userAgent, [])
   const isIos = useMemo(() => {
@@ -57,7 +58,7 @@ export default function InstallPrompt() {
   const isChromeAndroid = useMemo(() => {
     return isAndroid && /Chrome\//i.test(userAgent) && !isSamsungInternet && !/EdgA\//i.test(userAgent) && !/OPR\//i.test(userAgent)
   }, [isAndroid, isSamsungInternet, userAgent])
-  const supportedMobileBrowser = isAndroid || isIos || isSamsungInternet
+  const supportedMobileBrowser = isAndroid || isIos
 
   useEffect(() => {
     if (isStandaloneMode()) {
@@ -67,14 +68,14 @@ export default function InstallPrompt() {
 
     const syncStoredPrompt = () => {
       const stored = installWindow.__silaInstallPrompt
-      if (stored && !isSamsungInternet) setInstallEvent(stored)
+      if (stored) setInstallEvent(stored)
     }
 
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault()
       const promptEvent = event as BeforeInstallPromptEvent
       installWindow.__silaInstallPrompt = promptEvent
-      if (!isSamsungInternet) setInstallEvent(promptEvent)
+      setInstallEvent(promptEvent)
     }
 
     const onInstalled = () => {
@@ -83,6 +84,7 @@ export default function InstallPrompt() {
       setVisible(false)
       setPanelOpen(false)
       setIosHelp(false)
+      setFeedback('')
       setInstallEvent(null)
     }
 
@@ -96,7 +98,7 @@ export default function InstallPrompt() {
       window.removeEventListener('sila:install-prompt-ready', syncStoredPrompt)
       window.removeEventListener('appinstalled', onInstalled)
     }
-  }, [installWindow, isSamsungInternet])
+  }, [installWindow])
 
   useEffect(() => {
     const syncHome = () => setHomeActive(homeScreenIsVisible())
@@ -134,32 +136,47 @@ export default function InstallPrompt() {
     return () => window.clearTimeout(timer)
   }, [homeActive, installed, supportedMobileBrowser])
 
+  useEffect(() => {
+    if (!feedback) return undefined
+    const timer = window.setTimeout(() => setFeedback(''), 3200)
+    return () => window.clearTimeout(timer)
+  }, [feedback])
+
   function closePanel() {
     setPanelOpen(false)
     setIosHelp(false)
   }
 
   async function install() {
-    if (isSamsungInternet) {
-      openCurrentPageInChrome()
+    if (isAndroid && !isChromeAndroid) {
+      setIosHelp(false)
+      setPanelOpen(true)
       return
     }
 
-    if (installEvent) {
+    if (isChromeAndroid) {
+      const promptEvent = installEvent ?? installWindow.__silaInstallPrompt ?? null
+      if (!promptEvent) {
+        setFeedback('Chrome لم يجهّز نافذة التثبيت بعد. الزر سيبقى ظاهرًا؛ حاول مرة أخرى بعد لحظات.')
+        return
+      }
+
       setInstalling(true)
       try {
-        await installEvent.prompt()
-        const choice = await installEvent.userChoice
+        await promptEvent.prompt()
+        const choice = await promptEvent.userChoice
         installWindow.__silaInstallPrompt = null
         setInstallEvent(null)
         if (choice.outcome === 'accepted') {
           setVisible(false)
           setPanelOpen(false)
+          setFeedback('')
         }
       } catch (error) {
         console.warn('PWA install prompt could not be opened.', error)
         installWindow.__silaInstallPrompt = null
         setInstallEvent(null)
+        setFeedback('تعذر فتح نافذة التثبيت الآن. الزر سيبقى ظاهرًا للمحاولة مرة أخرى.')
       } finally {
         setInstalling(false)
       }
@@ -174,38 +191,60 @@ export default function InstallPrompt() {
 
   if (installed || !homeActive || !visible || !supportedMobileBrowser) return null
 
-  const showingSamsungHelp = isSamsungInternet && !iosHelp
-  const directChromeReady = isChromeAndroid && Boolean(installEvent)
-  const directChromeWaiting = isChromeAndroid && !installEvent
-  const title = iosHelp ? 'تثبيت صلة على iPhone / iPad' : 'تثبيت صلة على Samsung'
+  const showingChromeRedirect = isAndroid && !isChromeAndroid && !iosHelp
+  const title = iosHelp ? 'تثبيت صلة على iPhone / iPad' : 'فتح صلة في Google Chrome'
   const subtitle = iosHelp
     ? 'أضف صلة إلى الشاشة الرئيسية من قائمة المشاركة.'
-    : 'افتح صلة في Google Chrome ثم ثبّته من المتصفح.'
+    : 'التثبيت المباشر يعمل من Google Chrome. افتح نفس الصفحة في Chrome للمتابعة.'
 
   return (
     <>
-      {!panelOpen && directChromeWaiting ? (
-        <div className="pwa-install-fab is-waiting" role="status" aria-live="polite" aria-label="Chrome يجهز التثبيت المباشر">
-          <span className="pwa-install-fab-icon" aria-hidden="true">…</span>
-          <span>جاري تجهيز التثبيت…</span>
-        </div>
-      ) : null}
-
-      {!panelOpen && (directChromeReady || (!isChromeAndroid && supportedMobileBrowser)) ? (
+      {!panelOpen ? (
         <button
           className="pwa-install-fab"
           type="button"
           onClick={() => void install()}
           disabled={installing}
-          aria-label={directChromeReady ? 'تثبيت تطبيق صلة مباشرة من Chrome' : 'تثبيت تطبيق صلة'}
+          aria-label="تثبيت تطبيق صلة"
+          style={{ insetInlineStart: 'auto', insetInlineEnd: 'auto', left: '16px', right: 'auto', zIndex: 1495 }}
         >
           <span className="pwa-install-fab-icon" aria-hidden="true">↓</span>
-          <span>{installing ? 'جارٍ فتح التثبيت…' : directChromeReady ? 'تثبيت التطبيق' : 'طريقة التثبيت'}</span>
+          <span>تثبيت التطبيق</span>
         </button>
       ) : null}
 
+      {feedback && !panelOpen ? (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            zIndex: 1496,
+            left: '16px',
+            bottom: 'calc(224px + env(safe-area-inset-bottom, 0px))',
+            width: 'min(270px, calc(100vw - 32px))',
+            padding: '9px 11px',
+            border: '1px solid rgba(215, 188, 139, .9)',
+            borderRadius: '14px',
+            color: '#6f551e',
+            background: 'rgba(255, 249, 238, .98)',
+            boxShadow: '0 12px 30px rgba(126, 79, 8, .18)',
+            fontSize: '.58rem',
+            fontWeight: 800,
+            lineHeight: 1.7,
+          }}
+        >
+          {feedback}
+        </div>
+      ) : null}
+
       {panelOpen ? (
-        <aside className={`pwa-install-prompt ${iosHelp ? 'is-ios-help' : ''}`} role="dialog" aria-label="تثبيت تطبيق صلة">
+        <aside
+          className={`pwa-install-prompt ${iosHelp ? 'is-ios-help' : ''}`}
+          role="dialog"
+          aria-label="تثبيت تطبيق صلة"
+          style={{ zIndex: 1520 }}
+        >
           <button className="pwa-install-close" type="button" onClick={closePanel} aria-label="إغلاق تعليمات التثبيت">×</button>
 
           <div className="pwa-install-brand">
@@ -222,15 +261,15 @@ export default function InstallPrompt() {
               <span><b>1</b> اضغط زر المشاركة <strong aria-hidden="true">↑</strong> في Safari.</span>
               <span><b>2</b> اختر «إضافة إلى الشاشة الرئيسية» ثم «إضافة».</span>
             </div>
-          ) : showingSamsungHelp ? (
+          ) : showingChromeRedirect ? (
             <div className="pwa-ios-steps">
-              <span><b>1</b> اضغط «فتح في Google Chrome» أدناه.</span>
-              <span><b>2</b> في Chrome اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».</span>
+              <span><b>1</b> اضغط «فتح في Google Chrome».</span>
+              <span><b>2</b> بعد فتح الصفحة في Chrome اضغط زر «تثبيت التطبيق» الظاهر فوق الجرس.</span>
             </div>
           ) : null}
 
           <div className="pwa-install-actions">
-            {showingSamsungHelp ? (
+            {showingChromeRedirect ? (
               <button className="pwa-install-primary" type="button" onClick={openCurrentPageInChrome}>فتح في Google Chrome</button>
             ) : (
               <button className="pwa-install-primary" type="button" onClick={closePanel}>تم</button>

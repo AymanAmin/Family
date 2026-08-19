@@ -46,17 +46,13 @@ function closeOpenDialogs(): void {
       return
     }
 
-    if (dialog instanceof HTMLDialogElement && dialog.open) {
-      dialog.close()
-    }
+    if (dialog instanceof HTMLDialogElement && dialog.open) dialog.close()
   })
 }
 
 function isNavigationAction(target: Element): boolean {
   if (target.closest('a[href*="#/"]')) return true
 
-  // Keep the same close-before-leave behavior across public screens,
-  // person/family drill-downs and administration/settings navigation.
   return Boolean(target.closest([
     '.desktop-nav button',
     '.mobile-bottom-nav button',
@@ -86,6 +82,8 @@ export default function HouseholdPortalLifecycleFix(): null {
   useEffect(() => {
     let frame = 0
     let routeFrame = 0
+    let pendingHouseholdPersonNavigation = false
+    let householdRouteFallbackTimer = 0
     const previousPushState = window.history.pushState.bind(window.history)
     const previousReplaceState = window.history.replaceState.bind(window.history)
 
@@ -99,11 +97,18 @@ export default function HouseholdPortalLifecycleFix(): null {
       scheduleCleanup()
     }
 
-    // pushState/replaceState do not emit hashchange. The app uses them for its
-    // SPA routes, so route-aware enhancements need one dependable signal after
-    // the URL has actually changed. Dispatch on the next animation frame so
-    // React has a chance to commit the destination profile before photo widgets
-    // resolve the new person id and portal host.
+    const dispatchHouseholdPersonRoute = (): void => {
+      if (!pendingHouseholdPersonNavigation) return
+      if (!window.location.hash.startsWith('#/person/')) return
+
+      pendingHouseholdPersonNavigation = false
+      window.clearTimeout(householdRouteFallbackTimer)
+      householdRouteFallbackTimer = 0
+      window.dispatchEvent(new CustomEvent('sila:history-navigation', {
+        detail: { direction: 'forward', scrollY: 0, source: 'household-profile' },
+      }))
+    }
+
     const emitSpaRouteChanged = (previousHash: string): void => {
       const nextHash = window.location.hash
       if (nextHash === previousHash) return
@@ -132,24 +137,29 @@ export default function HouseholdPortalLifecycleFix(): null {
       const target = event.target
       if (!(target instanceof Element) || !isNavigationAction(target)) return
 
-      const bridgeHouseholdPersonRoute = isHouseholdPersonNavigation(target)
-      const previousHash = window.location.hash
+      if (isHouseholdPersonNavigation(target)) {
+        pendingHouseholdPersonNavigation = true
+        window.clearTimeout(householdRouteFallbackTimer)
+        householdRouteFallbackTimer = window.setTimeout(() => {
+          dispatchHouseholdPersonRoute()
+          if (pendingHouseholdPersonNavigation) pendingHouseholdPersonNavigation = false
+        }, 250)
+      }
 
-      // Household person cards currently change the hash directly. That updates
-      // the address bar but does not update App.tsx state on its own. Run after
-      // the card's onClick so the new #/person/:id route exists, close the old
-      // household layer, then feed that route through the app history handler.
-      window.queueMicrotask(() => {
-        closeForNavigation()
+      // Close the family overlay after the clicked control has executed its own
+      // onClick. Do not decide the destination here: window.location.href hash
+      // navigation is committed after this microtask on mobile browsers.
+      window.queueMicrotask(closeForNavigation)
+    }
 
-        if (!bridgeHouseholdPersonRoute) return
-        const nextHash = window.location.hash
-        if (nextHash === previousHash || !nextHash.startsWith('#/person/')) return
+    const handleHashChange = (): void => {
+      closeForNavigation()
 
-        window.dispatchEvent(new CustomEvent('sila:history-navigation', {
-          detail: { direction: 'forward', scrollY: 0, source: 'household-profile' },
-        }))
-      })
+      // This is the important bridge for family-profile person cards. The old
+      // implementation checked the hash inside the click microtask, which was
+      // too early on mobile: the browser had not committed #/person/:id yet.
+      // Waiting for hashchange guarantees App.tsx sees the final person route.
+      dispatchHouseholdPersonRoute()
     }
 
     scheduleCleanup()
@@ -159,7 +169,7 @@ export default function HouseholdPortalLifecycleFix(): null {
     observer.observe(root, { childList: true, subtree: true })
 
     document.addEventListener('click', handleNavigationClick, true)
-    window.addEventListener('hashchange', closeForNavigation)
+    window.addEventListener('hashchange', handleHashChange)
     window.addEventListener('popstate', closeForNavigation)
     window.addEventListener('sila:route-changed', closeForNavigation)
     window.addEventListener('sila:navigation-start', closeForNavigation)
@@ -168,10 +178,11 @@ export default function HouseholdPortalLifecycleFix(): null {
       observer.disconnect()
       window.cancelAnimationFrame(frame)
       window.cancelAnimationFrame(routeFrame)
+      window.clearTimeout(householdRouteFallbackTimer)
       window.history.pushState = previousPushState as History['pushState']
       window.history.replaceState = previousReplaceState as History['replaceState']
       document.removeEventListener('click', handleNavigationClick, true)
-      window.removeEventListener('hashchange', closeForNavigation)
+      window.removeEventListener('hashchange', handleHashChange)
       window.removeEventListener('popstate', closeForNavigation)
       window.removeEventListener('sila:route-changed', closeForNavigation)
       window.removeEventListener('sila:navigation-start', closeForNavigation)

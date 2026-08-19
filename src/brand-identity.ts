@@ -1,4 +1,4 @@
-import approvedLogoBase64 from '../scripts/assets/sila-approved-v4-512.jpg.b64?raw'
+import approvedLogoBase64 from '../scripts/assets/sila-approved-final-256.jpg.b64?raw'
 
 const svgIcon = (body: string): string => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`
 
@@ -18,16 +18,20 @@ function enhanceBrandMark(): void {
   if (!mark) return
 
   const current = mark.querySelector<HTMLImageElement>('img')
-  if (current?.dataset.silaApprovedLogo === '1') return
+  if (current?.dataset.silaApprovedLogo === '1' && current.complete && current.naturalWidth > 0) return
 
   const image = document.createElement('img')
   image.src = APPROVED_LOGO_DATA_URI
-  image.alt = 'شعار صلة القرابة'
-  image.decoding = 'async'
+  image.alt = ''
+  image.decoding = 'sync'
   image.className = 'sila-brand-image'
   image.dataset.silaApprovedLogo = '1'
+  image.addEventListener('error', () => {
+    mark.replaceChildren(document.createTextNode('ص'))
+    mark.dataset.silaBrand = 'fallback'
+  }, { once: true })
   mark.replaceChildren(image)
-  mark.dataset.silaBrand = '7'
+  mark.dataset.silaBrand = '9'
 }
 
 function enhanceBrandName(): void {

@@ -1,1 +1,2 @@
+# PWA icon normalization and validation
 Pillow>=10.4,<13

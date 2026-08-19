@@ -6,6 +6,7 @@ from pathlib import Path
 
 from PIL import Image, ImageColor
 
+# This validator runs during every production build so indexed PNGs cannot be published again.
 EXPECTED = {
     "icon-192.png": (192, 192),
     "icon-512.png": (512, 512),

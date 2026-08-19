@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#f4efe6" />
+    <meta name="theme-color" content="#b77914" />
     <meta name="description" content="صلة — منصة العائلة وصلة القرابة." />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -22,9 +22,9 @@
         place-items: center;
         overflow: hidden;
         background:
-          radial-gradient(circle at 16% 16%, rgba(191,174,143,.12), transparent 22rem),
-          radial-gradient(circle at 84% 82%, rgba(191,174,143,.09), transparent 20rem),
-          linear-gradient(180deg, #fbf8f1 0%, #f3ecdf 100%);
+          radial-gradient(circle at 14% 14%, rgba(239, 190, 86, .20), transparent 23rem),
+          radial-gradient(circle at 88% 84%, rgba(183, 121, 20, .12), transparent 22rem),
+          linear-gradient(180deg, #fffdf8 0%, #fff5df 100%);
         opacity: 1;
         visibility: visible;
         transition: opacity .38s ease, visibility .38s ease;
@@ -34,7 +34,7 @@
         position: absolute;
         width: min(64vw, 360px);
         aspect-ratio: 1;
-        border: 1px solid rgba(156,137,105,.13);
+        border: 1px solid rgba(183, 121, 20, .14);
         border-radius: 50%;
         content: '';
       }
@@ -48,7 +48,7 @@
       .sila-splash-inner {
         position: relative;
         display: grid;
-        width: min(78vw, 390px);
+        width: min(72vw, 330px);
         place-items: center;
         padding: 18px;
       }
@@ -56,30 +56,30 @@
         display: block;
         width: 100%;
         height: auto;
-        border-radius: 28px;
-        box-shadow: 0 26px 70px rgba(82,68,49,.14);
+        border-radius: 30px;
+        box-shadow: 0 26px 72px rgba(126, 79, 8, .20);
       }
       .sila-splash-loader {
-        width: 56px;
+        width: 62px;
         height: 4px;
-        margin-top: 22px;
+        margin-top: 24px;
         overflow: hidden;
         border-radius: 99px;
-        background: rgba(117,101,78,.14);
+        background: rgba(183, 121, 20, .16);
       }
       .sila-splash-loader::after {
         display: block;
         width: 48%;
         height: 100%;
         border-radius: inherit;
-        background: #9b896f;
+        background: linear-gradient(90deg, #b77914, #e3ad42);
         content: '';
         animation: silaSplashMove 1.05s ease-in-out infinite alternate;
       }
       @keyframes silaSplashMove { to { transform: translateX(-108%); } }
       @media (max-width: 430px) {
-        .sila-splash-inner { width: min(82vw, 340px); padding: 12px; }
-        .sila-splash-inner img { border-radius: 24px; }
+        .sila-splash-inner { width: min(70vw, 286px); padding: 12px; }
+        .sila-splash-inner img { border-radius: 26px; }
       }
       @media (prefers-reduced-motion: reduce) {
         .sila-splash-loader::after { animation: none; }
@@ -90,7 +90,7 @@
   <body>
     <div id="sila-splash" role="status" aria-label="جارٍ فتح صلة القرابة">
       <div class="sila-splash-inner">
-        <img src="%BASE_URL%brand/sila-app-icon.png" alt="صلة القرابة — Kinship Connection" />
+        <img src="%BASE_URL%brand/sila-app-icon.png" alt="شعار صلة القرابة" />
         <span class="sila-splash-loader" aria-hidden="true"></span>
       </div>
     </div>

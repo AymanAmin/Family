@@ -9,10 +9,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="صلة" />
-    <link rel="manifest" href="/Family/manifest.webmanifest?v=13" />
-    <link rel="preload" as="image" href="/Family/brand/sila-approved-v4.jpg?v=13" fetchpriority="high" />
-    <link rel="icon" type="image/jpeg" href="/Family/brand/sila-approved-v4.jpg?v=13" />
-    <link rel="apple-touch-icon" href="/Family/icons/apple-touch-icon-approved-v4.jpg?v=13" />
+    <link rel="manifest" href="/Family/manifest.webmanifest?v=14" />
+    <link rel="preload" as="image" href="/Family/brand/sila-approved-v4.jpg?v=14" fetchpriority="high" />
+    <link rel="icon" type="image/jpeg" href="/Family/brand/sila-approved-v4.jpg?v=14" />
+    <link rel="apple-touch-icon" href="/Family/icons/apple-touch-icon-approved-v4.jpg?v=14" />
     <title>صلة القرابة</title>
     <style>
       #sila-splash {
@@ -109,6 +109,143 @@
         }).catch((error) => console.warn('Early service worker registration failed.', error))
       })()
     </script>
+    <script>
+      (() => {
+        const RETRY_KEY = 'sila-pwa-install-reevaluate-v14'
+        const CHECK_PARAM = 'pwa-install-check'
+        const ua = navigator.userAgent
+        const isChromeAndroid = /Android/i.test(ua) && /Chrome\//i.test(ua) && !/SamsungBrowser|EdgA\/|OPR\//i.test(ua)
+        if (!isChromeAndroid) return
+
+        const cleanCheckParam = () => {
+          const url = new URL(window.location.href)
+          if (!url.searchParams.has(CHECK_PARAM)) return
+          url.searchParams.delete(CHECK_PARAM)
+          window.history.replaceState(window.history.state, '', url.toString())
+        }
+
+        const isAlreadyInstalled = async () => {
+          if (typeof navigator.getInstalledRelatedApps !== 'function') return false
+          try {
+            const apps = await navigator.getInstalledRelatedApps()
+            return apps.some((app) => app.platform === 'webapp' && String(app.url || '').includes('manifest.webmanifest'))
+          } catch {
+            return false
+          }
+        }
+
+        const ensureServiceWorkerController = async () => {
+          if (!('serviceWorker' in navigator)) return
+          try {
+            const registration = await navigator.serviceWorker.ready
+            await registration.update().catch(() => undefined)
+            if (navigator.serviceWorker.controller) return
+            await new Promise((resolve) => {
+              let done = false
+              const finish = () => {
+                if (done) return
+                done = true
+                navigator.serviceWorker.removeEventListener('controllerchange', finish)
+                resolve()
+              }
+              navigator.serviceWorker.addEventListener('controllerchange', finish)
+              window.setTimeout(finish, 1200)
+            })
+          } catch (error) {
+            console.warn('Chrome installability service worker check failed.', error)
+          }
+        }
+
+        const runNativePrompt = async (promptEvent, button, label) => {
+          await promptEvent.prompt()
+          const choice = await promptEvent.userChoice
+          window.__silaInstallPrompt = null
+          sessionStorage.removeItem(RETRY_KEY)
+          cleanCheckParam()
+          if (choice.outcome === 'accepted') {
+            button.remove()
+          } else {
+            button.disabled = false
+            if (label) label.textContent = 'تثبيت التطبيق'
+          }
+        }
+
+        window.addEventListener('beforeinstallprompt', () => {
+          sessionStorage.removeItem(RETRY_KEY)
+          cleanCheckParam()
+        })
+
+        window.addEventListener('appinstalled', () => {
+          sessionStorage.removeItem(RETRY_KEY)
+          cleanCheckParam()
+          document.querySelector('.pwa-install-fab')?.remove()
+        })
+
+        document.addEventListener('click', async (event) => {
+          const target = event.target
+          if (!(target instanceof Element)) return
+          const button = target.closest('.pwa-install-fab')
+          if (!(button instanceof HTMLButtonElement)) return
+
+          event.preventDefault()
+          event.stopPropagation()
+          event.stopImmediatePropagation()
+
+          const label = button.querySelector('span:last-child')
+          let promptEvent = window.__silaInstallPrompt || null
+          if (promptEvent) {
+            button.disabled = true
+            if (label) label.textContent = 'جارٍ فتح التثبيت…'
+            try {
+              await runNativePrompt(promptEvent, button, label)
+            } catch (error) {
+              console.warn('Chrome native install prompt failed.', error)
+              button.disabled = false
+              if (label) label.textContent = 'تثبيت التطبيق'
+            }
+            return
+          }
+
+          if (button.dataset.silaInstallBusy === '1') return
+          button.dataset.silaInstallBusy = '1'
+          button.disabled = true
+          if (label) label.textContent = 'فحص التثبيت…'
+
+          try {
+            if (await isAlreadyInstalled()) {
+              button.remove()
+              return
+            }
+
+            await ensureServiceWorkerController()
+            promptEvent = window.__silaInstallPrompt || null
+
+            if (promptEvent) {
+              try {
+                await runNativePrompt(promptEvent, button, label)
+                return
+              } catch (error) {
+                console.warn('Chrome prompt became ready after recheck but could not open.', error)
+              }
+            }
+
+            if (sessionStorage.getItem(RETRY_KEY) !== '1') {
+              sessionStorage.setItem(RETRY_KEY, '1')
+              const url = new URL(window.location.href)
+              url.searchParams.set(CHECK_PARAM, '14')
+              window.location.replace(url.toString())
+              return
+            }
+          } finally {
+            delete button.dataset.silaInstallBusy
+            if (button.isConnected) {
+              button.disabled = false
+              if (label) label.textContent = 'تثبيت التطبيق'
+            }
+          }
+        }, true)
+      })()
+    </script>
     <script type="module" crossorigin src="/Family/assets/index-CqfMtluI.js"></script>
     <link rel="modulepreload" crossorigin href="/Family/assets/jsx-runtime-Cut7sifM.js">
     <link rel="stylesheet" crossorigin href="/Family/assets/index-D7EyV_gS.css">
@@ -116,7 +253,7 @@
   <body>
     <div id="sila-splash" role="status" aria-label="جارٍ فتح صلة القرابة">
       <div class="sila-splash-inner">
-        <img src="/Family/brand/sila-approved-v4.jpg?v=13" alt="شعار صلة القرابة" fetchpriority="high" decoding="sync" />
+        <img src="/Family/brand/sila-approved-v4.jpg?v=14" alt="شعار صلة القرابة" fetchpriority="high" decoding="sync" />
         <span class="sila-splash-loader" aria-hidden="true"></span>
       </div>
     </div>

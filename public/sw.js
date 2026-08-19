@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sila-v17'
+const CACHE_VERSION = 'sila-v18'
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 
 function appUrl(path = '') {
@@ -11,11 +11,11 @@ self.addEventListener('install', (event) => {
       .then((cache) => cache.addAll([
         appUrl('./'),
         appUrl('manifest.webmanifest'),
-        appUrl('brand/sila-app-icon.png'),
-        appUrl('icons/icon-192.png'),
-        appUrl('icons/icon-512.png'),
-        appUrl('icons/maskable-512.png'),
-        appUrl('icons/apple-touch-icon.png'),
+        appUrl('brand/sila-app-icon-gold-v3.png'),
+        appUrl('icons/icon-gold-v3-192.png'),
+        appUrl('icons/icon-gold-v3-512.png'),
+        appUrl('icons/maskable-gold-v3-512.png'),
+        appUrl('icons/apple-touch-icon-gold-v3.png'),
         appUrl('icons/notification-badge.png'),
       ]))
       .then(() => self.skipWaiting()),
@@ -41,7 +41,7 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'صلة'
   const options = {
     body: data.body || 'لديك تحديث جديد في صلة.',
-    icon: data.icon ? new URL(data.icon, self.registration.scope).toString() : appUrl('icons/icon-192.png'),
+    icon: data.icon ? new URL(data.icon, self.registration.scope).toString() : appUrl('icons/icon-gold-v3-192.png'),
     badge: data.badge ? new URL(data.badge, self.registration.scope).toString() : appUrl('icons/notification-badge.png'),
     tag: data.tag || 'sila-update',
     renotify: true,
@@ -94,6 +94,22 @@ self.addEventListener('fetch', (event) => {
         .catch(async () => {
           return (await caches.match(request)) || (await caches.match(appUrl('./'))) || Response.error()
         }),
+    )
+    return
+  }
+
+  const isBrandAsset = requestUrl.pathname.includes('/brand/') || requestUrl.pathname.includes('/icons/') || requestUrl.pathname.endsWith('/manifest.webmanifest')
+  if (isBrandAsset) {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' })
+        .then((response) => {
+          if (response && response.status === 200 && response.type !== 'opaque') {
+            const copy = response.clone()
+            void caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy))
+          }
+          return response
+        })
+        .catch(async () => (await caches.match(request)) || Response.error()),
     )
     return
   }

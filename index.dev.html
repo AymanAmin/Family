@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="صلة" />
-    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest?v=7" />
     <link rel="icon" type="image/jpeg" href="__SILA_APPROVED_LOGO_DATA_URI__" />
     <link rel="apple-touch-icon" href="%BASE_URL%icons/apple-touch-icon-approved-v4.jpg?v=7" />
     <title>صلة القرابة</title>
@@ -86,6 +86,33 @@
         #sila-splash { transition-duration: .01ms; }
       }
     </style>
+    <script>
+      (() => {
+        const resetKey = 'sila-brand-cache-reset-v7'
+        if (localStorage.getItem(resetKey) === 'done') return
+        localStorage.setItem(resetKey, 'running')
+
+        window.addEventListener('load', async () => {
+          try {
+            if ('serviceWorker' in navigator) {
+              const registrations = await navigator.serviceWorker.getRegistrations()
+              await Promise.all(registrations.map((registration) => registration.unregister()))
+            }
+            if ('caches' in window) {
+              const keys = await caches.keys()
+              await Promise.all(keys.filter((key) => key.startsWith('sila-')).map((key) => caches.delete(key)))
+            }
+          } catch (error) {
+            console.warn('Brand cache reset could not fully complete.', error)
+          } finally {
+            localStorage.setItem(resetKey, 'done')
+            const url = new URL(window.location.href)
+            url.searchParams.set('brand', 'v7')
+            window.location.replace(url.toString())
+          }
+        }, { once: true })
+      })()
+    </script>
   </head>
   <body>
     <div id="sila-splash" role="status" aria-label="جارٍ فتح صلة القرابة">

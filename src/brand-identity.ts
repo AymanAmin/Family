@@ -1,3 +1,5 @@
+import approvedLogoBase64 from '../scripts/assets/sila-approved-v4-512.jpg.b64?raw'
+
 const svgIcon = (body: string): string => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`
 
 const icons = {
@@ -9,23 +11,23 @@ const icons = {
   account: svgIcon('<circle cx="12" cy="8" r="3.4"/><path d="M5.3 20c.9-4.1 3.1-6.1 6.7-6.1s5.8 2 6.7 6.1"/>'),
 }
 
-const BRAND_ASSET = 'icons/icon-approved-v4-512.jpg'
+const APPROVED_LOGO_DATA_URI = `data:image/jpeg;base64,${approvedLogoBase64.trim()}`
 
 function enhanceBrandMark(): void {
   const mark = document.querySelector<HTMLElement>('.brand-mark')
   if (!mark) return
 
-  const desiredSource = `${import.meta.env.BASE_URL}${BRAND_ASSET}`
   const current = mark.querySelector<HTMLImageElement>('img')
-  if (current?.src.includes('/icons/icon-approved-v4-512.jpg')) return
+  if (current?.dataset.silaApprovedLogo === '1') return
 
   const image = document.createElement('img')
-  image.src = desiredSource
+  image.src = APPROVED_LOGO_DATA_URI
   image.alt = 'شعار صلة القرابة'
   image.decoding = 'async'
   image.className = 'sila-brand-image'
+  image.dataset.silaApprovedLogo = '1'
   mark.replaceChildren(image)
-  mark.dataset.silaBrand = '6'
+  mark.dataset.silaBrand = '7'
 }
 
 function enhanceBrandName(): void {

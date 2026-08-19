@@ -1,23 +1,30 @@
-const CACHE_VERSION = 'sila-v19'
+const CACHE_VERSION = 'sila-v20'
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 
 function appUrl(path = '') {
   return new URL(path, self.registration.scope).toString()
 }
 
+const PRECACHE_PATHS = [
+  './',
+  'manifest.webmanifest',
+  'icons/icon-approved-v4-192.jpg',
+  'icons/icon-approved-v4-512.jpg',
+  'icons/maskable-approved-v4-512.jpg',
+  'icons/apple-touch-icon-approved-v4.jpg',
+  'icons/notification-badge.png',
+]
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION)
-      .then((cache) => cache.addAll([
-        appUrl('./'),
-        appUrl('manifest.webmanifest'),
-        appUrl('brand/sila-approved-v4.jpg'),
-        appUrl('icons/icon-approved-v4-192.jpg'),
-        appUrl('icons/icon-approved-v4-512.jpg'),
-        appUrl('icons/maskable-approved-v4-512.jpg'),
-        appUrl('icons/apple-touch-icon-approved-v4.jpg'),
-        appUrl('icons/notification-badge.png'),
-      ]))
+      .then((cache) => Promise.all(PRECACHE_PATHS.map(async (path) => {
+        try {
+          await cache.add(appUrl(path))
+        } catch (error) {
+          console.warn('[Sila SW] Optional precache skipped:', path, error)
+        }
+      })))
       .then(() => self.skipWaiting()),
   )
 })
@@ -85,7 +92,7 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: 'no-store' })
         .then((response) => {
           const copy = response.clone()
           void caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy))

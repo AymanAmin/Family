@@ -9,8 +9,8 @@ const icons = {
   account: svgIcon('<circle cx="12" cy="8" r="3.4"/><path d="M5.3 20c.9-4.1 3.1-6.1 6.7-6.1s5.8 2 6.7 6.1"/>'),
 }
 
-const APPROVED_LOGO_URL = `${import.meta.env.BASE_URL}brand/sila-approved-v4.jpg?v=10`
-const APPROVED_LOGO_FALLBACK_URL = `${import.meta.env.BASE_URL}icons/icon-approved-v4-192.jpg?v=10`
+const APPROVED_LOGO_URL = `${import.meta.env.BASE_URL}brand/sila-approved-v4.jpg?v=11`
+const APPROVED_LOGO_FALLBACK_URL = `${import.meta.env.BASE_URL}brand/sila-approved-v4.jpg?v=11&fallback=1`
 
 function enhanceBrandMark(): void {
   const mark = document.querySelector<HTMLElement>('.brand-mark')
@@ -39,7 +39,7 @@ function enhanceBrandMark(): void {
   })
 
   mark.replaceChildren(image)
-  mark.dataset.silaBrand = '10'
+  mark.dataset.silaBrand = '11'
 }
 
 function enhanceBrandName(): void {

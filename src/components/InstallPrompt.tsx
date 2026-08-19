@@ -157,7 +157,7 @@ export default function InstallPrompt() {
     if (isChromeAndroid) {
       const promptEvent = installEvent ?? installWindow.__silaInstallPrompt ?? null
       if (!promptEvent) {
-        setFeedback('زر التثبيت جاهز، لكن Chrome لم يجهّز نافذة التثبيت بعد. حاول مرة أخرى بعد لحظات.')
+        setFeedback('Chrome لم يجهّز نافذة التثبيت بعد. الزر سيبقى ظاهرًا؛ حاول مرة أخرى بعد لحظات.')
         return
       }
 
@@ -176,7 +176,7 @@ export default function InstallPrompt() {
         console.warn('PWA install prompt could not be opened.', error)
         installWindow.__silaInstallPrompt = null
         setInstallEvent(null)
-        setFeedback('تعذر فتح نافذة التثبيت الآن. حاول مرة أخرى بعد لحظات.')
+        setFeedback('تعذر فتح نافذة التثبيت الآن. الزر سيبقى ظاهرًا للمحاولة مرة أخرى.')
       } finally {
         setInstalling(false)
       }
@@ -206,6 +206,7 @@ export default function InstallPrompt() {
           onClick={() => void install()}
           disabled={installing}
           aria-label="تثبيت تطبيق صلة"
+          style={{ insetInlineStart: 'auto', insetInlineEnd: 'auto', left: '16px', right: 'auto', zIndex: 1495 }}
         >
           <span className="pwa-install-fab-icon" aria-hidden="true">↓</span>
           <span>تثبيت التطبيق</span>
@@ -213,11 +214,37 @@ export default function InstallPrompt() {
       ) : null}
 
       {feedback && !panelOpen ? (
-        <div className="pwa-install-feedback" role="status" aria-live="polite">{feedback}</div>
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            zIndex: 1496,
+            left: '16px',
+            bottom: 'calc(224px + env(safe-area-inset-bottom, 0px))',
+            width: 'min(270px, calc(100vw - 32px))',
+            padding: '9px 11px',
+            border: '1px solid rgba(215, 188, 139, .9)',
+            borderRadius: '14px',
+            color: '#6f551e',
+            background: 'rgba(255, 249, 238, .98)',
+            boxShadow: '0 12px 30px rgba(126, 79, 8, .18)',
+            fontSize: '.58rem',
+            fontWeight: 800,
+            lineHeight: 1.7,
+          }}
+        >
+          {feedback}
+        </div>
       ) : null}
 
       {panelOpen ? (
-        <aside className={`pwa-install-prompt ${iosHelp ? 'is-ios-help' : ''}`} role="dialog" aria-label="تثبيت تطبيق صلة">
+        <aside
+          className={`pwa-install-prompt ${iosHelp ? 'is-ios-help' : ''}`}
+          role="dialog"
+          aria-label="تثبيت تطبيق صلة"
+          style={{ zIndex: 1520 }}
+        >
           <button className="pwa-install-close" type="button" onClick={closePanel} aria-label="إغلاق تعليمات التثبيت">×</button>
 
           <div className="pwa-install-brand">

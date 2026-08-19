@@ -1,0 +1,62 @@
+name: PWA Build Check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pwa-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Pillow
+        run: python -m pip install --disable-pip-version-check -r scripts/requirements-pwa.txt
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify production PWA icons
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          expected = {
+              'dist/icons/icon-192.png': (192, 192),
+              'dist/icons/icon-512.png': (512, 512),
+              'dist/icons/maskable-512.png': (512, 512),
+          }
+
+          for path_text, size in expected.items():
+              path = Path(path_text)
+              with Image.open(path) as image:
+                  image.load()
+                  assert image.format == 'PNG', (path, image.format)
+                  assert image.mode == 'RGBA', (path, image.mode)
+                  assert image.size == size, (path, image.size)
+                  print(f'OK {path}: {image.format} {image.mode} {image.size}')
+
+          regular = Path('dist/icons/icon-512.png').read_bytes()
+          maskable = Path('dist/icons/maskable-512.png').read_bytes()
+          assert regular != maskable, 'maskable icon must not be byte-identical to icon-512.png'
+          print('OK maskable-512.png is distinct from icon-512.png')
+          PY

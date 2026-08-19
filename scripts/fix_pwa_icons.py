@@ -6,7 +6,6 @@ from pathlib import Path
 
 from PIL import Image, ImageColor
 
-# This validator runs during every production build so indexed PNGs cannot be published again.
 EXPECTED = {
     "icon-192.png": (192, 192),
     "icon-512.png": (512, 512),
@@ -19,61 +18,72 @@ MASKABLE_CONTENT_RATIO = 0.66
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Convert Family PWA icons to true RGBA PNGs and rebuild a safe-zone maskable icon."
+        description="Build clean RGBA PWA icons from the verified Family brand artwork."
     )
     parser.add_argument(
         "--icons-dir",
-        default="icons",
-        help="Directory containing icon-192.png and icon-512.png (default: icons)",
+        default="public/icons",
+        help="Output directory for generated PWA icons.",
+    )
+    parser.add_argument(
+        "--source-logo",
+        default="public/brand/sila-approved-v4.jpg",
+        help="Verified source artwork used to rebuild all PWA icons.",
     )
     return parser.parse_args()
 
 
 def require_file(path: Path) -> None:
     if not path.is_file():
-        raise FileNotFoundError(f"Required icon not found: {path}")
+        raise FileNotFoundError(f"Required source not found: {path}")
 
 
-def save_true_rgba(source_path: Path, expected_size: tuple[int, int]) -> None:
-    require_file(source_path)
-
-    with Image.open(source_path) as source:
-        source.load()
-        if source.size != expected_size:
-            raise ValueError(
-                f"{source_path.name}: expected {expected_size[0]}x{expected_size[1]}, "
-                f"found {source.size[0]}x{source.size[1]}"
-            )
-        rgba = source.convert("RGBA")
-
-    rgba.save(source_path, format="PNG", optimize=True)
+def load_verified_source(path: Path) -> Image.Image:
+    require_file(path)
+    with Image.open(path) as image:
+        image.load()
+        rgba = image.convert("RGBA")
+    if rgba.width <= 0 or rgba.height <= 0:
+        raise ValueError(f"Invalid source artwork dimensions: {rgba.size}")
+    print(f"[OK] source artwork: {path} / {rgba.mode} / {rgba.size[0]}x{rgba.size[1]}")
+    return rgba
 
 
-def rebuild_maskable(icon_512: Path, maskable_path: Path) -> None:
-    with Image.open(icon_512) as source:
-        source.load()
-        source = source.convert("RGBA")
+def fit_square(source: Image.Image, size: int) -> Image.Image:
+    # The approved artwork is square; this also handles any future non-square source safely.
+    side = min(source.size)
+    left = (source.width - side) // 2
+    top = (source.height - side) // 2
+    cropped = source.crop((left, top, left + side, top + side))
+    return cropped.resize((size, size), Image.Resampling.LANCZOS)
+
+
+def save_rgba_png(image: Image.Image, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    image.convert("RGBA").save(path, format="PNG", optimize=True)
+
+
+def rebuild_icons(source_logo: Path, icons_dir: Path) -> None:
+    source = load_verified_source(source_logo)
+
+    icon_192 = fit_square(source, 192)
+    icon_512 = fit_square(source, 512)
+
+    save_rgba_png(icon_192, icons_dir / "icon-192.png")
+    save_rgba_png(icon_512, icons_dir / "icon-512.png")
+    save_rgba_png(icon_192, icons_dir / "apple-touch-icon.png")
 
     canvas_size = 512
     content_size = round(canvas_size * MASKABLE_CONTENT_RATIO)
-    logo = source.resize((content_size, content_size), Image.Resampling.LANCZOS)
-
+    safe_logo = fit_square(source, content_size)
     canvas = Image.new(
         "RGBA",
         (canvas_size, canvas_size),
         ImageColor.getcolor(BACKGROUND, "RGBA"),
     )
-
     offset = (canvas_size - content_size) // 2
-    canvas.alpha_composite(logo, (offset, offset))
-    canvas.save(maskable_path, format="PNG", optimize=True)
-
-
-def sync_apple_touch(icon_192: Path, apple_touch: Path) -> None:
-    with Image.open(icon_192) as source:
-        source.load()
-        rgba = source.convert("RGBA")
-    rgba.save(apple_touch, format="PNG", optimize=True)
+    canvas.alpha_composite(safe_logo, (offset, offset))
+    save_rgba_png(canvas, icons_dir / "maskable-512.png")
 
 
 def validate(path: Path, expected_size: tuple[int, int]) -> None:
@@ -83,6 +93,7 @@ def validate(path: Path, expected_size: tuple[int, int]) -> None:
         image.verify()
 
     with Image.open(path) as image:
+        image.load()
         if image.format != "PNG":
             raise ValueError(f"{path.name}: expected PNG, found {image.format}")
         if image.mode != "RGBA":
@@ -99,22 +110,19 @@ def validate(path: Path, expected_size: tuple[int, int]) -> None:
 def main() -> int:
     args = parse_args()
     icons_dir = Path(args.icons_dir).resolve()
+    source_logo = Path(args.source_logo).resolve()
 
-    icon_192 = icons_dir / "icon-192.png"
-    icon_512 = icons_dir / "icon-512.png"
-    maskable_512 = icons_dir / "maskable-512.png"
-    apple_touch = icons_dir / "apple-touch-icon.png"
-
-    print(f"Fixing PWA icons in: {icons_dir}")
-
-    save_true_rgba(icon_192, (192, 192))
-    save_true_rgba(icon_512, (512, 512))
-    rebuild_maskable(icon_512, maskable_512)
-    sync_apple_touch(icon_192, apple_touch)
+    print(f"Rebuilding PWA icons in: {icons_dir}")
+    rebuild_icons(source_logo, icons_dir)
 
     for name, size in EXPECTED.items():
         validate(icons_dir / name, size)
-    validate(apple_touch, (192, 192))
+    validate(icons_dir / "apple-touch-icon.png", (192, 192))
+
+    regular = (icons_dir / "icon-512.png").read_bytes()
+    maskable = (icons_dir / "maskable-512.png").read_bytes()
+    if regular == maskable:
+        raise ValueError("maskable-512.png must not be identical to icon-512.png")
 
     content_size = round(512 * MASKABLE_CONTENT_RATIO)
     padding = (512 - content_size) // 2
@@ -122,7 +130,7 @@ def main() -> int:
         f"[OK] maskable safe zone: logo={content_size}x{content_size}, "
         f"padding={padding}px per side, background={BACKGROUND}"
     )
-    print("PWA icon conversion completed successfully.")
+    print("PWA icons rebuilt successfully from verified artwork.")
     return 0
 
 

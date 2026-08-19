@@ -5,5 +5,5 @@
             <solid android:color="#FFF9EE" />
         </shape>
     </item>
-    <item android:width="180dp" android:height="180dp" android:gravity="center" android:drawable="@drawable/ic_family" />
+    <item android:width="180dp" android:height="180dp" android:gravity="center" android:drawable="@drawable/sila_approved_logo" />
 </layer-list>

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sila-v18'
+const CACHE_VERSION = 'sila-v19'
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 
 function appUrl(path = '') {
@@ -11,11 +11,11 @@ self.addEventListener('install', (event) => {
       .then((cache) => cache.addAll([
         appUrl('./'),
         appUrl('manifest.webmanifest'),
-        appUrl('brand/sila-app-icon-gold-v3.png'),
-        appUrl('icons/icon-gold-v3-192.png'),
-        appUrl('icons/icon-gold-v3-512.png'),
-        appUrl('icons/maskable-gold-v3-512.png'),
-        appUrl('icons/apple-touch-icon-gold-v3.png'),
+        appUrl('brand/sila-approved-v4.jpg'),
+        appUrl('icons/icon-approved-v4-192.jpg'),
+        appUrl('icons/icon-approved-v4-512.jpg'),
+        appUrl('icons/maskable-approved-v4-512.jpg'),
+        appUrl('icons/apple-touch-icon-approved-v4.jpg'),
         appUrl('icons/notification-badge.png'),
       ]))
       .then(() => self.skipWaiting()),
@@ -41,7 +41,7 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'صلة'
   const options = {
     body: data.body || 'لديك تحديث جديد في صلة.',
-    icon: data.icon ? new URL(data.icon, self.registration.scope).toString() : appUrl('icons/icon-gold-v3-192.png'),
+    icon: data.icon ? new URL(data.icon, self.registration.scope).toString() : appUrl('icons/icon-approved-v4-192.jpg'),
     badge: data.badge ? new URL(data.badge, self.registration.scope).toString() : appUrl('icons/notification-badge.png'),
     tag: data.tag || 'sila-update',
     renotify: true,

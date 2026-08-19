@@ -5,15 +5,21 @@ type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>
   userChoice: Promise<InstallChoice>
 }
-type NavigatorWithStandalone = Navigator & { standalone?: boolean }
+type RelatedInstalledApp = { platform?: string; id?: string; url?: string }
+type NavigatorWithPwaApis = Navigator & {
+  standalone?: boolean
+  getInstalledRelatedApps?: () => Promise<RelatedInstalledApp[]>
+}
 type WindowWithInstallPrompt = Window & typeof globalThis & {
   __silaInstallPrompt?: BeforeInstallPromptEvent | null
 }
 
 const PROMPT_DELAY_MS = 500
+const INSTALL_REEVALUATE_KEY = 'sila-pwa-install-reevaluate-v14'
+const INSTALL_REEVALUATE_PARAM = 'pwa-install-check'
 
 function isStandaloneMode() {
-  return window.matchMedia('(display-mode: standalone)').matches || Boolean((navigator as NavigatorWithStandalone).standalone)
+  return window.matchMedia('(display-mode: standalone)').matches || Boolean((navigator as NavigatorWithPwaApis).standalone)
 }
 
 function homeScreenIsVisible() {
@@ -38,16 +44,24 @@ function openCurrentPageInChrome() {
   window.location.href = intentUrl
 }
 
+function removeInstallCheckParam() {
+  const url = new URL(window.location.href)
+  if (!url.searchParams.has(INSTALL_REEVALUATE_PARAM)) return
+  url.searchParams.delete(INSTALL_REEVALUATE_PARAM)
+  window.history.replaceState(window.history.state, '', url.toString())
+}
+
 export default function InstallPrompt() {
   const installWindow = window as WindowWithInstallPrompt
+  const pwaNavigator = navigator as NavigatorWithPwaApis
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(() => installWindow.__silaInstallPrompt ?? null)
   const [visible, setVisible] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
   const [iosHelp, setIosHelp] = useState(false)
+  const [chromeFallback, setChromeFallback] = useState(false)
   const [installed, setInstalled] = useState(false)
   const [installing, setInstalling] = useState(false)
   const [homeActive, setHomeActive] = useState(false)
-  const [feedback, setFeedback] = useState('')
 
   const userAgent = useMemo(() => navigator.userAgent, [])
   const isIos = useMemo(() => {
@@ -68,7 +82,10 @@ export default function InstallPrompt() {
 
     const syncStoredPrompt = () => {
       const stored = installWindow.__silaInstallPrompt
-      if (stored) setInstallEvent(stored)
+      if (!stored) return
+      setInstallEvent(stored)
+      sessionStorage.removeItem(INSTALL_REEVALUATE_KEY)
+      removeInstallCheckParam()
     }
 
     const onBeforeInstallPrompt = (event: Event) => {
@@ -76,15 +93,21 @@ export default function InstallPrompt() {
       const promptEvent = event as BeforeInstallPromptEvent
       installWindow.__silaInstallPrompt = promptEvent
       setInstallEvent(promptEvent)
+      setChromeFallback(false)
+      setPanelOpen(false)
+      sessionStorage.removeItem(INSTALL_REEVALUATE_KEY)
+      removeInstallCheckParam()
     }
 
     const onInstalled = () => {
       installWindow.__silaInstallPrompt = null
+      sessionStorage.removeItem(INSTALL_REEVALUATE_KEY)
+      removeInstallCheckParam()
       setInstalled(true)
       setVisible(false)
       setPanelOpen(false)
       setIosHelp(false)
-      setFeedback('')
+      setChromeFallback(false)
       setInstallEvent(null)
     }
 
@@ -99,6 +122,28 @@ export default function InstallPrompt() {
       window.removeEventListener('appinstalled', onInstalled)
     }
   }, [installWindow])
+
+  useEffect(() => {
+    if (!isChromeAndroid || !pwaNavigator.getInstalledRelatedApps || isStandaloneMode()) return undefined
+
+    let cancelled = false
+    pwaNavigator.getInstalledRelatedApps()
+      .then((apps) => {
+        if (cancelled) return
+        const selfInstalled = apps.some((app) => app.platform === 'webapp' && String(app.url || '').includes('manifest.webmanifest'))
+        if (selfInstalled) {
+          sessionStorage.removeItem(INSTALL_REEVALUATE_KEY)
+          removeInstallCheckParam()
+          setInstalled(true)
+          setVisible(false)
+        }
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [isChromeAndroid, pwaNavigator])
 
   useEffect(() => {
     const syncHome = () => setHomeActive(homeScreenIsVisible())
@@ -136,29 +181,96 @@ export default function InstallPrompt() {
     return () => window.clearTimeout(timer)
   }, [homeActive, installed, supportedMobileBrowser])
 
-  useEffect(() => {
-    if (!feedback) return undefined
-    const timer = window.setTimeout(() => setFeedback(''), 3200)
-    return () => window.clearTimeout(timer)
-  }, [feedback])
-
   function closePanel() {
     setPanelOpen(false)
     setIosHelp(false)
+    setChromeFallback(false)
+  }
+
+  async function detectInstalledPwa() {
+    if (!isChromeAndroid || !pwaNavigator.getInstalledRelatedApps) return false
+    try {
+      const apps = await pwaNavigator.getInstalledRelatedApps()
+      return apps.some((app) => app.platform === 'webapp' && String(app.url || '').includes('manifest.webmanifest'))
+    } catch {
+      return false
+    }
+  }
+
+  async function forceChromeInstallabilityRecheck() {
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready
+        await registration.update().catch(() => undefined)
+
+        if (!navigator.serviceWorker.controller) {
+          await new Promise<void>((resolve) => {
+            let finished = false
+            const finish = () => {
+              if (finished) return
+              finished = true
+              navigator.serviceWorker.removeEventListener('controllerchange', finish)
+              resolve()
+            }
+            navigator.serviceWorker.addEventListener('controllerchange', finish)
+            window.setTimeout(finish, 1200)
+          })
+        }
+      }
+    } catch (error) {
+      console.warn('PWA service worker readiness check failed.', error)
+    }
+
+    const storedPrompt = installWindow.__silaInstallPrompt
+    if (storedPrompt) {
+      setInstallEvent(storedPrompt)
+      return false
+    }
+
+    if (sessionStorage.getItem(INSTALL_REEVALUATE_KEY) === '1') return false
+
+    sessionStorage.setItem(INSTALL_REEVALUATE_KEY, '1')
+    const url = new URL(window.location.href)
+    url.searchParams.set(INSTALL_REEVALUATE_PARAM, '14')
+    window.location.replace(url.toString())
+    return true
   }
 
   async function install() {
     if (isAndroid && !isChromeAndroid) {
       setIosHelp(false)
+      setChromeFallback(false)
       setPanelOpen(true)
       return
     }
 
     if (isChromeAndroid) {
-      const promptEvent = installEvent ?? installWindow.__silaInstallPrompt ?? null
+      let promptEvent = installEvent ?? installWindow.__silaInstallPrompt ?? null
+
       if (!promptEvent) {
-        setFeedback('Chrome لم يجهّز نافذة التثبيت بعد. الزر سيبقى ظاهرًا؛ حاول مرة أخرى بعد لحظات.')
-        return
+        setInstalling(true)
+        const alreadyInstalled = await detectInstalledPwa()
+        if (alreadyInstalled) {
+          setInstalled(true)
+          setVisible(false)
+          setInstalling(false)
+          return
+        }
+
+        const reloading = await forceChromeInstallabilityRecheck()
+        if (reloading) return
+
+        promptEvent = installWindow.__silaInstallPrompt ?? null
+        setInstalling(false)
+
+        if (!promptEvent) {
+          setIosHelp(false)
+          setChromeFallback(true)
+          setPanelOpen(true)
+          return
+        }
+
+        setInstallEvent(promptEvent)
       }
 
       setInstalling(true)
@@ -167,16 +279,19 @@ export default function InstallPrompt() {
         const choice = await promptEvent.userChoice
         installWindow.__silaInstallPrompt = null
         setInstallEvent(null)
+        sessionStorage.removeItem(INSTALL_REEVALUATE_KEY)
+        removeInstallCheckParam()
         if (choice.outcome === 'accepted') {
           setVisible(false)
           setPanelOpen(false)
-          setFeedback('')
         }
       } catch (error) {
         console.warn('PWA install prompt could not be opened.', error)
         installWindow.__silaInstallPrompt = null
         setInstallEvent(null)
-        setFeedback('تعذر فتح نافذة التثبيت الآن. الزر سيبقى ظاهرًا للمحاولة مرة أخرى.')
+        sessionStorage.removeItem(INSTALL_REEVALUATE_KEY)
+        setChromeFallback(true)
+        setPanelOpen(true)
       } finally {
         setInstalling(false)
       }
@@ -185,6 +300,7 @@ export default function InstallPrompt() {
 
     if (isIos) {
       setIosHelp(true)
+      setChromeFallback(false)
       setPanelOpen(true)
     }
   }
@@ -192,10 +308,16 @@ export default function InstallPrompt() {
   if (installed || !homeActive || !visible || !supportedMobileBrowser) return null
 
   const showingChromeRedirect = isAndroid && !isChromeAndroid && !iosHelp
-  const title = iosHelp ? 'تثبيت صلة على iPhone / iPad' : 'فتح صلة في Google Chrome'
+  const title = iosHelp
+    ? 'تثبيت صلة على iPhone / iPad'
+    : chromeFallback
+      ? 'التثبيت من Google Chrome'
+      : 'فتح صلة في Google Chrome'
   const subtitle = iosHelp
     ? 'أضف صلة إلى الشاشة الرئيسية من قائمة المشاركة.'
-    : 'التثبيت المباشر يعمل من Google Chrome. افتح نفس الصفحة في Chrome للمتابعة.'
+    : chromeFallback
+      ? 'أعاد النظام فحص قابلية التثبيت، لكن Chrome لم يوفّر نافذة التثبيت البرمجية لهذا التبويب.'
+      : 'التثبيت المباشر يعمل من Google Chrome. افتح نفس الصفحة في Chrome للمتابعة.'
 
   return (
     <>
@@ -209,33 +331,8 @@ export default function InstallPrompt() {
           style={{ insetInlineStart: 'auto', insetInlineEnd: 'auto', left: '16px', right: 'auto', zIndex: 1495 }}
         >
           <span className="pwa-install-fab-icon" aria-hidden="true">↓</span>
-          <span>تثبيت التطبيق</span>
+          <span>{installing ? 'فحص التثبيت…' : 'تثبيت التطبيق'}</span>
         </button>
-      ) : null}
-
-      {feedback && !panelOpen ? (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: 'fixed',
-            zIndex: 1496,
-            left: '16px',
-            bottom: 'calc(224px + env(safe-area-inset-bottom, 0px))',
-            width: 'min(270px, calc(100vw - 32px))',
-            padding: '9px 11px',
-            border: '1px solid rgba(215, 188, 139, .9)',
-            borderRadius: '14px',
-            color: '#6f551e',
-            background: 'rgba(255, 249, 238, .98)',
-            boxShadow: '0 12px 30px rgba(126, 79, 8, .18)',
-            fontSize: '.58rem',
-            fontWeight: 800,
-            lineHeight: 1.7,
-          }}
-        >
-          {feedback}
-        </div>
       ) : null}
 
       {panelOpen ? (
@@ -248,7 +345,7 @@ export default function InstallPrompt() {
           <button className="pwa-install-close" type="button" onClick={closePanel} aria-label="إغلاق تعليمات التثبيت">×</button>
 
           <div className="pwa-install-brand">
-            <img src={`${import.meta.env.BASE_URL}brand/sila-approved-v4.jpg?v=13`} alt="" aria-hidden="true" />
+            <img src={`${import.meta.env.BASE_URL}brand/sila-approved-v4.jpg?v=14`} alt="" aria-hidden="true" />
             <div>
               <span>صلة</span>
               <strong>{title}</strong>
@@ -265,6 +362,11 @@ export default function InstallPrompt() {
             <div className="pwa-ios-steps">
               <span><b>1</b> اضغط «فتح في Google Chrome».</span>
               <span><b>2</b> بعد فتح الصفحة في Chrome اضغط زر «تثبيت التطبيق» الظاهر فوق الجرس.</span>
+            </div>
+          ) : chromeFallback ? (
+            <div className="pwa-ios-steps">
+              <span><b>1</b> اضغط قائمة Chrome <strong aria-hidden="true">⋮</strong> أعلى الشاشة.</span>
+              <span><b>2</b> اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».</span>
             </div>
           ) : null}
 

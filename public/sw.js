@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sila-v27-install-v15'
+const CACHE_VERSION = 'sila-v28-install-v16'
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 
 function appUrl(path = '') {
@@ -7,13 +7,13 @@ function appUrl(path = '') {
 
 const PRECACHE_PATHS = [
   './',
-  'manifest.webmanifest?v=15',
-  'icons/icon-192.png?v=15',
-  'icons/icon-512.png?v=15',
-  'icons/maskable-512.png?v=15',
-  'icons/apple-touch-icon.png?v=15',
-  'brand/sila-approved-v4.jpg?v=15',
-  'brand/sila-mark.svg?v=15',
+  'manifest.webmanifest?v=16',
+  'icons/icon-192.png?v=16',
+  'icons/icon-512.png?v=16',
+  'icons/maskable-512.png?v=16',
+  'icons/apple-touch-icon.png?v=16',
+  'brand/sila-approved-v4.jpg?v=16',
+  'brand/sila-mark.svg?v=16',
   'icons/notification-badge.png',
 ]
 
@@ -54,7 +54,7 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'صلة'
   const options = {
     body: data.body || 'لديك تحديث جديد في صلة.',
-    icon: appUrl('icons/icon-192.png?v=15'),
+    icon: appUrl('icons/icon-192.png?v=16'),
     badge: appUrl('icons/notification-badge.png'),
     tag: data.tag || 'sila-update',
     renotify: true,

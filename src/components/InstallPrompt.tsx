@@ -5,7 +5,10 @@ type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>
   userChoice: Promise<InstallChoice>
 }
-type NavigatorWithStandalone = Navigator & { standalone?: boolean }
+type NavigatorWithPwaInstall = Navigator & {
+  standalone?: boolean
+  install?: () => Promise<unknown>
+}
 type WindowWithInstallPrompt = Window & typeof globalThis & {
   __silaInstallPrompt?: BeforeInstallPromptEvent | null
 }
@@ -13,7 +16,7 @@ type WindowWithInstallPrompt = Window & typeof globalThis & {
 const PROMPT_DELAY_MS = 500
 
 function isStandaloneMode() {
-  return window.matchMedia('(display-mode: standalone)').matches || Boolean((navigator as NavigatorWithStandalone).standalone)
+  return window.matchMedia('(display-mode: standalone)').matches || Boolean((navigator as NavigatorWithPwaInstall).standalone)
 }
 
 function homeScreenIsVisible() {
@@ -40,6 +43,7 @@ function openCurrentPageInChrome() {
 
 export default function InstallPrompt() {
   const installWindow = window as WindowWithInstallPrompt
+  const pwaNavigator = navigator as NavigatorWithPwaInstall
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(() => installWindow.__silaInstallPrompt ?? null)
   const [visible, setVisible] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
@@ -147,6 +151,18 @@ export default function InstallPrompt() {
     }
 
     if (isChromeAndroid) {
+      if (typeof pwaNavigator.install === 'function') {
+        setInstalling(true)
+        try {
+          await pwaNavigator.install()
+          return
+        } catch (error) {
+          console.warn('Web Install API was available but could not complete installation.', error)
+        } finally {
+          setInstalling(false)
+        }
+      }
+
       const promptEvent = installEvent ?? installWindow.__silaInstallPrompt ?? null
       if (!promptEvent) return
 
@@ -210,7 +226,7 @@ export default function InstallPrompt() {
           <button className="pwa-install-close" type="button" onClick={closePanel} aria-label="إغلاق تعليمات التثبيت">×</button>
 
           <div className="pwa-install-brand">
-            <img src={`${import.meta.env.BASE_URL}brand/sila-approved-v4.jpg?v=14`} alt="" aria-hidden="true" />
+            <img src={`${import.meta.env.BASE_URL}brand/sila-approved-v4.jpg?v=15`} alt="" aria-hidden="true" />
             <div>
               <span>صلة</span>
               <strong>{title}</strong>

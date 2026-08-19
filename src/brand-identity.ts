@@ -9,21 +9,23 @@ const icons = {
   account: svgIcon('<circle cx="12" cy="8" r="3.4"/><path d="M5.3 20c.9-4.1 3.1-6.1 6.7-6.1s5.8 2 6.7 6.1"/>'),
 }
 
+const BRAND_ASSET = 'brand/sila-app-icon-gold-v3.png'
+
 function enhanceBrandMark(): void {
   const mark = document.querySelector<HTMLElement>('.brand-mark')
   if (!mark) return
 
-  const desiredSource = `${import.meta.env.BASE_URL}brand/sila-app-icon.png`
+  const desiredSource = `${import.meta.env.BASE_URL}${BRAND_ASSET}`
   const current = mark.querySelector<HTMLImageElement>('img')
-  if (current?.src.endsWith('/brand/sila-app-icon.png')) return
+  if (current?.src.includes('/brand/sila-app-icon-gold-v3.png')) return
 
   const image = document.createElement('img')
   image.src = desiredSource
-  image.alt = ''
+  image.alt = 'شعار صلة القرابة'
   image.decoding = 'async'
   image.className = 'sila-brand-image'
   mark.replaceChildren(image)
-  mark.dataset.silaBrand = '2'
+  mark.dataset.silaBrand = '3'
 }
 
 function enhanceBrandName(): void {

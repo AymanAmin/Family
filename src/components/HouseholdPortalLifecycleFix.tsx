@@ -74,6 +74,14 @@ function isNavigationAction(target: Element): boolean {
   ].join(',')))
 }
 
+function isHouseholdPersonNavigation(target: Element): boolean {
+  return Boolean(target.closest([
+    '.household-open-husband',
+    '.household-spouse-heading button',
+    '.household-child-grid button',
+  ].join(',')))
+}
+
 export default function HouseholdPortalLifecycleFix(): null {
   useEffect(() => {
     let frame = 0
@@ -124,9 +132,24 @@ export default function HouseholdPortalLifecycleFix(): null {
       const target = event.target
       if (!(target instanceof Element) || !isNavigationAction(target)) return
 
-      // Let the clicked control finish its own routing first, then close the
-      // previous surface before the browser paints the destination screen.
-      window.queueMicrotask(closeForNavigation)
+      const bridgeHouseholdPersonRoute = isHouseholdPersonNavigation(target)
+      const previousHash = window.location.hash
+
+      // Household person cards currently change the hash directly. That updates
+      // the address bar but does not update App.tsx state on its own. Run after
+      // the card's onClick so the new #/person/:id route exists, close the old
+      // household layer, then feed that route through the app history handler.
+      window.queueMicrotask(() => {
+        closeForNavigation()
+
+        if (!bridgeHouseholdPersonRoute) return
+        const nextHash = window.location.hash
+        if (nextHash === previousHash || !nextHash.startsWith('#/person/')) return
+
+        window.dispatchEvent(new CustomEvent('sila:history-navigation', {
+          detail: { direction: 'forward', scrollY: 0, source: 'household-profile' },
+        }))
+      })
     }
 
     scheduleCleanup()

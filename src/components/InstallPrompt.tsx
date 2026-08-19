@@ -1,19 +1,24 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 type InstallChoice = { outcome: 'accepted' | 'dismissed'; platform: string }
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>
   userChoice: Promise<InstallChoice>
 }
+type RelatedInstalledApp = { platform?: string; id?: string; url?: string }
 type NavigatorWithPwaInstall = Navigator & {
   standalone?: boolean
   install?: () => Promise<unknown>
+  getInstalledRelatedApps?: () => Promise<RelatedInstalledApp[]>
 }
 type WindowWithInstallPrompt = Window & typeof globalThis & {
   __silaInstallPrompt?: BeforeInstallPromptEvent | null
 }
+type InstallStatus = 'idle' | 'opening' | 'pending' | 'confirmed' | 'failed'
 
 const PROMPT_DELAY_MS = 500
+const VERIFY_INTERVAL_MS = 2000
+const VERIFY_ATTEMPTS = 24
 
 function isStandaloneMode() {
   return window.matchMedia('(display-mode: standalone)').matches || Boolean((navigator as NavigatorWithPwaInstall).standalone)
@@ -41,16 +46,21 @@ function openCurrentPageInChrome() {
   window.location.href = intentUrl
 }
 
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, ms))
+}
+
 export default function InstallPrompt() {
   const installWindow = window as WindowWithInstallPrompt
   const pwaNavigator = navigator as NavigatorWithPwaInstall
+  const verifyRunningRef = useRef(false)
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(() => installWindow.__silaInstallPrompt ?? null)
   const [visible, setVisible] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
   const [iosHelp, setIosHelp] = useState(false)
   const [installed, setInstalled] = useState(false)
-  const [installing, setInstalling] = useState(false)
   const [homeActive, setHomeActive] = useState(false)
+  const [installStatus, setInstallStatus] = useState<InstallStatus>('idle')
 
   const userAgent = useMemo(() => navigator.userAgent, [])
   const isIos = useMemo(() => {
@@ -63,6 +73,46 @@ export default function InstallPrompt() {
   }, [isAndroid, isSamsungInternet, userAgent])
   const supportedMobileBrowser = isAndroid || isIos
 
+  async function isInstalledPwa() {
+    if (isStandaloneMode()) return true
+    if (!pwaNavigator.getInstalledRelatedApps) return false
+
+    try {
+      const apps = await pwaNavigator.getInstalledRelatedApps()
+      return apps.some((app) => app.platform === 'webapp' && String(app.url || '').includes('manifest.webmanifest'))
+    } catch (error) {
+      console.warn('Could not query installed related apps.', error)
+      return false
+    }
+  }
+
+  async function verifyAndroidInstallation() {
+    if (!isChromeAndroid || verifyRunningRef.current) return
+
+    verifyRunningRef.current = true
+    setInstallStatus('pending')
+    setVisible(true)
+
+    try {
+      for (let attempt = 0; attempt < VERIFY_ATTEMPTS; attempt += 1) {
+        if (await isInstalledPwa()) {
+          setInstallStatus('confirmed')
+          window.setTimeout(() => {
+            setInstalled(true)
+            setVisible(false)
+          }, 4200)
+          return
+        }
+        await sleep(VERIFY_INTERVAL_MS)
+      }
+
+      setInstallStatus('failed')
+      setVisible(true)
+    } finally {
+      verifyRunningRef.current = false
+    }
+  }
+
   useEffect(() => {
     if (isStandaloneMode()) {
       setInstalled(true)
@@ -71,7 +121,10 @@ export default function InstallPrompt() {
 
     const syncStoredPrompt = () => {
       const stored = installWindow.__silaInstallPrompt
-      if (stored) setInstallEvent(stored)
+      if (stored) {
+        setInstallEvent(stored)
+        if (installStatus === 'failed') setInstallStatus('idle')
+      }
     }
 
     const onBeforeInstallPrompt = (event: Event) => {
@@ -79,15 +132,20 @@ export default function InstallPrompt() {
       const promptEvent = event as BeforeInstallPromptEvent
       installWindow.__silaInstallPrompt = promptEvent
       setInstallEvent(promptEvent)
+      if (installStatus === 'failed') setInstallStatus('idle')
     }
 
     const onInstalled = () => {
       installWindow.__silaInstallPrompt = null
-      setInstalled(true)
-      setVisible(false)
+      setInstallEvent(null)
       setPanelOpen(false)
       setIosHelp(false)
-      setInstallEvent(null)
+      if (isChromeAndroid) {
+        void verifyAndroidInstallation()
+      } else {
+        setInstalled(true)
+        setVisible(false)
+      }
     }
 
     syncStoredPrompt()
@@ -100,7 +158,22 @@ export default function InstallPrompt() {
       window.removeEventListener('sila:install-prompt-ready', syncStoredPrompt)
       window.removeEventListener('appinstalled', onInstalled)
     }
-  }, [installWindow])
+  }, [installWindow, installStatus, isChromeAndroid])
+
+  useEffect(() => {
+    if (!isChromeAndroid || isStandaloneMode()) return undefined
+
+    let cancelled = false
+    void isInstalledPwa().then((alreadyInstalled) => {
+      if (cancelled || !alreadyInstalled) return
+      setInstalled(true)
+      setVisible(false)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isChromeAndroid])
 
   useEffect(() => {
     const syncHome = () => setHomeActive(homeScreenIsVisible())
@@ -151,37 +224,43 @@ export default function InstallPrompt() {
     }
 
     if (isChromeAndroid) {
+      if (installStatus === 'opening' || installStatus === 'pending' || installStatus === 'confirmed') return
+
       if (typeof pwaNavigator.install === 'function') {
-        setInstalling(true)
+        setInstallStatus('opening')
         try {
           await pwaNavigator.install()
+          await verifyAndroidInstallation()
           return
         } catch (error) {
           console.warn('Web Install API was available but could not complete installation.', error)
-        } finally {
-          setInstalling(false)
+          setInstallStatus('idle')
         }
       }
 
       const promptEvent = installEvent ?? installWindow.__silaInstallPrompt ?? null
-      if (!promptEvent) return
+      if (!promptEvent) {
+        setInstallStatus('failed')
+        return
+      }
 
-      setInstalling(true)
+      setInstallStatus('opening')
       try {
         await promptEvent.prompt()
         const choice = await promptEvent.userChoice
         installWindow.__silaInstallPrompt = null
         setInstallEvent(null)
+
         if (choice.outcome === 'accepted') {
-          setVisible(false)
-          setPanelOpen(false)
+          await verifyAndroidInstallation()
+        } else {
+          setInstallStatus('idle')
         }
       } catch (error) {
         console.warn('PWA install prompt could not be opened.', error)
         installWindow.__silaInstallPrompt = null
         setInstallEvent(null)
-      } finally {
-        setInstalling(false)
+        setInstallStatus('failed')
       }
       return
     }
@@ -200,6 +279,24 @@ export default function InstallPrompt() {
     ? 'أضف صلة إلى الشاشة الرئيسية من قائمة المشاركة.'
     : 'التثبيت المباشر يعمل من Google Chrome. افتح نفس الصفحة في Chrome للمتابعة.'
 
+  const buttonLabel = installStatus === 'opening'
+    ? 'جارٍ فتح التثبيت…'
+    : installStatus === 'pending'
+      ? 'جارٍ تثبيت صلة…'
+      : installStatus === 'confirmed'
+        ? 'تم تثبيت صلة ✓'
+        : installStatus === 'failed'
+          ? 'إعادة محاولة التثبيت'
+          : 'تثبيت التطبيق'
+
+  const statusMessage = installStatus === 'pending'
+    ? 'تم قبول التثبيت من Chrome. Android ينشئ تطبيق صلة الآن؛ قد يستغرق ذلك عدة ثوانٍ.'
+    : installStatus === 'confirmed'
+      ? 'تم تثبيت صلة بنجاح. ستجده في قائمة التطبيقات وعلى الشاشة الرئيسية.'
+      : installStatus === 'failed'
+        ? 'لم يؤكد Android اكتمال التثبيت بعد. اضغط «إعادة محاولة التثبيت» للمحاولة مرة أخرى.'
+        : ''
+
   return (
     <>
       {!panelOpen ? (
@@ -207,13 +304,38 @@ export default function InstallPrompt() {
           className="pwa-install-fab"
           type="button"
           onClick={() => void install()}
-          disabled={installing}
+          disabled={installStatus === 'opening' || installStatus === 'pending' || installStatus === 'confirmed'}
           aria-label="تثبيت تطبيق صلة"
           style={{ insetInlineStart: 'auto', insetInlineEnd: 'auto', left: '16px', right: 'auto', zIndex: 1495 }}
         >
           <span className="pwa-install-fab-icon" aria-hidden="true">↓</span>
-          <span>تثبيت التطبيق</span>
+          <span>{buttonLabel}</span>
         </button>
+      ) : null}
+
+      {statusMessage && !panelOpen ? (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            zIndex: 1496,
+            left: '16px',
+            bottom: 'calc(224px + env(safe-area-inset-bottom, 0px))',
+            width: 'min(310px, calc(100vw - 32px))',
+            padding: '10px 12px',
+            border: '1px solid rgba(215, 188, 139, .92)',
+            borderRadius: '16px',
+            color: installStatus === 'confirmed' ? '#176b50' : '#6f551e',
+            background: 'rgba(255, 249, 238, .98)',
+            boxShadow: '0 12px 30px rgba(126, 79, 8, .18)',
+            fontSize: '.62rem',
+            fontWeight: 800,
+            lineHeight: 1.8,
+          }}
+        >
+          {statusMessage}
+        </div>
       ) : null}
 
       {panelOpen ? (
@@ -226,7 +348,7 @@ export default function InstallPrompt() {
           <button className="pwa-install-close" type="button" onClick={closePanel} aria-label="إغلاق تعليمات التثبيت">×</button>
 
           <div className="pwa-install-brand">
-            <img src={`${import.meta.env.BASE_URL}brand/sila-approved-v4.jpg?v=15`} alt="" aria-hidden="true" />
+            <img src={`${import.meta.env.BASE_URL}brand/sila-approved-v4.jpg?v=16`} alt="" aria-hidden="true" />
             <div>
               <span>صلة</span>
               <strong>{title}</strong>

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sila-v21-brand-reset'
+const CACHE_VERSION = 'sila-v22-brand-everywhere'
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 
 function appUrl(path = '') {
@@ -7,11 +7,12 @@ function appUrl(path = '') {
 
 const PRECACHE_PATHS = [
   './',
-  'manifest.webmanifest?v=7',
-  'icons/icon-approved-v4-192.jpg?v=7',
-  'icons/icon-approved-v4-512.jpg?v=7',
-  'icons/maskable-approved-v4-512.jpg?v=7',
-  'icons/apple-touch-icon-approved-v4.jpg?v=7',
+  'manifest.webmanifest?v=8',
+  'icons/icon-approved-v4-192.jpg?v=8',
+  'icons/icon-approved-v4-512.jpg?v=8',
+  'icons/maskable-approved-v4-512.jpg?v=8',
+  'icons/apple-touch-icon-approved-v4.jpg?v=8',
+  'brand/sila-mark.svg?v=8',
   'icons/notification-badge.png',
 ]
 
@@ -52,8 +53,9 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'صلة'
   const options = {
     body: data.body || 'لديك تحديث جديد في صلة.',
-    icon: data.icon ? new URL(data.icon, self.registration.scope).toString() : appUrl('icons/icon-approved-v4-192.jpg?v=7'),
-    badge: data.badge ? new URL(data.badge, self.registration.scope).toString() : appUrl('icons/notification-badge.png'),
+    // Always use the approved identity. Older payloads may still carry legacy icon paths.
+    icon: appUrl('icons/icon-approved-v4-192.jpg?v=8'),
+    badge: appUrl('icons/notification-badge.png'),
     tag: data.tag || 'sila-update',
     renotify: true,
     silent: false,

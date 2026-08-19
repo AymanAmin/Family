@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sila-v20'
+const CACHE_VERSION = 'sila-v21-brand-reset'
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 
 function appUrl(path = '') {
@@ -7,11 +7,11 @@ function appUrl(path = '') {
 
 const PRECACHE_PATHS = [
   './',
-  'manifest.webmanifest',
-  'icons/icon-approved-v4-192.jpg',
-  'icons/icon-approved-v4-512.jpg',
-  'icons/maskable-approved-v4-512.jpg',
-  'icons/apple-touch-icon-approved-v4.jpg',
+  'manifest.webmanifest?v=7',
+  'icons/icon-approved-v4-192.jpg?v=7',
+  'icons/icon-approved-v4-512.jpg?v=7',
+  'icons/maskable-approved-v4-512.jpg?v=7',
+  'icons/apple-touch-icon-approved-v4.jpg?v=7',
   'icons/notification-badge.png',
 ]
 
@@ -37,6 +37,10 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting()
+})
+
 self.addEventListener('push', (event) => {
   let data = {}
   try {
@@ -48,7 +52,7 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'صلة'
   const options = {
     body: data.body || 'لديك تحديث جديد في صلة.',
-    icon: data.icon ? new URL(data.icon, self.registration.scope).toString() : appUrl('icons/icon-approved-v4-192.jpg'),
+    icon: data.icon ? new URL(data.icon, self.registration.scope).toString() : appUrl('icons/icon-approved-v4-192.jpg?v=7'),
     badge: data.badge ? new URL(data.badge, self.registration.scope).toString() : appUrl('icons/notification-badge.png'),
     tag: data.tag || 'sila-update',
     renotify: true,

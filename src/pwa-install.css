@@ -1,0 +1,128 @@
+.pwa-install-fab {
+  position: fixed;
+  z-index: 1495;
+  left: 16px;
+  bottom: calc(166px + env(safe-area-inset-bottom, 0px));
+  display: inline-flex;
+  min-height: 50px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px 7px 10px;
+  border: 1px solid rgb(255 255 255 / 90%);
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #a96d10, #d9a233 58%, #b77914);
+  box-shadow: 0 14px 34px rgb(126 79 8 / 28%);
+  font: inherit;
+  font-size: .66rem;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pwa-install-fab:focus-visible {
+  outline: 3px solid #f2c66d;
+  outline-offset: 3px;
+}
+
+.pwa-install-fab-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border-radius: 50%;
+  color: #7d510c;
+  background: #fff8e8;
+  box-shadow: inset 0 0 0 1px rgb(183 121 20 / 14%);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.pwa-install-panel {
+  position: fixed;
+  z-index: 1520;
+  left: 16px;
+  bottom: calc(226px + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 11px;
+  width: min(340px, calc(100vw - 32px));
+  padding: 14px;
+  border: 1px solid #eadcc0;
+  border-radius: 20px;
+  color: #203f68;
+  background: rgb(255 253 248 / 98%);
+  box-shadow: 0 20px 50px rgb(126 79 8 / 22%);
+  backdrop-filter: blur(16px);
+}
+
+.pwa-install-panel > img {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  object-fit: cover;
+  box-shadow: 0 8px 20px rgb(126 79 8 / 18%);
+}
+
+.pwa-install-panel-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.pwa-install-panel-copy strong {
+  font-size: .75rem;
+  line-height: 1.55;
+}
+
+.pwa-install-panel-copy span {
+  color: #756b5d;
+  font-size: .56rem;
+  line-height: 1.7;
+}
+
+.pwa-install-panel-copy button {
+  min-height: 38px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 11px;
+  color: #fff;
+  background: linear-gradient(145deg, #b77914, #8e590d);
+  font: inherit;
+  font-size: .6rem;
+  font-weight: 900;
+}
+
+.pwa-install-close {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  color: #756444;
+  background: #f6edda;
+  font-size: 1rem;
+}
+
+@media (display-mode: standalone) {
+  .pwa-install-fab,
+  .pwa-install-panel {
+    display: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .pwa-install-fab {
+    bottom: 88px;
+  }
+
+  .pwa-install-panel {
+    bottom: 150px;
+  }
+}

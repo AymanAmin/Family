@@ -141,25 +141,29 @@ export default function HouseholdPortalLifecycleFix(): null {
         pendingHouseholdPersonNavigation = true
         window.clearTimeout(householdRouteFallbackTimer)
         householdRouteFallbackTimer = window.setTimeout(() => {
-          dispatchHouseholdPersonRoute()
-          if (pendingHouseholdPersonNavigation) pendingHouseholdPersonNavigation = false
+          if (window.location.hash.startsWith('#/person/')) {
+            dispatchHouseholdPersonRoute()
+            closeForNavigation()
+          } else {
+            pendingHouseholdPersonNavigation = false
+          }
         }, 250)
+
+        // On mobile browsers window.location.href may commit the hash after the
+        // click microtask. Closing the household here would run its onClose and
+        // replaceState against the old directory URL, cancelling #/person/:id.
+        // Keep the overlay alive until hashchange confirms the person route.
+        return
       }
 
-      // Close the family overlay after the clicked control has executed its own
-      // onClick. Do not decide the destination here: window.location.href hash
-      // navigation is committed after this microtask on mobile browsers.
       window.queueMicrotask(closeForNavigation)
     }
 
     const handleHashChange = (): void => {
-      closeForNavigation()
-
-      // This is the important bridge for family-profile person cards. The old
-      // implementation checked the hash inside the click microtask, which was
-      // too early on mobile: the browser had not committed #/person/:id yet.
-      // Waiting for hashchange guarantees App.tsx sees the final person route.
+      // Let App.tsx consume the final person route before closing the family
+      // overlay. This prevents closeHousehold/replaceState from winning the race.
       dispatchHouseholdPersonRoute()
+      closeForNavigation()
     }
 
     scheduleCleanup()

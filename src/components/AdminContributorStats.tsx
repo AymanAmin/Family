@@ -31,6 +31,12 @@ type Overview = {
   duplicate_linked_accounts: number
 }
 
+type VisitorStats = {
+  unique_visitors: number
+  total_views: number
+  visitors_24h: number
+}
+
 type Props = { active: boolean }
 
 const PAGE_SIZE = 10
@@ -81,6 +87,14 @@ function normalizeOverview(row?: Record<string, unknown> | null): Overview {
   }
 }
 
+function normalizeVisitorStats(row?: Record<string, unknown> | null): VisitorStats {
+  return {
+    unique_visitors: number(row?.unique_visitors),
+    total_views: number(row?.total_views),
+    visitors_24h: number(row?.visitors_24h),
+  }
+}
+
 function formatDate(value: string | null) {
   if (!value) return 'لا يوجد نشاط'
   return new Intl.DateTimeFormat('ar-SA', { dateStyle: 'medium' }).format(new Date(value))
@@ -90,6 +104,7 @@ export default function AdminContributorStats({ active }: Props) {
   const [period, setPeriod] = useState<Period>('30')
   const [rows, setRows] = useState<Contributor[]>([])
   const [overview, setOverview] = useState<Overview>(() => normalizeOverview())
+  const [visitorStats, setVisitorStats] = useState<VisitorStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(false)
@@ -102,7 +117,7 @@ export default function AdminContributorStats({ active }: Props) {
     append ? setLoadingMore(true) : setLoading(true)
     setMessage('')
 
-    const [rankingResult, overviewResult] = await Promise.all([
+    const [rankingResult, overviewResult, visitorResult] = await Promise.all([
       supabase.rpc('list_admin_contributor_stats', {
         p_period_days: periodDays,
         p_limit: PAGE_SIZE + 1,
@@ -110,6 +125,9 @@ export default function AdminContributorStats({ active }: Props) {
       }),
       offset === 0
         ? supabase.rpc('get_admin_contribution_overview', { p_period_days: periodDays })
+        : Promise.resolve({ data: null, error: null }),
+      offset === 0
+        ? supabase.rpc('get_admin_visitor_stats', { p_period_days: periodDays })
         : Promise.resolve({ data: null, error: null }),
     ])
 
@@ -131,6 +149,15 @@ export default function AdminContributorStats({ active }: Props) {
     if (!overviewResult.error && overviewResult.data) {
       const raw = Array.isArray(overviewResult.data) ? overviewResult.data[0] : overviewResult.data
       setOverview(normalizeOverview(raw as Record<string, unknown> | null))
+    }
+
+    if (offset === 0) {
+      if (!visitorResult.error && visitorResult.data) {
+        const raw = Array.isArray(visitorResult.data) ? visitorResult.data[0] : visitorResult.data
+        setVisitorStats(normalizeVisitorStats(raw as Record<string, unknown> | null))
+      } else {
+        setVisitorStats(null)
+      }
     }
   }, [active, periodDays])
 
@@ -158,6 +185,7 @@ export default function AdminContributorStats({ active }: Props) {
         <article><span>مساهمون نشطون</span><strong>{overview.active_contributors}</strong><small>لديهم مساهمة واحدة على الأقل</small></article>
         <article><span>مساهمات معتمدة</span><strong>{overview.approved_contributions}</strong><small>{overview.pending_contributions} معلقة حاليًا</small></article>
         <article className={overview.duplicate_linked_people ? 'integrity-warning' : 'integrity-ok'}><span>سلامة ربط الحسابات</span><strong>{overview.duplicate_linked_people}</strong><small>{overview.duplicate_linked_people ? `${overview.duplicate_linked_accounts} حسابًا موزعة على سجلات مكررة` : 'لا توجد روابط مكررة مكتشفة'}</small></article>
+        <article className="visitor-stat"><span>زوار الموقع</span><strong>{visitorStats ? visitorStats.unique_visitors : '—'}</strong><small>{visitorStats ? (period === '30' ? `زوار فريدون خلال آخر 30 يومًا · ${visitorStats.visitors_24h} خلال 24 ساعة` : `زوار فريدون منذ بدء التتبع · ${visitorStats.visitors_24h} خلال 24 ساعة`) : 'تعذر تحميل إحصائية الزوار'}</small></article>
       </div>
 
       {message && <div className="admin-users-message">{message}</div>}

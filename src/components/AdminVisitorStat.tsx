@@ -48,7 +48,7 @@ export default function AdminVisitorStat() {
       return
     }
 
-    const { data, error } = await supabase.rpc('get_admin_visitor_stats')
+    const { data, error } = await supabase.rpc('get_admin_visitor_stats', { p_period_days: null })
     if (error) {
       setStats(null)
       return
